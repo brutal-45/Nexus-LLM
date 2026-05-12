@@ -560,5 +560,5 @@ MIT License — see [LICENSE](LICENSE) for details.
 ---
 
 <p align="center">
-  <strong>Built with ❤️ by the Nexus Community</strong>
+  <strong>Built with ❤️ by the Nexus Community & BrutalTools </strong>
 </p>
