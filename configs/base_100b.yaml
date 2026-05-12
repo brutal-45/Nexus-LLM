@@ -1,0 +1,104 @@
+# Base 100B Parameter Model Configuration
+# =========================================
+# Decoder-only Transformer: 100B params, 80 layers, 128 heads
+
+model:
+  name: "Nexus-100B"
+  arch: "decoder_only_transformer"
+  
+  # Dimensions
+  hidden_size: 12288          # d_model
+  intermediate_size: 49152    # 4x hidden (SwiGLU)
+  num_hidden_layers: 80       # depth
+  num_attention_heads: 96     # query heads
+  num_key_value_heads: 8      # GQA: 96/8 = 12 groups
+  head_dim: 128               # hidden_size / num_attention_heads
+  max_position_embeddings: 8192  # context window
+  vocab_size: 65536           # BPE vocabulary
+  
+  # Normalization
+  rms_norm_eps: 1.0e-5
+  hidden_act: "siu"           # SwiGLU
+  tie_word_embeddings: false
+  
+  # Regularization
+  attention_dropout: 0.0
+  hidden_dropout: 0.0
+  initializer_range: 0.02
+  
+  # RoPE
+  rope_theta: 10000.0
+  use_rope_scaling: false
+
+training:
+  # Data
+  data_dir: "/data/nexus/corpus"
+  tokenizer_path: "/data/nexus/tokenizer"
+  seq_length: 8192
+  micro_batch_size: 1
+  global_batch_size: 2048     # across all GPUs
+  
+  # Optimizer
+  optimizer: "adamw_torch"
+  lr: 1.0e-4
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  adam_eps: 1.0e-8
+  grad_clip: 1.0
+  
+  # Learning rate schedule
+  lr_scheduler: "cosine"
+  warmup_steps: 2000
+  min_lr_ratio: 0.1
+  
+  # Training duration
+  max_steps: 5_000_000
+  max_epochs: 1
+  
+  # Precision
+  precision: "bf16_mixed"
+  gradient_accumulation_steps: 1
+  gradient_checkpointing: true
+  
+  # Parallelism
+  tensor_parallel_size: 1     # intra-node
+  pipeline_parallel_size: 1   # inter-node layers
+  data_parallel_size: -1      # auto = rest of GPUs
+  
+  # FSDP / ZeRO
+  fsdp: true
+  fsdp_sharding_strategy: "FULL_SHARD"  # ZeRO-3
+  fsdp_backward_prefetch: true
+  fsdp_forward_prefetch: false
+  fsdp_wrap_policy: "transformer_auto_wrap"
+  
+  # Checkpointing
+  save_interval: 5000         # steps
+  eval_interval: 1000
+  checkpoint_dir: "checkpoints/nexus-100b"
+  save_safetensors: true
+  
+  # Logging
+  log_interval: 10
+  log_dir: "logs/"
+  wandb_project: "nexus-100b"
+  tensorboard: true
+
+inference:
+  max_new_tokens: 4096
+  temperature: 0.7
+  top_p: 0.9
+  top_k: 50
+  repetition_penalty: 1.1
+  beam_size: 1
+  use_cache: true
+  
+  # Quantization
+  quantization: null          # null, "int8", "int4"
+  
+  # Serving
+  host: "0.0.0.0"
+  port: 8000
+  max_batch_size: 128
+  max_concurrent_requests: 512
