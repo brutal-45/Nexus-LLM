@@ -1,5 +1,5 @@
 """
-Nexus Linear Algebra — Complete Implementation from Scratch
+Nexus Linear Algebra — Complete Implementation from Scratch 
 ==============================================================
 All linear algebra operations implemented algorithmically (no scipy/lapack).
 
