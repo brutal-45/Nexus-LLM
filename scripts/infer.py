@@ -7,7 +7,7 @@ Usage:
     python -m nexus.scripts.infer --checkpoint checkpoints/nexus-100b --prompt "Explain quantum computing" --max_tokens 1024 --temperature 0.7
 """
 
-from __future__ import annotations
+from __future__ import annotations 
 import argparse
 import os
 import sys
