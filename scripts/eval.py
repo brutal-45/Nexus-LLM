@@ -41,7 +41,7 @@ def main():
     else:
         tokenizer = BPETokenizer()
     
-    # Parse tasks
+    # Parse tasks 
     if args.tasks == "all":
         tasks = ["mmlu", "gsm8k", "humaneval", "hellaswag", "arc"]
     else:
