@@ -1,7 +1,7 @@
 <p align="center">
 <h1 align="center">⬡ Nexus LLM</h1>
 <p align="center">
-  <strong>A Production-Grade 100B+ Parameter Large Language Model — Built From Scratch</strong>
+  <strong>A Production-Grade 100B+ Parameter Large Language Model — Built From Scratch</strong> 
 </p>
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10+-blue.svg" alt="Python">
