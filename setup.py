@@ -7,7 +7,7 @@ No external AI APIs required. Fully open-source.
 Architecture: Decoder-only Transformer with RoPE, GQA, SwiGLU, RMSNorm
 Training: 3D Parallelism (TP/PP/DP), FSDP/ZeRO-3, BF16 Mixed Precision
 Alignment: SFT → DPO → RLHF pipeline
-Inference: PagedAttention, INT4/INT8 Quantization, Continuous Batching
+Inference: PagedAttention, INT4/INT8 Quantization, Continuous Batching 
 """
 
 from setuptools import setup, find_packages
