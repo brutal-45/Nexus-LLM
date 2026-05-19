@@ -1,0 +1,250 @@
+# Nexus-LLM Training Presets
+# Pre-configured training hyperparameters for different fine-tuning scenarios.
+# Each preset provides sensible defaults for learning rate, batch size,
+# scheduling, and other training-specific parameters.
+
+quick:
+  description: "Fast training for experimentation and prototyping. Uses fewer epochs and aggressive learning rates for quick iteration."
+  training:
+    num_train_epochs: 1
+    max_steps: -1
+    per_device_train_batch_size: 8
+    per_device_eval_batch_size: 8
+    gradient_accumulation_steps: 1
+    learning_rate: 5.0e-4
+    weight_decay: 0.01
+    adam_beta1: 0.9
+    adam_beta2: 0.999
+    adam_epsilon: 1.0e-8
+    max_grad_norm: 1.0
+    lr_scheduler_type: "cosine"
+    warmup_ratio: 0.05
+    warmup_steps: 0
+    fp16: true
+    bf16: false
+    gradient_checkpointing: false
+    dataloader_num_workers: 4
+    dataloader_pin_memory: true
+    save_strategy: "no"
+    evaluation_strategy: "no"
+    logging_steps: 50
+    logging_first_step: true
+    seed: 42
+    dataloader_drop_last: false
+    group_by_length: true
+    report_to: ["tensorboard"]
+    remove_unused_columns: true
+  data:
+    max_seq_length: 512
+    preprocessing_num_workers: 4
+    overwrite_cache: true
+  notes: "Use for quick experiments. Not recommended for production models."
+
+standard:
+  description: "Standard training configuration balancing quality and time. Good default for most fine-tuning tasks."
+  training:
+    num_train_epochs: 3
+    max_steps: -1
+    per_device_train_batch_size: 4
+    per_device_eval_batch_size: 4
+    gradient_accumulation_steps: 4
+    learning_rate: 2.0e-5
+    weight_decay: 0.01
+    adam_beta1: 0.9
+    adam_beta2: 0.999
+    adam_epsilon: 1.0e-8
+    max_grad_norm: 1.0
+    lr_scheduler_type: "cosine"
+    warmup_ratio: 0.1
+    warmup_steps: 0
+    fp16: true
+    bf16: false
+    gradient_checkpointing: true
+    dataloader_num_workers: 4
+    dataloader_pin_memory: true
+    save_strategy: "steps"
+    save_steps: 500
+    save_total_limit: 3
+    evaluation_strategy: "steps"
+    eval_steps: 500
+    eval_accumulation_steps: 1
+    load_best_model_at_end: true
+    metric_for_best_model: "eval_loss"
+    greater_is_better: false
+    logging_steps: 25
+    logging_first_step: true
+    seed: 42
+    dataloader_drop_last: false
+    group_by_length: true
+    report_to: ["tensorboard", "wandb"]
+    remove_unused_columns: true
+  data:
+    max_seq_length: 2048
+    preprocessing_num_workers: 4
+    overwrite_cache: false
+  notes: "Recommended starting point for most fine-tuning tasks."
+
+thorough:
+  description: "Thorough training with extensive evaluation and conservative learning rates for maximum quality."
+  training:
+    num_train_epochs: 5
+    max_steps: -1
+    per_device_train_batch_size: 2
+    per_device_eval_batch_size: 2
+    gradient_accumulation_steps: 8
+    learning_rate: 1.0e-5
+    weight_decay: 0.01
+    adam_beta1: 0.9
+    adam_beta2: 0.999
+    adam_epsilon: 1.0e-8
+    max_grad_norm: 1.0
+    lr_scheduler_type: "cosine_with_restarts"
+    warmup_ratio: 0.15
+    warmup_steps: 0
+    fp16: true
+    bf16: false
+    gradient_checkpointing: true
+    dataloader_num_workers: 8
+    dataloader_pin_memory: true
+    save_strategy: "steps"
+    save_steps: 250
+    save_total_limit: 5
+    evaluation_strategy: "steps"
+    eval_steps: 250
+    eval_accumulation_steps: 2
+    load_best_model_at_end: true
+    metric_for_best_model: "eval_loss"
+    greater_is_better: false
+    logging_steps: 10
+    logging_first_step: true
+    seed: 42
+    dataloader_drop_last: false
+    group_by_length: true
+    report_to: ["tensorboard", "wandb"]
+    remove_unused_columns: true
+  data:
+    max_seq_length: 4096
+    preprocessing_num_workers: 8
+    overwrite_cache: false
+  notes: "For production-quality models. Requires significant compute and time."
+
+lora:
+  description: "LoRA (Low-Rank Adaptation) fine-tuning for parameter-efficient training. Trains a small number of adapter weights."
+  training:
+    num_train_epochs: 3
+    max_steps: -1
+    per_device_train_batch_size: 4
+    per_device_eval_batch_size: 4
+    gradient_accumulation_steps: 4
+    learning_rate: 3.0e-4
+    weight_decay: 0.01
+    adam_beta1: 0.9
+    adam_beta2: 0.999
+    adam_epsilon: 1.0e-8
+    max_grad_norm: 1.0
+    lr_scheduler_type: "cosine"
+    warmup_ratio: 0.05
+    warmup_steps: 0
+    fp16: true
+    bf16: false
+    gradient_checkpointing: true
+    dataloader_num_workers: 4
+    dataloader_pin_memory: true
+    save_strategy: "steps"
+    save_steps: 500
+    save_total_limit: 3
+    evaluation_strategy: "steps"
+    eval_steps: 500
+    load_best_model_at_end: true
+    metric_for_best_model: "eval_loss"
+    greater_is_better: false
+    logging_steps: 25
+    logging_first_step: true
+    seed: 42
+    dataloader_drop_last: false
+    group_by_length: true
+    report_to: ["tensorboard"]
+    remove_unused_columns: true
+  lora:
+    r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    target_modules:
+      - "q_proj"
+      - "v_proj"
+      - "k_proj"
+      - "o_proj"
+      - "gate_proj"
+      - "up_proj"
+      - "down_proj"
+    bias: "none"
+    task_type: "CAUSAL_LM"
+    modules_to_save: null
+  data:
+    max_seq_length: 2048
+    preprocessing_num_workers: 4
+    overwrite_cache: false
+  notes: "Efficient fine-tuning using LoRA. Reduces memory usage by ~70%."
+
+qlora:
+  description: "QLoRA (Quantized LoRA) for extreme parameter efficiency. Combines 4-bit quantization with LoRA adapters."
+  training:
+    num_train_epochs: 3
+    max_steps: -1
+    per_device_train_batch_size: 4
+    per_device_eval_batch_size: 4
+    gradient_accumulation_steps: 4
+    learning_rate: 2.0e-4
+    weight_decay: 0.01
+    adam_beta1: 0.9
+    adam_beta2: 0.999
+    adam_epsilon: 1.0e-8
+    max_grad_norm: 1.0
+    lr_scheduler_type: "cosine"
+    warmup_ratio: 0.05
+    warmup_steps: 0
+    fp16: true
+    bf16: false
+    gradient_checkpointing: true
+    dataloader_num_workers: 4
+    dataloader_pin_memory: true
+    save_strategy: "steps"
+    save_steps: 500
+    save_total_limit: 3
+    evaluation_strategy: "steps"
+    eval_steps: 500
+    load_best_model_at_end: true
+    metric_for_best_model: "eval_loss"
+    greater_is_better: false
+    logging_steps: 25
+    logging_first_step: true
+    seed: 42
+    dataloader_drop_last: false
+    group_by_length: true
+    report_to: ["tensorboard"]
+    remove_unused_columns: true
+  quantization:
+    load_in_4bit: true
+    bnb_4bit_compute_dtype: "bfloat16"
+    bnb_4bit_quant_type: "nf4"
+    bnb_4bit_use_double_quant: true
+  lora:
+    r: 64
+    lora_alpha: 16
+    lora_dropout: 0.1
+    target_modules:
+      - "q_proj"
+      - "v_proj"
+      - "k_proj"
+      - "o_proj"
+      - "gate_proj"
+      - "up_proj"
+      - "down_proj"
+    bias: "none"
+    task_type: "CAUSAL_LM"
+    modules_to_save: null
+  data:
+    max_seq_length: 2048
+    preprocessing_num_workers: 4
+    overwrite_cache: false
+  notes: "Most memory-efficient fine-tuning. Enables training large models on consumer GPUs."

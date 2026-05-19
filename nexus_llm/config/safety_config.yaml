@@ -1,0 +1,297 @@
+# Nexus-LLM Safety Configuration
+# Controls content filtering, moderation, toxicity detection, and guardrails.
+# All safety features are enabled by default with moderate thresholds.
+
+safety:
+  enabled: true
+
+  # ─── Content Filter ────────────────────────────────────────────────
+  # Keyword and regex-based content filtering for inputs and outputs.
+  content_filter:
+    enabled: true
+    mode: "block"                    # block, flag, replace
+
+    # Check user inputs before model inference
+    check_input: true
+    # Check model outputs before returning to user
+    check_output: true
+
+    # PII (Personally Identifiable Information) detection
+    pii_detection:
+      enabled: true
+      phone_numbers: true            # Match phone number patterns
+      email_addresses: true          # Match email patterns
+      social_security_numbers: true  # Match SSN patterns
+      credit_card_numbers: true      # Match credit card patterns
+      ip_addresses: false            # Match IP address patterns
+      dates_of_birth: false          # Match DOB patterns
+      replacement: "[REDACTED]"      # Replacement text for PII matches
+
+    # Custom keyword blocklists
+    keyword_blocklists:
+      - name: "profanity_en"
+        file: "blocklists/profanity_en.txt"
+        case_sensitive: false
+        whole_word: true
+        action: "flag"               # flag, block, replace
+        category: "profanity"
+        priority: 5
+
+      - name: "hate_speech_en"
+        file: "blocklists/hate_speech_en.txt"
+        case_sensitive: false
+        whole_word: true
+        action: "block"
+        category: "hate_speech"
+        priority: 10
+
+      - name: "custom_blocked"
+        keywords: []
+        case_sensitive: false
+        whole_word: true
+        action: "block"
+        category: "custom"
+        priority: 5
+
+    # Custom regex rules
+    regex_rules:
+      - name: "url_detector"
+        pattern: 'https?://[^\s]+'
+        action: "replace"
+        replacement: "[URL]"
+        category: "spam"
+        priority: 3
+
+      - name: "api_key_leak"
+        pattern: '(?:sk|pk|nxs_sk|sk-)[a-zA-Z0-9]{20,}'
+        action: "block"
+        category: "pii"
+        priority: 10
+
+      - name: "phone_number_us"
+        pattern: '\b\d{3}[-.]?\d{3}[-.]?\d{4}\b'
+        action: "replace"
+        replacement: "[PHONE]"
+        category: "pii"
+        priority: 8
+
+      - name: "ssn_us"
+        pattern: '\b\d{3}-\d{2}-\d{4}\b'
+        action: "replace"
+        replacement: "[SSN]"
+        category: "pii"
+        priority: 9
+
+      - name: "credit_card"
+        pattern: '\b(?:\d[ -]?){13,16}\b'
+        action: "replace"
+        replacement: "[CARD]"
+        category: "pii"
+        priority: 9
+
+  # ─── Moderation ────────────────────────────────────────────────────
+  # Model-based content moderation using a classifier.
+  moderation:
+    enabled: true
+    model: "meta-llama/Llama-Guard-3-8B"    # Moderation classifier model
+    device: "auto"                           # Device for moderation model (auto, cpu, cuda)
+    max_length: 4096                         # Max input length for moderation model
+
+    # Whether to check inputs and/or outputs
+    check_input: true
+    check_output: true
+
+    # Categories to monitor
+    categories:
+      - violence
+      - hate_speech
+      - self_harm
+      - sexual_content
+      - harassment
+      - illegal_activity
+
+    # Confidence thresholds per category (0.0 - 1.0)
+    # Lower values = more restrictive, higher = more permissive
+    thresholds:
+      violence: 0.5
+      hate_speech: 0.5
+      self_harm: 0.3               # More restrictive for self-harm
+      sexual_content: 0.5
+      harassment: 0.5
+      illegal_activity: 0.5
+
+    # Action when any threshold is exceeded
+    action: "block"                # block, flag, replace
+
+    # Response message when content is blocked
+    block_message: "I'm unable to respond to that request due to content policy restrictions."
+
+    # Caching moderation results for repeated inputs
+    cache:
+      enabled: true
+      ttl: 3600                    # Cache TTL in seconds
+      max_size: 10000              # Maximum cache entries
+
+  # ─── Toxicity Detection ───────────────────────────────────────────
+  # Numerical toxicity scoring for model outputs.
+  toxicity:
+    enabled: true
+    model: "unitary/toxic-bert"    # Toxicity scoring model
+    device: "auto"
+
+    # Overall toxicity threshold (0.0 - 1.0)
+    threshold: 0.7
+
+    # Sub-category thresholds
+    categories:
+      toxic: 0.7
+      severe_toxic: 0.5
+      obscene: 0.7
+      threat: 0.5
+      insult: 0.7
+      identity_hate: 0.5
+
+    # Action when threshold is exceeded
+    action: "regenerate"           # block, flag, regenerate
+
+    # Regeneration settings (when action is "regenerate")
+    max_retries: 3                 # Maximum regeneration attempts
+    retry_temperature_adjustment: -0.1   # Temperature reduction per retry
+
+    # Include toxicity scores in API response metadata
+    include_scores: false          # Set true for debugging
+
+  # ─── Guardrails ───────────────────────────────────────────────────
+  # Structural and topical constraints on model behavior.
+  guardrails:
+    enabled: true
+
+    # Topic restrictions
+    topics:
+      allowed: []                  # Empty = all topics allowed
+      blocked:
+        - "financial_advice"
+        - "medical_diagnosis"
+        - "legal_counsel"
+      block_message: "I'm not able to provide advice on this topic. Please consult a qualified professional."
+
+    # Output format constraints
+    output_format:
+      enforce_json: false          # Enforce JSON when response_format is specified
+      max_length: 4096             # Maximum output length in characters
+      min_length: 1                # Minimum output length in characters
+
+    # Input validation
+    input:
+      max_prompt_length: 32768     # Maximum prompt length in characters
+      reject_empty: true           # Reject empty prompts
+      reject_whitespace: true      # Reject prompts that are only whitespace
+
+    # Language restrictions (ISO 639-1 codes)
+    languages:
+      allowed: []                  # Empty = all languages allowed
+      blocked: []                  # Block specific language codes
+
+    # Pattern-based output validation
+    output_patterns:
+      - name: "api_key_leak"
+        pattern: '(?:sk|pk|nxs_sk|sk-)[a-zA-Z0-9]{20,}'
+        action: "replace"
+        replacement: "[API_KEY_REDACTED]"
+
+      - name: "ip_address_leak"
+        pattern: '\b(?:\d{1,3}\.){3}\d{1,3}\b'
+        action: "replace"
+        replacement: "[IP_REDACTED]"
+
+      - name: "aws_key_leak"
+        pattern: 'AKIA[0-9A-Z]{16}'
+        action: "block"
+
+    # Custom guardrail scripts
+    custom_guardrails: []
+    # Example:
+    #   - name: "no_code_execution"
+    #     module: "nexus_llm.safety.custom.no_code_exec"
+    #     config:
+    #       blocked_patterns:
+    #         - "os.system"
+    #         - "subprocess"
+    #         - "eval("
+    #         - "exec("
+
+  # ─── Policies ──────────────────────────────────────────────────────
+  # Preset safety configurations for different deployment scenarios.
+  # Apply with: nexus-llm safety policy apply <policy_name>
+  policies:
+    strict:
+      content_filter:
+        enabled: true
+        mode: "block"
+        check_input: true
+        check_output: true
+      moderation:
+        enabled: true
+        check_input: true
+        check_output: true
+        action: "block"
+        thresholds:
+          violence: 0.3
+          hate_speech: 0.3
+          self_harm: 0.2
+          sexual_content: 0.3
+          harassment: 0.3
+          illegal_activity: 0.3
+      toxicity:
+        enabled: true
+        threshold: 0.5
+        action: "regenerate"
+        max_retries: 5
+      guardrails:
+        enabled: true
+        topics:
+          blocked: ["financial_advice", "medical_diagnosis", "legal_counsel"]
+
+    standard:
+      content_filter:
+        enabled: true
+        mode: "flag"
+        check_input: true
+        check_output: true
+      moderation:
+        enabled: true
+        check_input: true
+        check_output: false
+        action: "flag"
+      toxicity:
+        enabled: true
+        threshold: 0.7
+        action: "flag"
+      guardrails:
+        enabled: true
+
+    permissive:
+      content_filter:
+        enabled: true
+        mode: "flag"
+        pii_detection:
+          enabled: true
+      moderation:
+        enabled: false
+      toxicity:
+        enabled: true
+        threshold: 0.9
+        action: "flag"
+      guardrails:
+        enabled: false
+
+  # ─── Logging & Auditing ───────────────────────────────────────────
+  logging:
+    enabled: true
+    level: "info"                  # debug, info, warning, error
+    log_blocked: true              # Log blocked content
+    log_flagged: true              # Log flagged content
+    log_modified: true             # Log modified content
+    log_safe: false                # Log safe content (verbose)
+    redact_content: true           # Redact matched content in logs
+    retention_days: 90             # Log retention period

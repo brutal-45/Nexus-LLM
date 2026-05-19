@@ -1,0 +1,68 @@
+# Nexus-LLM Pipeline Configuration
+# Controls data processing pipeline behavior and settings
+
+pipeline:
+  # Default settings
+  defaults:
+    max_steps: 50
+    step_timeout_seconds: 300
+    continue_on_error: false
+    enable_caching: true
+    cache_ttl_seconds: 3600
+
+  # Preprocessing
+  preprocessing:
+    enabled: true
+    steps:
+      - name: "strip_whitespace"
+        enabled: true
+      - name: "normalize_unicode"
+        enabled: true
+      - name: "remove_control_chars"
+        enabled: true
+    max_input_length: 1000000
+
+  # Processing
+  processing:
+    enabled: true
+    batch_size: 32
+    max_concurrent: 4
+    retry_failed: true
+    max_retries: 2
+
+  # Postprocessing
+  postprocessing:
+    enabled: true
+    steps:
+      - name: "format_output"
+        enabled: true
+      - name: "validate_output"
+        enabled: true
+
+  # Validation
+  validation:
+    enabled: true
+    strict_mode: false
+    max_errors: 10
+    schemas_dir: "./schemas"
+
+  # Transform
+  transform:
+    enabled: true
+    default_operations:
+      - "strip"
+      - "normalize"
+    batch_size: 100
+
+  # Caching
+  cache:
+    backend: "memory"  # memory, redis, file
+    max_size: 10000
+    ttl_seconds: 3600
+    key_algorithm: "sha256"
+
+  # Builder
+  builder:
+    validate_on_build: true
+    optimize_execution_order: true
+    merge_similar_steps: false

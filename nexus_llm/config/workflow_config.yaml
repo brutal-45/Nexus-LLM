@@ -1,0 +1,54 @@
+# Nexus-LLM Workflow Configuration
+# Controls workflow execution, scheduling, and persistence settings
+
+workflow:
+  # Default execution settings
+  defaults:
+    max_retries: 3
+    retry_delay_seconds: 1.0
+    timeout_seconds: 3600
+    continue_on_error: false
+    parallelism: 4
+
+  # Scheduling
+  scheduling:
+    enabled: false
+    check_interval_seconds: 10
+    max_concurrent_workflows: 5
+    queue_backend: "memory"  # memory, redis, rabbitmq
+
+  # Persistence
+  persistence:
+    enabled: true
+    backend: "local"  # local, database
+    storage_dir: "./workflows"
+    auto_save: true
+    save_interval_seconds: 300
+    format: "json"  # json, yaml
+
+  # Validation
+  validation:
+    strict_mode: false
+    check_cycles: true
+    check_connectivity: true
+    check_functions: true
+    max_nodes: 100
+    max_edges: 200
+
+  # Templates
+  templates:
+    auto_register: true
+    search_paths:
+      - "./workflow_templates"
+    builtin_templates:
+      - "sequential"
+      - "fan_out_fan_in"
+      - "conditional_branch"
+      - "retry"
+
+  # Monitoring
+  monitoring:
+    enabled: true
+    track_execution_time: true
+    track_node_status: true
+    alert_on_failure: true

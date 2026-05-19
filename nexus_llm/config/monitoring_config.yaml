@@ -1,0 +1,408 @@
+# Nexus-LLM Monitoring Configuration
+# Controls dashboard, alerts, metrics collection, logging, and health checks.
+# Customize these settings for your deployment environment.
+
+monitoring:
+  enabled: true
+
+  # ─── Dashboard ─────────────────────────────────────────────────────
+  # Built-in web dashboard for real-time monitoring.
+  dashboard:
+    enabled: true
+    host: "0.0.0.0"
+    port: 8501
+    refresh_interval: 5             # Dashboard refresh interval in seconds
+    theme: "dark"                   # dark, light
+
+    # Dashboard sections to display
+    sections:
+      system_overview: true
+      gpu_metrics: true
+      model_performance: true
+      request_metrics: true
+      safety_metrics: true
+      rate_limit_metrics: true
+
+    # Custom widgets (extended monitoring)
+    custom_widgets: []
+    # Example:
+    #   - type: "chart"
+    #     title: "Custom Application Metrics"
+    #     metric: "my_app_latency_seconds"
+    #     chart_type: "line"
+    #     refresh_interval: 10
+
+    # Authentication for dashboard access
+    auth:
+      enabled: false               # Set true for production
+      username: "admin"
+      password_env: "DASHBOARD_PASSWORD"
+
+  # ─── Metrics ───────────────────────────────────────────────────────
+  # Metrics collection and export configuration.
+  metrics:
+    enabled: true
+    collect_interval: 10           # Default collection interval in seconds
+
+    # Prometheus-compatible metrics endpoint
+    prometheus:
+      enabled: true
+      endpoint: "/metrics"         # Prometheus scrape endpoint
+      port: 8000                   # Same port as API server
+      prefix: "nexus_"             # Metric name prefix
+
+    # Per-category collection intervals (override collect_interval)
+    intervals:
+      server: 10                   # Server health metrics
+      gpu: 5                       # GPU metrics (more frequent)
+      model: 10                    # Model performance metrics
+      safety: 30                   # Safety metrics (less frequent)
+      rate_limit: 10               # Rate limiting metrics
+      custom: 30                   # Custom application metrics
+
+    # Histogram bucket configuration
+    histograms:
+      request_duration:
+        buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0]
+      inference_duration:
+        buckets: [0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0]
+      time_to_first_token:
+        buckets: [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0]
+      token_generation_time:
+        buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1]
+
+    # Metric retention
+    retention:
+      enabled: true
+      raw_data_hours: 24           # Keep raw data for 24 hours
+      aggregated_days: 30          # Keep aggregated data for 30 days
+      aggregation_intervals:
+        - 60                       # 1-minute aggregates
+        - 300                      # 5-minute aggregates
+        - 3600                     # 1-hour aggregates
+
+    # Custom metrics registration
+    custom: []
+    # Example:
+    #   - name: "my_app_requests_total"
+    #     type: "counter"
+    #     description: "Total custom application requests"
+    #     labels: ["app", "method"]
+
+  # ─── Alerts ────────────────────────────────────────────────────────
+  # Alert rules and notification channels.
+  alerts:
+    enabled: true
+    evaluation_interval: 30        # How often to check alert conditions (seconds)
+    cooldown_period: 300           # Minimum time between repeated alerts (seconds)
+    resolve_timeout: 600           # Auto-resolve alerts after this period (seconds)
+
+    # Notification channels
+    channels:
+      # Slack integration
+      - name: "slack"
+        type: "slack"
+        webhook_url: ""            # Set via environment: SLACK_WEBHOOK_URL
+        min_severity: "warning"    # warning, critical
+        template: |
+          :rotating_light: *Nexus-LLM Alert*
+          *Alert:* {{ alert.name }}
+          *Severity:* {{ alert.severity }}
+          *Description:* {{ alert.description }}
+          *Value:* {{ alert.value }}
+          *Threshold:* {{ alert.threshold }}
+          *Time:* {{ alert.fired_at }}
+
+      # Email integration
+      - name: "email"
+        type: "email"
+        recipients: []
+        smtp_host: ""
+        smtp_port: 587
+        smtp_user: ""
+        smtp_password_env: "SMTP_PASSWORD"
+        smtp_tls: true
+        min_severity: "critical"
+        subject_template: "[Nexus-LLM {{ alert.severity }}] {{ alert.name }}"
+
+      # Generic webhook
+      - name: "webhook"
+        type: "webhook"
+        url: ""
+        method: "POST"
+        headers: {}
+        min_severity: "warning"
+
+      # Log-based alerts (always enabled)
+      - name: "log"
+        type: "log"
+        level: "warning"           # Log level for alert messages
+        min_severity: "warning"
+
+    # Alert rules
+    rules:
+      # ─── GPU Alerts ────────────────────────────────────────────
+      - name: "gpu_memory_high"
+        description: "GPU memory usage exceeds 90%"
+        severity: "warning"
+        condition: "nexus_gpu_memory_utilization_ratio > 0.9"
+        for: "2m"
+        channels: ["slack", "log"]
+        annotations:
+          summary: "GPU memory is critically high"
+          runbook: "Consider unloading models or enabling quantization"
+
+      - name: "gpu_memory_critical"
+        description: "GPU memory usage exceeds 95%"
+        severity: "critical"
+        condition: "nexus_gpu_memory_utilization_ratio > 0.95"
+        for: "30s"
+        channels: ["slack", "email", "log"]
+
+      - name: "gpu_temperature_high"
+        description: "GPU temperature exceeds 85°C"
+        severity: "warning"
+        condition: "nexus_gpu_temperature_celsius > 85"
+        for: "1m"
+        channels: ["slack", "log"]
+
+      - name: "gpu_temperature_critical"
+        description: "GPU temperature exceeds 95°C"
+        severity: "critical"
+        condition: "nexus_gpu_temperature_celsius > 95"
+        for: "30s"
+        channels: ["slack", "email", "log"]
+
+      # ─── Inference Alerts ──────────────────────────────────────
+      - name: "high_latency_p95"
+        description: "P95 inference latency exceeds 5 seconds"
+        severity: "warning"
+        condition: "histogram_quantile(0.95, nexus_inference_duration_seconds) > 5.0"
+        for: "5m"
+        channels: ["slack", "log"]
+
+      - name: "very_high_latency_p95"
+        description: "P95 inference latency exceeds 30 seconds"
+        severity: "critical"
+        condition: "histogram_quantile(0.95, nexus_inference_duration_seconds) > 30.0"
+        for: "2m"
+        channels: ["slack", "email", "log"]
+
+      - name: "low_throughput"
+        description: "Token generation throughput below 10 tokens/second"
+        severity: "warning"
+        condition: "nexus_tokens_per_second < 10"
+        for: "5m"
+        channels: ["slack", "log"]
+
+      - name: "high_ttft"
+        description: "Time to first token exceeds 2 seconds"
+        severity: "warning"
+        condition: "histogram_quantile(0.95, nexus_time_to_first_token_seconds) > 2.0"
+        for: "5m"
+        channels: ["slack", "log"]
+
+      # ─── Error Rate Alerts ─────────────────────────────────────
+      - name: "high_error_rate"
+        description: "Error rate exceeds 5%"
+        severity: "warning"
+        condition: "rate(nexus_requests_total{status=~\"5..\"}[5m]) / rate(nexus_requests_total[5m]) > 0.05"
+        for: "3m"
+        channels: ["slack", "log"]
+
+      - name: "critical_error_rate"
+        description: "Error rate exceeds 20%"
+        severity: "critical"
+        condition: "rate(nexus_requests_total{status=~\"5..\"}[5m]) / rate(nexus_requests_total[5m]) > 0.20"
+        for: "1m"
+        channels: ["slack", "email", "log"]
+
+      - name: "rate_limit_exceeded_spike"
+        description: "Unusual spike in rate limit errors"
+        severity: "warning"
+        condition: "rate(nexus_requests_total{status=\"429\"}[5m]) > 10"
+        for: "2m"
+        channels: ["slack", "log"]
+
+      # ─── Safety Alerts ─────────────────────────────────────────
+      - name: "safety_block_spike"
+        description: "Unusual spike in content filter blocks"
+        severity: "warning"
+        condition: "rate(nexus_safety_blocked_total[5m]) > 10"
+        for: "2m"
+        channels: ["slack", "log"]
+
+      - name: "high_toxicity_rate"
+        description: "More than 1% of outputs flagged for toxicity"
+        severity: "warning"
+        condition: "rate(nexus_safety_checks_total{result=\"toxic\"}[10m]) / rate(nexus_safety_checks_total[10m]) > 0.01"
+        for: "5m"
+        channels: ["slack", "log"]
+
+      # ─── Queue Alerts ──────────────────────────────────────────
+      - name: "queue_backlog"
+        description: "Request queue depth exceeds 100"
+        severity: "warning"
+        condition: "nexus_queue_depth > 100"
+        for: "2m"
+        channels: ["slack", "log"]
+
+      - name: "queue_critical"
+        description: "Request queue depth exceeds 500"
+        severity: "critical"
+        condition: "nexus_queue_depth > 500"
+        for: "1m"
+        channels: ["slack", "email", "log"]
+
+    # Alert silencing (maintenance windows, planned changes)
+    silences: []
+    # Example:
+    #   - rule: "high_latency_p95"
+    #     reason: "Planned maintenance"
+    #     until: "2024-01-20T18:00:00Z"
+    #     created_by: "admin"
+
+  # ─── Logging ───────────────────────────────────────────────────────
+  # Structured logging configuration.
+  logging:
+    level: "info"                  # debug, info, warning, error, critical
+    format: "json"                 # json, text
+    output: "stdout"               # stdout, file, both
+
+    # File logging settings
+    file:
+      path: "/var/log/nexus-llm/server.log"
+      max_size_mb: 100             # Maximum log file size
+      backup_count: 5              # Number of rotated log files to keep
+      rotation: "daily"            # daily, size-based
+
+    # Log filtering
+    filters:
+      # Don't log health check requests (reduces noise)
+      exclude_endpoints:
+        - "/v1/health"
+        - "/metrics"
+      # Don't log successful GET requests at INFO level
+      exclude_success_methods: []
+
+    # Request/response logging
+    request_logging:
+      enabled: true
+      log_request_body: false      # Don't log request bodies (may contain prompts)
+      log_response_body: false     # Don't log response bodies
+      log_headers: false           # Don't log headers (may contain API keys)
+      max_body_length: 1000        # Truncate logged bodies
+      include_request_id: true     # Include unique request ID
+
+    # External log aggregation
+    loki:
+      enabled: false
+      url: "http://loki:3100"
+      labels:
+        app: "nexus-llm"
+        env: "production"
+      flush_interval: 10
+
+    elasticsearch:
+      enabled: false
+      url: "http://elasticsearch:9200"
+      index: "nexus-llm-logs"
+      flush_interval: 5
+      max_batch_size: 100
+
+  # ─── Health Checks ─────────────────────────────────────────────────
+  # Health check endpoints and probe configuration.
+  health:
+    enabled: true
+    endpoint: "/v1/health"         # Liveness endpoint
+    ready_endpoint: "/v1/health/ready"  # Readiness endpoint
+    check_interval: 30             # Internal health check interval (seconds)
+
+    # Health check components
+    checks:
+      # Model availability
+      models:
+        enabled: true
+        require_loaded: true       # At least one model must be loaded for ready
+        check_inference: false     # Run a test inference (expensive)
+
+      # GPU health
+      gpu:
+        enabled: true
+        memory_threshold: 95       # Percent - mark unhealthy above this
+        temperature_threshold: 95  # Celsius - mark unhealthy above this
+        ecc_errors: true           # Check for GPU ECC errors
+
+      # Disk space
+      disk:
+        enabled: true
+        path: "/"
+        threshold: 95              # Percent - mark unhealthy above this
+        model_cache_path: ".cache/nexus-llm"
+
+      # Memory (system RAM)
+      memory:
+        enabled: true
+        threshold: 95              # Percent - mark unhealthy above this
+
+      # Database connectivity
+      database:
+        enabled: false             # Enable if using persistent storage
+        timeout: 5                 # Connection timeout (seconds)
+
+    # Kubernetes probe settings
+    kubernetes:
+      liveness:
+        initial_delay_seconds: 30
+        period_seconds: 10
+        timeout_seconds: 5
+        failure_threshold: 3
+      readiness:
+        initial_delay_seconds: 60
+        period_seconds: 5
+        timeout_seconds: 3
+        failure_threshold: 3
+
+  # ─── Tracing ───────────────────────────────────────────────────────
+  # Distributed tracing for request flow analysis.
+  tracing:
+    enabled: false
+    backend: "jaeger"              # jaeger, zipkin, otlp
+    sample_rate: 0.1               # Sample 10% of requests
+
+    jaeger:
+      agent_host: "localhost"
+      agent_port: 6831
+
+    zipkin:
+      url: "http://localhost:9411/api/v2/spans"
+
+    otlp:
+      endpoint: "localhost:4317"
+      insecure: true
+
+  # ─── Reporting ─────────────────────────────────────────────────────
+  # Periodic report generation.
+  reporting:
+    enabled: false
+    interval: "daily"              # daily, weekly, monthly
+
+    # Report contents
+    include:
+      request_summary: true
+      latency_percentiles: true
+      error_summary: true
+      gpu_utilization: true
+      safety_summary: true
+      top_models: true
+      resource_usage: true
+
+    # Report delivery
+    delivery:
+      channels: []
+      # Example:
+      #   - type: "email"
+      #     recipients: ["ops@example.com"]
+      #   - type: "file"
+      #     path: "/var/log/nexus-llm/reports/"
+      #     format: "html"

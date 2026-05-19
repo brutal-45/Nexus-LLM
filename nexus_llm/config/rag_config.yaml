@@ -1,0 +1,289 @@
+# Nexus-LLM RAG Configuration
+# Controls document chunking, embedding generation, vector storage, and retrieval.
+# Adjust these settings based on your document types, scale, and accuracy requirements.
+
+rag:
+  enabled: true
+
+  # ─── Chunking ──────────────────────────────────────────────────────
+  # Document splitting strategy and parameters.
+  chunking:
+    # Chunking strategy: fixed, sentence, paragraph, semantic, recursive
+    strategy: "recursive"
+
+    # Target chunk size in tokens
+    chunk_size: 512
+
+    # Overlap between consecutive chunks in tokens
+    chunk_overlap: 64
+
+    # Minimum chunk size (smaller chunks are merged with neighbors)
+    min_chunk_size: 50
+
+    # Maximum chunk size (larger chunks are split)
+    max_chunk_size: 1024
+
+    # Separator hierarchy for recursive chunking (in order of preference)
+    separators:
+      - "\n\n"                     # Paragraph break
+      - "\n"                       # Line break
+      - ". "                       # Sentence end
+      - " "                        # Word boundary
+      - ""                         # Character boundary (last resort)
+
+    # Sentence chunking settings
+    sentence:
+      min_sentences: 1
+      max_sentences: 10
+
+    # Semantic chunking settings (uses embeddings to find natural boundaries)
+    semantic:
+      model: "BAAI/bge-small-en-v1.5"
+      similarity_threshold: 0.75
+      buffer_size: 3               # Sentences to buffer before splitting
+
+    # Document-type-specific overrides
+    overrides:
+      pdf:
+        chunk_size: 512
+        chunk_overlap: 64
+        strategy: "recursive"
+      markdown:
+        chunk_size: 1024
+        chunk_overlap: 128
+        strategy: "recursive"
+        respect_headers: true       # Split at markdown headers
+      code:
+        chunk_size: 256
+        chunk_overlap: 32
+        strategy: "recursive"
+        respect_functions: true     # Split at function/class boundaries
+      txt:
+        chunk_size: 512
+        chunk_overlap: 64
+        strategy: "recursive"
+
+  # ─── Embeddings ────────────────────────────────────────────────────
+  # Embedding model configuration for document and query encoding.
+  embeddings:
+    # Default embedding model
+    model: "BAAI/bge-large-en-v1.5"
+
+    # Alternative models for different use cases
+    models:
+      default: "BAAI/bge-large-en-v1.5"
+      fast: "BAAI/bge-small-en-v1.5"
+      multilingual: "BAAI/bge-m3"
+      code: "jinaai/jina-embeddings-v2-base-code"
+
+    # Model settings
+    device: "auto"                 # auto, cpu, cuda
+    max_length: 512                # Maximum input length in tokens
+    batch_size: 32                 # Batch size for embedding generation
+    normalize: true                # L2 normalize embeddings
+    show_progress: true            # Show progress bar for bulk embedding
+
+    # Embedding cache
+    cache:
+      enabled: true
+      backend: "disk"              # memory, disk, redis
+      ttl: 86400                   # Cache TTL in seconds (24 hours)
+      max_size: 100000             # Maximum cached embeddings
+      disk_path: ".cache/nexus-llm/embeddings"
+
+  # ─── Vector Store ──────────────────────────────────────────────────
+  # Vector database configuration for storing and searching embeddings.
+  vector_store:
+    # Backend: faiss, chroma, qdrant, milvus, pinecone, weaviate
+    backend: "chroma"
+
+    # Persist directory (for local backends: faiss, chroma)
+    persist_directory: ".cache/nexus-llm/vector_store"
+
+    # Collection naming
+    default_collection: "default"
+    collection_prefix: "nexus_"
+
+    # Index settings
+    index:
+      # FAISS-specific
+      faiss:
+        index_type: "IVFFlat"       # Flat, IVFFlat, IVFPQ, HNSW
+        n_lists: 100                # Number of inverted lists (IVF)
+        n_probe: 10                 # Number of lists to search
+        metric: "ip"                # ip (inner product), l2
+        use_gpu: false              # Use GPU for FAISS search
+
+      # Chroma-specific
+      chroma:
+        distance_function: "cosine" # cosine, l2, ip
+        host: "localhost"
+        port: 8001
+
+      # Qdrant-specific
+      qdrant:
+        host: "localhost"
+        port: 6333
+        grpc_port: 6334
+        prefer_grpc: false
+        collection_config:
+          vector_size: 1024
+          distance: "Cosine"
+          hnsw_config:
+            m: 16
+            ef_construct: 100
+
+      # Milvus-specific
+      milvus:
+        host: "localhost"
+        port: 19530
+        collection_name: "nexus_rag"
+        index_type: "IVF_FLAT"
+        metric_type: "COSINE"
+        nlist: 1024
+
+      # Pinecone-specific
+      pinecone:
+        api_key_env: "PINECONE_API_KEY"
+        environment: "us-east-1-aws"
+        index_name: "nexus-rag"
+        dimension: 1024
+        metric: "cosine"
+
+      # Weaviate-specific
+      weaviate:
+        url: "http://localhost:8080"
+        api_key_env: "WEAVIATE_API_KEY"
+        class_name: "NexusDocument"
+
+    # Search settings
+    search:
+      top_k: 5                     # Default number of results
+      max_k: 50                    # Maximum allowed results
+      score_threshold: 0.5         # Minimum similarity score
+      include_metadata: true       # Include document metadata in results
+      include_content: true        # Include chunk content in results
+
+  # ─── Retrieval ─────────────────────────────────────────────────────
+  # Query processing, retrieval, and reranking configuration.
+  retrieval:
+    # Query processing
+    query:
+      # Query expansion: none, multi_query, hyde, step_back
+      expansion: "none"
+      multi_query:
+        model: "default"            # Model for generating query variations
+        num_variations: 3           # Number of query variations
+        temperature: 0.7
+      hyde:
+        model: "default"            # Model for generating hypothetical document
+        max_tokens: 256
+        temperature: 0.7
+      step_back:
+        model: "default"
+        max_tokens: 128
+        temperature: 0.3
+
+    # Retrieval strategy
+    strategy:
+      # Method: dense, sparse, hybrid
+      method: "dense"
+
+      # Hybrid search weights (when method is "hybrid")
+      hybrid:
+        dense_weight: 0.7           # Weight for dense (vector) search
+        sparse_weight: 0.3          # Weight for sparse (keyword) search
+        sparse_method: "bm25"       # bm25, tfidf
+
+      # Multi-collection search
+      multi_collection:
+        enabled: false
+        collections: []
+        merge_strategy: "rrf"       # rrf (Reciprocal Rank Fusion), weighted
+
+    # Reranking
+    reranking:
+      enabled: false
+      model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+      device: "auto"
+      top_k: 5                     # Number of results to rerank
+      batch_size: 16
+
+    # Context assembly
+    context:
+      # How to combine retrieved chunks into context
+      strategy: "concat"           # concat, template, map_reduce
+      max_tokens: 4096             # Maximum context length in tokens
+      max_chunks: 10               # Maximum number of chunks
+
+      # Template for context assembly (when strategy is "template")
+      template: |
+        Use the following pieces of context to answer the question.
+        If you don't know the answer, just say that you don't know.
+
+        Context:
+        {% for chunk in chunks %}
+        [{{ chunk.source }}]: {{ chunk.content }}
+        {% endfor %}
+
+        Question: {{ query }}
+        Answer:
+
+      # Source attribution
+      include_sources: true         # Include source citations in response
+      source_format: "[{source}]"   # Format for source citations
+
+    # Filtering
+    filters:
+      # Metadata filters for retrieval
+      enabled: true
+      # Default filters applied to all queries
+      defaults: {}
+      # Example:
+      #   defaults:
+      #     department: "engineering"
+      #     access_level: "public"
+
+  # ─── Document Processing ───────────────────────────────────────────
+  # Document ingestion and processing settings.
+  documents:
+    # Supported file types
+    supported_formats:
+      - "pdf"
+      - "txt"
+      - "md"
+      - "docx"
+      - "html"
+      - "csv"
+      - "json"
+      - "jsonl"
+
+    # Maximum file size for upload (bytes)
+    max_file_size: 52428800         # 50MB
+
+    # Maximum files per upload
+    max_files_per_upload: 20
+
+    # OCR settings (for scanned PDFs and images)
+    ocr:
+      enabled: false
+      engine: "tesseract"           # tesseract, easyocr
+      languages: ["eng"]
+
+    # Metadata extraction
+    metadata:
+      extract_title: true
+      extract_author: true
+      extract_date: true
+      extract_source: true
+      custom_fields: {}
+      # Example:
+      #   custom_fields:
+      #     department: "engineering"
+      #     classification: "internal"
+
+    # Deduplication
+    deduplication:
+      enabled: true
+      method: "hash"                # hash, embedding_similarity
+      similarity_threshold: 0.95    # For embedding-based dedup

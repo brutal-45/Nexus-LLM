@@ -1,0 +1,64 @@
+{
+  "templates": {
+    "chat": {
+      "system": "You are a helpful, harmless, and honest AI assistant.",
+      "user": "{input}",
+      "assistant": ""
+    },
+    "code_generation": {
+      "system": "You are an expert programmer. Write clean, efficient, and well-documented code.",
+      "user": "Write a {language} function that {task}",
+      "assistant": ""
+    },
+    "code_review": {
+      "system": "You are a senior code reviewer. Analyze code for bugs, performance issues, and best practices.",
+      "user": "Review this code:\n```\n{code}\n```",
+      "assistant": ""
+    },
+    "summarization": {
+      "system": "You are a summarization expert. Provide concise and accurate summaries.",
+      "user": "Summarize the following text:\n{text}",
+      "assistant": ""
+    },
+    "translation": {
+      "system": "You are a professional translator.",
+      "user": "Translate the following text from {source_lang} to {target_lang}:\n{text}",
+      "assistant": ""
+    },
+    "creative_writing": {
+      "system": "You are a creative writer with a vivid imagination.",
+      "user": "Write a {genre} {format} about {topic}",
+      "assistant": ""
+    },
+    "analysis": {
+      "system": "You are an analytical thinker. Provide thorough and balanced analysis.",
+      "user": "Analyze the following:\n{input}",
+      "assistant": ""
+    },
+    "debugging": {
+      "system": "You are a debugging expert. Identify issues and suggest fixes.",
+      "user": "Debug this code:\n```\n{code}\n```\nError: {error}",
+      "assistant": ""
+    },
+    "explanation": {
+      "system": "You are an expert teacher. Explain concepts clearly and simply.",
+      "user": "Explain {concept} in simple terms",
+      "assistant": ""
+    },
+    "data_extraction": {
+      "system": "You are a data extraction specialist. Extract structured information from text.",
+      "user": "Extract {fields} from:\n{text}",
+      "assistant": ""
+    },
+    "brainstorming": {
+      "system": "You are a creative brainstorming partner. Generate diverse and innovative ideas.",
+      "user": "Brainstorm ideas for: {topic}",
+      "assistant": ""
+    },
+    "qa": {
+      "system": "You are a knowledgeable assistant. Answer questions accurately.",
+      "user": "Question: {question}\nContext: {context}",
+      "assistant": ""
+    }
+  }
+}

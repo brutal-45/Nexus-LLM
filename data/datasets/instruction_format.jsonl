@@ -1,0 +1,10 @@
+{"instruction": "Write a function to find the maximum element in a list.", "input": "list = [3, 7, 2, 9, 1]", "output": "def find_max(lst):\n    return max(lst)\n\n# Result: 9"}
+{"instruction": "Explain the concept of recursion.", "input": "", "output": "Recursion is when a function calls itself to solve a problem by breaking it into smaller subproblems. It requires a base case to stop and a recursive case that moves toward the base case."}
+{"instruction": "What is the difference between a list and a tuple in Python?", "input": "", "output": "Lists are mutable (can be changed) and use square brackets []. Tuples are immutable (cannot be changed) and use parentheses (). Tuples are faster and can be used as dictionary keys."}
+{"instruction": "Convert the following sentence to passive voice.", "input": "The cat chased the mouse.", "output": "The mouse was chased by the cat."}
+{"instruction": "Calculate the area of a circle with radius 5.", "input": "", "output": "Area = π × r² = 3.14159 × 5² = 78.54 square units"}
+{"instruction": "What is object-oriented programming?", "input": "", "output": "OOP is a programming paradigm based on objects that contain data (attributes) and code (methods). Key principles: encapsulation, inheritance, polymorphism, and abstraction."}
+{"instruction": "Write a SQL query to find all users older than 25.", "input": "", "output": "SELECT * FROM users WHERE age > 25;"}
+{"instruction": "Explain REST API.", "input": "", "output": "REST (Representational State Transfer) is an architectural style for web services. It uses HTTP methods (GET, POST, PUT, DELETE) to operate on resources identified by URLs, with stateless communication."}
+{"instruction": "Sort these words alphabetically.", "input": "banana, apple, cherry, date", "output": "apple, banana, cherry, date"}
+{"instruction": "What is the time complexity of sorting algorithms?", "input": "", "output": "Common sorting complexities:\n- Bubble Sort: O(n²)\n- Merge Sort: O(n log n)\n- Quick Sort: O(n log n) average, O(n²) worst\n- Heap Sort: O(n log n)\n- Radix Sort: O(nk)"}

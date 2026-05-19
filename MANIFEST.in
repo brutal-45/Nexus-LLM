@@ -1,0 +1,58 @@
+# Manifest for Nexus-LLM package distribution
+
+# Include all Python source files
+recursive-include nexus_llm *.py
+recursive-include nexus_llm py.typed
+
+# Include configuration files
+include setup.py
+include setup.cfg
+include pyproject.toml
+include requirements.txt
+include requirements-dev.txt
+include requirements-gpu.txt
+include Makefile
+include Dockerfile
+include docker-compose.yml
+include tox.ini
+include MANIFEST.in
+include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+include .env.example
+
+# Include environment and git config
+include .gitignore
+
+# Exclude compiled files
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude __pycache__
+global-exclude *.so
+global-exclude *.egg-info
+global-exclude .eggs
+global-exclude dist
+global-exclude build
+
+# Exclude development files
+exclude .env
+exclude .mypy_cache
+exclude .pytest_cache
+exclude .ruff_cache
+exclude .coverage
+exclude htmlcov
+exclude .tox
+exclude .idea
+exclude .vscode
+
+# Exclude large data and model files
+recursive-exclude models *
+recursive-exclude data *
+recursive-exclude cache *
+recursive-exclude logs *
+recursive-exclude output *
+recursive-exclude checkpoints *
+
+# Exclude test artifacts
+recursive-exclude tests *.pyc
+recursive-exclude tests __pycache__

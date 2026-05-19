@@ -1,0 +1,10 @@
+{"instruction": "Give three tips for staying healthy.", "input": "", "output": "1. Eat a balanced diet rich in fruits, vegetables, and whole grains.\n2. Exercise regularly, aiming for at least 30 minutes of moderate activity most days.\n3. Get adequate sleep, typically 7-9 hours per night for adults."}
+{"instruction": "Translate the following English text to French.", "input": "The weather is beautiful today.", "output": "Le temps est beau aujourd'hui."}
+{"instruction": "Write a short poem about the ocean.", "input": "", "output": "Waves dance upon the shore,\nSalt kisses the morning air,\nThe ocean whispers ancient lore,\nOf depths beyond compare."}
+{"instruction": "Explain what a database index is.", "input": "", "output": "A database index is a data structure that improves the speed of data retrieval operations on a database table. It works like a book's index, allowing the database to find data without scanning every row."}
+{"instruction": "Sort the following list of numbers in ascending order.", "input": "5, 2, 8, 1, 9, 3", "output": "1, 2, 3, 5, 8, 9"}
+{"instruction": "Write a Python function to check if a string is a palindrome.", "input": "", "output": "def is_palindrome(s: str) -> bool:\n    s = s.lower().replace(' ', '')\n    return s == s[::-1]"}
+{"instruction": "What are the primary colors?", "input": "", "output": "The primary colors are red, blue, and yellow. In the RGB color model used for light, they are red, green, and blue."}
+{"instruction": "Convert 100 degrees Celsius to Fahrenheit.", "input": "", "output": "212 degrees Fahrenheit. Formula: F = (C × 9/5) + 32 = (100 × 9/5) + 32 = 212"}
+{"instruction": "Summarize the key features of Python.", "input": "", "output": "Python is a high-level, interpreted programming language known for its readable syntax, dynamic typing, extensive standard library, and broad ecosystem of third-party packages."}
+{"instruction": "Write a haiku about autumn.", "input": "", "output": "Leaves fall softly down\nGolden hues paint the landscape\nAutumn whispers change"}

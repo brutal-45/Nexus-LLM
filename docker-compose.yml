@@ -1,0 +1,131 @@
+version: "3.9"
+
+services:
+  nexus-llm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CUDA_VERSION: "12.1"
+        INSTALL_GPU: "false"
+    image: nexus-llm:latest
+    container_name: nexus-llm
+    restart: unless-stopped
+    ports:
+      - "${NEXUS_LLM_PORT:-8000}:8000"
+    volumes:
+      - model-data:/app/models
+      - training-data:/app/data
+      - cache-data:/app/cache
+      - log-data:/app/logs
+      - output-data:/app/output
+      - ./config:/app/config:ro
+    environment:
+      - NEXUS_LLM_HOST=0.0.0.0
+      - NEXUS_LLM_PORT=8000
+      - NEXUS_LLM_LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - NEXUS_LLM_DEFAULT_MODEL=${DEFAULT_MODEL:-gpt2-medium}
+      - MODEL_CACHE_DIR=/app/cache
+      - TRANSFORMERS_CACHE=/app/cache/transformers
+      - HF_HOME=/app/cache/huggingface
+      - TORCH_HOME=/app/cache/torch
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    networks:
+      - nexus-network
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+        reservations:
+          memory: 4G
+
+  nexus-llm-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CUDA_VERSION: "12.1"
+        INSTALL_GPU: "true"
+    image: nexus-llm:gpu
+    container_name: nexus-llm-gpu
+    restart: unless-stopped
+    profiles:
+      - gpu
+    ports:
+      - "${NEXUS_LLM_PORT:-8000}:8000"
+    volumes:
+      - model-data:/app/models
+      - training-data:/app/data
+      - cache-data:/app/cache
+      - log-data:/app/logs
+      - output-data:/app/output
+      - ./config:/app/config:ro
+    environment:
+      - NEXUS_LLM_HOST=0.0.0.0
+      - NEXUS_LLM_PORT=8000
+      - NEXUS_LLM_LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - NEXUS_LLM_DEFAULT_MODEL=${DEFAULT_MODEL:-gpt2-medium}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    networks:
+      - nexus-network
+    deploy:
+      resources:
+        limits:
+          memory: 32G
+        reservations:
+          memory: 8G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  model-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./models
+  training-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data
+  cache-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./cache
+  log-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./logs
+  output-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./output
+
+networks:
+  nexus-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
