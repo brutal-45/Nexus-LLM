@@ -26,7 +26,7 @@ Describe specific use cases for this feature:
 
 ## Alternatives Considered
 
-A clear description of any alternative solutions or features you've considered.
+A clear description of any alternative solutions or features you've considered. 
 
 ## Additional Context
 
