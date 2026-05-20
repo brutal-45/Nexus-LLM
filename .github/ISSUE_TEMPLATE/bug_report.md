@@ -30,7 +30,7 @@ A clear and concise description of what actually happened.
 Paste relevant error logs here. Include full stack traces if available.
 ```
 
-## Environment
+## Environment 
 
 - **Nexus-LLM Version**: [e.g., 1.0.0]
 - **Python Version**: [e.g., 3.11.5]
