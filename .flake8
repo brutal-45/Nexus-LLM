@@ -1,5 +1,5 @@
 [flake8]
-# Flake8 configuration for Nexus-LLM
+# Flake8 configuration for Nexus-LLM 
 
 # Maximum line length (aligned with Black)
 max-line-length = 88
