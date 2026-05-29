@@ -1,4 +1,4 @@
-# Core ML dependencies
+# Core ML dependencies 
 torch>=2.0.0
 transformers>=4.35.0
 accelerate>=0.24.0
