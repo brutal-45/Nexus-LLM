@@ -37,7 +37,7 @@ global-exclude build
 # Exclude development files
 exclude .env
 exclude .mypy_cache
-exclude .pytest_cache
+exclude .pytest_cache 
 exclude .ruff_cache
 exclude .coverage
 exclude htmlcov
