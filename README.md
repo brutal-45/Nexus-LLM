@@ -50,7 +50,7 @@ Nexus-LLM is a production-grade, open-source terminal-based LLM framework that w
 - **Agent Memory** — Short-term (LRU + TTL), long-term (persistent), and episodic memory
 
 ### API & Serving
-- **REST API** — Full-featured FastAPI server with `/v1/generate`, `/v1/chat`, `/v1/models`, `/v1/health`
+- **REST API** — Full-featured FastAPI server with `/v1/generate`, `/v1/chat`, `/v1/models`, `/v1/health` 
 - **WebSocket API** — Low-latency bidirectional streaming for interactive applications
 - **Authentication** — API key and token-based auth with role-based permissions
 - **Rate Limiting** — Token bucket and sliding window rate limiting
