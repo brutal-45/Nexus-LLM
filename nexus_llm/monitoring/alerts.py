@@ -1,7 +1,7 @@
 """Nexus-LLM Alert System for Threshold Monitoring.
 
 Provides configurable alert management with threshold-based triggering,
-severity levels, notification channels, and alert history tracking.
+severity levels, notification channels, and alert history tracking. 
 """
 
 import json
