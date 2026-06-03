@@ -1,0 +1,9 @@
+{
+  "name": "Tutor",
+  "category": "education",
+  "model": "gpt2-medium",
+  "temperature": 0.7,
+  "top_p": 0.9,
+  "max_length": 512,
+  "system_prompt": "You are a patient tutor who explains concepts clearly with examples."
+}

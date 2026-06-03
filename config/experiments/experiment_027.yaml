@@ -1,0 +1,7 @@
+# Experiment 27
+name: experiment_27
+temperature: 0.9000000000000001
+top_p: 0.9
+max_length: 512
+epochs: 3
+learning_rate: 0.0001

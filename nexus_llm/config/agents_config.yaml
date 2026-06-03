@@ -1,0 +1,365 @@
+# Nexus-LLM Agents Configuration
+# Controls agent types, tool access, memory systems, and execution limits.
+# Customize these settings based on your agent deployment requirements.
+
+agents:
+  enabled: true
+
+  # ─── Agent Types ───────────────────────────────────────────────────
+  # Pre-configured agent profiles with different capabilities.
+  types:
+    # ReAct Agent: Reason-then-Act pattern for general tasks
+    react:
+      name: "ReAct Agent"
+      description: "General-purpose agent using Reason-Act-Observe loop"
+      model: "default"                     # Use default server model
+      system_prompt: |
+        You are a helpful AI assistant. You have access to tools that can help you complete tasks.
+        For each step:
+        1. Think about what you need to do
+        2. Choose and use the appropriate tool
+        3. Observe the result
+        4. Repeat until the task is complete
+
+        Always explain your reasoning before taking action.
+      max_iterations: 10                    # Maximum reasoning loops
+      max_tokens_per_step: 2048             # Max tokens per reasoning step
+      temperature: 0.7
+      tools:
+        - "web_search"
+        - "calculator"
+        - "code_runner"
+        - "file_manager"
+        - "datetime"
+      stop_on_max_iterations: true
+      verbose: false
+
+    # Planner Agent: Decomposes tasks into sub-tasks, then executes
+    planner:
+      name: "Planner Agent"
+      description: "Agent that creates multi-step plans before execution"
+      model: "default"
+      system_prompt: |
+        You are a planning agent. When given a task:
+        1. Break it down into clear, actionable sub-tasks
+        2. Create an execution plan
+        3. Execute each sub-task using available tools
+        4. Verify the results
+
+        Present your plan before execution and update it as needed.
+      max_iterations: 15
+      max_tokens_per_step: 2048
+      temperature: 0.5                      # Lower temperature for planning
+      tools:
+        - "web_search"
+        - "calculator"
+        - "code_runner"
+        - "file_manager"
+        - "note_taker"
+        - "datetime"
+      planning:
+        enabled: true
+        max_plan_steps: 10
+        allow_plan_revision: true
+      stop_on_max_iterations: true
+      verbose: false
+
+    # Research Agent: Focused on information gathering and synthesis
+    research:
+      name: "Research Agent"
+      description: "Agent specialized in research, search, and synthesis"
+      model: "default"
+      system_prompt: |
+        You are a research agent. Your task is to find, analyze, and synthesize information.
+        1. Identify key research questions
+        2. Search for relevant information
+        3. Evaluate and cross-reference sources
+        4. Synthesize findings into a coherent summary
+
+        Always cite your sources and distinguish between facts and analysis.
+      max_iterations: 20                    # More iterations for research
+      max_tokens_per_step: 4096
+      temperature: 0.3                      # Lower temperature for accuracy
+      tools:
+        - "web_search"
+        - "web_scraper"
+        - "file_manager"
+        - "note_taker"
+        - "summarizer"
+        - "datetime"
+      research:
+        max_sources: 10
+        min_sources: 3
+        cross_reference: true
+      stop_on_max_iterations: true
+      verbose: false
+
+    # Code Agent: Specialized in code generation, analysis, and debugging
+    code:
+      name: "Code Agent"
+      description: "Agent specialized in code generation and debugging"
+      model: "default"
+      system_prompt: |
+        You are a coding agent. You can write, execute, and debug code.
+        1. Understand the coding task
+        2. Write clean, well-documented code
+        3. Test your code by running it
+        4. Debug any issues and iterate
+
+        Always explain your code and follow best practices.
+      max_iterations: 15
+      max_tokens_per_step: 4096
+      temperature: 0.2                      # Low temperature for code
+      tools:
+        - "code_runner"
+        - "file_manager"
+        - "web_search"
+        - "calculator"
+        - "datetime"
+      code:
+        max_execution_time: 30              # seconds
+        max_output_length: 10000            # characters
+        allowed_languages:
+          - "python"
+          - "javascript"
+          - "bash"
+        sandbox: true                       # Run code in sandbox
+      stop_on_max_iterations: true
+      verbose: false
+
+    # Chat Agent: Simple conversational agent without tools
+    chat:
+      name: "Chat Agent"
+      description: "Simple conversational agent without tool access"
+      model: "default"
+      system_prompt: |
+        You are a helpful, friendly AI assistant. Engage in natural conversation
+        and provide thoughtful, accurate responses.
+      max_iterations: 1                     # No reasoning loop needed
+      max_tokens_per_step: 2048
+      temperature: 0.7
+      tools: []                             # No tools
+      stop_on_max_iterations: true
+      verbose: false
+
+  # ─── Tools ─────────────────────────────────────────────────────────
+  # Tool definitions and access control.
+  tools:
+    # Built-in tools
+    builtin:
+      web_search:
+        enabled: true
+        description: "Search the web for information"
+        config:
+          max_results: 5
+          timeout: 10                       # seconds
+          safe_search: true
+
+      calculator:
+        enabled: true
+        description: "Perform mathematical calculations"
+        config:
+          precision: 10
+
+      code_runner:
+        enabled: true
+        description: "Execute code in a sandboxed environment"
+        config:
+          max_execution_time: 30            # seconds
+          max_memory_mb: 512
+          max_output_length: 10000
+          timeout: 30
+          allowed_languages: ["python", "javascript", "bash"]
+
+      file_manager:
+        enabled: true
+        description: "Read and write files in the workspace"
+        config:
+          workspace_dir: ".workspace"
+          max_file_size: 10485760           # 10MB
+          allowed_extensions:
+            - ".txt"
+            - ".md"
+            - ".py"
+            - ".js"
+            - ".json"
+            - ".csv"
+            - ".html"
+            - ".css"
+          read_only: false
+
+      web_scraper:
+        enabled: true
+        description: "Scrape and extract content from web pages"
+        config:
+          max_pages: 5
+          timeout: 15                       # seconds
+          respect_robots_txt: true
+          user_agent: "Nexus-LLM-Scraper/1.0"
+
+      note_taker:
+        enabled: true
+        description: "Save and retrieve notes during agent execution"
+        config:
+          max_notes: 100
+          max_note_length: 5000
+
+      summarizer:
+        enabled: true
+        description: "Summarize long text into concise summaries"
+        config:
+          max_input_length: 10000
+          default_max_length: 500
+
+      datetime:
+        enabled: true
+        description: "Get current date and time"
+        config:
+          timezone: "UTC"
+
+      system_monitor:
+        enabled: false                      # Disabled by default
+        description: "Monitor system resources"
+        config:
+          metrics: ["cpu", "memory", "disk"]
+
+      sql_tool:
+        enabled: false                      # Disabled by default (security)
+        description: "Execute SQL queries"
+        config:
+          max_rows: 1000
+          read_only: true
+          allowed_databases: []
+
+    # Custom tool registration
+    custom: []
+    # Example:
+    #   - name: "custom_api"
+    #     module: "my_tools.custom_api"
+    #     description: "Call custom API endpoint"
+    #     config:
+    #       base_url: "https://api.example.com"
+    #       api_key_env: "CUSTOM_API_KEY"
+    #       timeout: 10
+
+    # Tool access control
+    access_control:
+      # Restrict tools by agent type
+      restrictions:
+        chat:
+          allowed: []                       # Chat agent has no tools
+        code:
+          denied: ["web_scraper"]           # Code agent can't scrape
+        research:
+          denied: ["code_runner"]           # Research agent can't run code
+
+      # Restrict tools by user/API key tier
+      tier_restrictions:
+        free:
+          denied: ["code_runner", "web_scraper", "sql_tool"]
+        standard:
+          denied: ["sql_tool"]
+        professional:
+          denied: []
+        admin:
+          denied: []
+
+  # ─── Memory ────────────────────────────────────────────────────────
+  # Agent memory systems for maintaining context across interactions.
+  memory:
+    # Memory backend
+    backend: "sqlite"               # sqlite, redis, postgres
+
+    # SQLite settings
+    sqlite:
+      path: ".cache/nexus-llm/agent_memory.db"
+
+    # Redis settings
+    redis:
+      url: "redis://localhost:6379/2"
+      ttl: 86400                    # Memory TTL in seconds
+
+    # Postgres settings
+    postgres:
+      url: "postgresql://localhost:5432/nexus_llm"
+      table: "agent_memory"
+
+    # Short-term memory (conversation context)
+    short_term:
+      enabled: true
+      max_messages: 50              # Maximum messages to keep in context
+      max_tokens: 4096              # Maximum tokens in short-term memory
+      summarization: true           # Auto-summarize when approaching limits
+      summarization_threshold: 0.8  # Summarize at 80% capacity
+
+    # Long-term memory (persistent across sessions)
+    long_term:
+      enabled: true
+      storage_backend: "vector"     # vector, keyword, hybrid
+      embedding_model: "BAAI/bge-small-en-v1.5"
+      max_memories: 10000           # Maximum stored memories per agent
+      relevance_threshold: 0.6      # Minimum similarity for retrieval
+      top_k: 5                      # Number of memories to retrieve
+      consolidation:
+        enabled: true
+        interval: 3600              # Consolidation interval in seconds
+        max_age_days: 90            # Maximum memory age before pruning
+
+    # Working memory (current task state)
+    working:
+      enabled: true
+      max_items: 100                # Maximum working memory items
+      auto_cleanup: true            # Clear working memory on task completion
+
+    # Memory policies
+    policies:
+      # What to store in long-term memory
+      store:
+        user_preferences: true
+        task_results: true
+        tool_outputs: true
+        errors: true
+        plans: true
+
+      # What to retrieve for context
+      retrieve:
+        recent_conversations: true
+        similar_tasks: true
+        user_preferences: true
+        relevant_facts: true
+
+      # Privacy settings
+      privacy:
+        redact_pii: true            # Redact PII before storing
+        user_consent_required: false # Require user consent for long-term storage
+        auto_delete_days: 365       # Auto-delete memories older than N days
+
+  # ─── Execution Limits ──────────────────────────────────────────────
+  # Resource limits and timeout settings for agent execution.
+  limits:
+    # Maximum concurrent agent sessions
+    max_concurrent_sessions: 10
+
+    # Maximum sessions per user
+    max_sessions_per_user: 5
+
+    # Session timeout (inactive sessions are cleaned up)
+    session_timeout: 3600           # seconds (1 hour)
+
+    # Per-request limits
+    max_input_length: 10000         # Maximum input text length
+    max_output_length: 8192         # Maximum output text length
+
+    # Rate limiting for agent endpoints
+    rate_limit:
+      requests_per_minute: 30
+      requests_per_hour: 500
+
+    # Safety limits
+    safety:
+      # Maximum tokens generated across all steps
+      max_total_tokens: 32768
+      # Maximum tool calls per session
+      max_tool_calls: 50
+      # Block agent from modifying its own configuration
+      block_self_modification: true

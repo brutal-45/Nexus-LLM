@@ -1,0 +1,168 @@
+# Monitoring Configuration for Nexus-LLM
+# Settings for system monitoring, metrics, and alerting
+
+monitoring:
+  enabled: true
+  log_level: "INFO"
+
+  metrics:
+    enabled: true
+    backend: "prometheus"
+    port: 9090
+    collection_interval_seconds: 15
+    metrics_prefix: "nexus_llm"
+    tracked_metrics:
+      - name: "inference_requests_total"
+        type: "counter"
+        description: "Total number of inference requests"
+        labels: ["model", "endpoint", "status"]
+      - name: "inference_duration_seconds"
+        type: "histogram"
+        description: "Time spent on inference"
+        labels: ["model"]
+        buckets: [0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0]
+      - name: "tokens_generated_total"
+        type: "counter"
+        description: "Total tokens generated"
+        labels: ["model"]
+      - name: "tokens_input_total"
+        type: "counter"
+        description: "Total input tokens processed"
+        labels: ["model"]
+      - name: "model_memory_usage_bytes"
+        type: "gauge"
+        description: "GPU memory usage per model"
+        labels: ["model", "gpu_id"]
+      - name: "active_connections"
+        type: "gauge"
+        description: "Number of active connections"
+        labels: ["endpoint"]
+      - name: "queue_depth"
+        type: "gauge"
+        description: "Current request queue depth"
+        labels: ["priority"]
+      - name: "cache_hit_ratio"
+        type: "gauge"
+        description: "Cache hit ratio"
+        labels: ["cache_type"]
+
+  health_checks:
+    enabled: true
+    endpoint: "/health"
+    interval_seconds: 30
+    timeout_seconds: 10
+    checks:
+      - name: "model_loaded"
+        type: "model_availability"
+        critical: true
+      - name: "gpu_memory"
+        type: "resource_threshold"
+        threshold: 90
+        unit: "percent"
+        critical: true
+      - name: "disk_space"
+        type: "resource_threshold"
+        threshold: 85
+        unit: "percent"
+        critical: false
+      - name: "response_time"
+        type: "latency"
+        threshold_ms: 30000
+        critical: false
+      - name: "database_connection"
+        type: "service_connectivity"
+        critical: true
+      - name: "queue_overflow"
+        type: "queue_depth"
+        threshold: 1000
+        critical: true
+
+  alerting:
+    enabled: true
+    backend: "webhook"
+    channels:
+      - name: "critical_alerts"
+        type: "webhook"
+        url: "https://hooks.slack.com/services/CRITICAL_ALERTS"
+        severity_levels: ["critical"]
+        rate_limit_per_hour: 20
+      - name: "warning_alerts"
+        type: "webhook"
+        url: "https://hooks.slack.com/services/WARNING_ALERTS"
+        severity_levels: ["warning", "info"]
+        rate_limit_per_hour: 50
+      - name: "email_alerts"
+        type: "email"
+        recipients:
+          - "ops-team@nexus-llm.internal"
+        severity_levels: ["critical"]
+        rate_limit_per_hour: 10
+    rules:
+      - name: "high_latency"
+        condition: "inference_duration_seconds > 30"
+        severity: "warning"
+        cooldown_minutes: 15
+      - name: "model_down"
+        condition: "model_loaded == false"
+        severity: "critical"
+        cooldown_minutes: 5
+      - name: "memory_critical"
+        condition: "model_memory_usage_bytes > 0.9 * total_memory"
+        severity: "critical"
+        cooldown_minutes: 10
+      - name: "queue_backlog"
+        condition: "queue_depth > 500"
+        severity: "warning"
+        cooldown_minutes: 10
+      - name: "error_rate_high"
+        condition: "error_rate_5min > 0.1"
+        severity: "critical"
+        cooldown_minutes: 5
+
+  logging:
+    enabled: true
+    format: "json"
+    level: "INFO"
+    outputs:
+      - type: "console"
+        level: "INFO"
+      - type: "file"
+        path: "/var/log/nexus-llm/app.log"
+        level: "DEBUG"
+        rotation: "daily"
+        max_size_mb: 100
+        retention_days: 30
+      - type: "syslog"
+        host: "localhost"
+        port: 514
+        level: "WARNING"
+    request_logging:
+      enabled: true
+      log_body: false
+      log_headers: false
+      exclude_paths:
+        - "/health"
+        - "/metrics"
+      sensitive_fields:
+        - "api_key"
+        - "password"
+        - "token"
+
+  dashboard:
+    enabled: true
+    port: 8501
+    refresh_interval_seconds: 5
+    default_time_range: "1h"
+    panels:
+      - title: "Request Rate"
+        metric: "inference_requests_total"
+        type: "timeseries"
+      - title: "Latency Distribution"
+        metric: "inference_duration_seconds"
+        type: "histogram"
+      - title: "Memory Usage"
+        metric: "model_memory_usage_bytes"
+        type: "gauge"
+      - title: "Token Throughput"
+        metric: "tokens_generated_total"
+        type: "counter"

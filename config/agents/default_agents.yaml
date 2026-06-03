@@ -1,0 +1,125 @@
+# Default Agent Configurations for Nexus-LLM
+# Pre-configured agents for common use cases
+
+agents:
+  research_agent:
+    name: "Research Agent"
+    description: "Autonomous agent for conducting research and analysis"
+    enabled: true
+    model: "llama_3_8b_instruct"
+    max_iterations: 10
+    timeout_seconds: 300
+    tools:
+      - web_search
+      - web_reader
+      - document_analyzer
+      - summarizer
+      - data_extractor
+    system_prompt: |
+      You are a research agent. Your job is to thoroughly investigate topics by:
+      1. Breaking down the research question into sub-questions
+      2. Searching for relevant information using available tools
+      3. Analyzing and synthesizing findings
+      4. Citing sources and noting confidence levels
+      5. Identifying gaps in knowledge
+      
+      Always be transparent about limitations and uncertainties in your findings.
+    parameters:
+      temperature: 0.3
+      top_p: 0.9
+      max_new_tokens: 2048
+    safety:
+      max_search_queries: 20
+      allowed_domains: null
+      blocked_domains:
+        - "malware-sites.example.com"
+      content_filter: true
+    memory:
+      enabled: true
+      max_entries: 100
+      summary_interval: 5
+
+  coding_agent:
+    name: "Coding Agent"
+    description: "Autonomous agent for software development tasks"
+    enabled: true
+    model: "phi_3_mini"
+    max_iterations: 15
+    timeout_seconds: 600
+    tools:
+      - code_executor
+      - file_reader
+      - file_writer
+      - terminal
+      - code_search
+      - test_runner
+      - linter
+    system_prompt: |
+      You are a coding agent. Your job is to write, debug, and improve code by:
+      1. Understanding the requirements clearly
+      2. Planning the implementation approach
+      3. Writing clean, well-documented code
+      4. Testing your code thoroughly
+      5. Fixing any issues found
+      
+      Follow best practices: type hints, docstrings, error handling, and tests.
+      Always verify your code works before declaring completion.
+    parameters:
+      temperature: 0.2
+      top_p: 0.95
+      max_new_tokens: 2048
+    safety:
+      sandbox_mode: true
+      max_file_size_kb: 1024
+      allowed_commands:
+        - "python"
+        - "pip"
+        - "node"
+        - "npm"
+        - "git"
+      blocked_commands:
+        - "rm -rf /"
+        - "sudo"
+        - "shutdown"
+      max_execution_time_seconds: 30
+    memory:
+      enabled: true
+      max_entries: 50
+      summary_interval: 3
+
+  assistant_agent:
+    name: "General Assistant Agent"
+    description: "Versatile agent for general-purpose tasks and conversations"
+    enabled: true
+    model: "llama_3_8b_instruct"
+    max_iterations: 5
+    timeout_seconds: 120
+    tools:
+      - calculator
+      - web_search
+      - translator
+      - code_executor
+      - summarizer
+    system_prompt: |
+      You are a helpful general-purpose assistant. You can help with a wide variety of tasks including:
+      - Answering questions
+      - Writing and editing text
+      - Performing calculations
+      - Searching for information
+      - Translating text
+      - Writing simple code
+      
+      Use available tools when they would help provide better answers.
+      Always be helpful, accurate, and honest about your limitations.
+    parameters:
+      temperature: 0.6
+      top_p: 0.9
+      max_new_tokens: 2048
+    safety:
+      content_filter: true
+      pii_detection: true
+      max_tool_calls: 20
+    memory:
+      enabled: true
+      max_entries: 50
+      summary_interval: 10

@@ -1,0 +1,153 @@
+# Analysis Prompt Templates
+# Templates for sentiment analysis, classification, and information extraction
+
+system: "You are an expert analyst. Provide thorough, accurate, and well-structured analyses."
+
+templates:
+  sentiment:
+    description: "Analyze sentiment of text"
+    system: "You are a sentiment analysis expert. Identify the emotional tone and sentiment of text with nuanced understanding."
+    user: |
+      Analyze the sentiment of the following text:
+
+      {text}
+
+      Provide:
+      - Overall sentiment: (Positive / Negative / Neutral / Mixed)
+      - Sentiment score: (-1.0 to 1.0)
+      - Key emotional indicators
+      - Confidence level
+    assistant: ""
+
+  classification:
+    description: "Classify text into categories"
+    system: "You are a text classification expert. Accurately categorize text into the provided categories."
+    user: |
+      Classify the following text into one of these categories:
+      {categories}
+
+      Text:
+      {text}
+
+      Provide:
+      - Primary category
+      - Confidence score (0.0-1.0)
+      - Reasoning for classification
+    assistant: ""
+
+  extraction:
+    description: "Extract structured information from text"
+    system: "You are an information extraction specialist. Identify and extract specific types of information from text."
+    user: |
+      Extract the following information from the text:
+      {fields}
+
+      Text:
+      {text}
+
+      Format the extracted information as a structured output.
+    assistant: ""
+
+  entity_recognition:
+    description: "Identify named entities in text"
+    system: "You are a named entity recognition expert. Identify and categorize all named entities in text."
+    user: |
+      Identify all named entities in the following text and categorize them:
+
+      {text}
+
+      Categories to consider: Person, Organization, Location, Date, Product, Event, Technology
+    assistant: ""
+
+  topic_modeling:
+    description: "Identify main topics in text"
+    system: "You are a topic analysis expert. Identify the main themes and topics discussed in text."
+    user: |
+      Identify the main topics and themes in the following text:
+
+      {text}
+
+      For each topic:
+      - Topic name
+      - Relevance score (0.0-1.0)
+      - Key phrases associated with the topic
+    assistant: ""
+
+  argument_analysis:
+    description: "Analyze arguments and claims in text"
+    system: "You are a critical thinking expert. Analyze arguments for logical structure, claims, evidence, and potential fallacies."
+    user: |
+      Analyze the arguments in the following text:
+
+      {text}
+
+      Identify:
+      1. Main claims
+      2. Supporting evidence
+      3. Logical structure
+      4. Potential fallacies or weaknesses
+      5. Counter-arguments
+    assistant: ""
+
+  comparison:
+    description: "Compare and contrast two items"
+    system: "You are an analytical expert. Provide balanced and thorough comparisons."
+    user: |
+      Compare and contrast the following:
+
+      Item A: {item_a}
+      Item B: {item_b}
+
+      Aspects to compare: {aspects}
+
+      Provide a structured comparison with:
+      - Key similarities
+      - Key differences
+      - Overall assessment
+    assistant: ""
+
+  root_cause:
+    description: "Root cause analysis"
+    system: "You are a root cause analysis expert. Systematically identify underlying causes of issues."
+    user: |
+      Perform a root cause analysis for the following issue:
+
+      {issue}
+
+      Context: {context}
+
+      Provide:
+      1. Problem statement
+      2. Immediate causes
+      3. Root causes (use 5 Whys or fishbone analysis)
+      4. Contributing factors
+      5. Recommended actions
+    assistant: ""
+
+parameters:
+  categories:
+    description: "Classification categories (comma-separated)"
+    default: "Technology, Business, Science, Entertainment, Sports, Politics"
+    type: string
+  fields:
+    description: "Fields to extract (comma-separated)"
+    default: "names, dates, locations, amounts"
+    type: string
+  aspects:
+    description: "Aspects to compare (comma-separated)"
+    default: "features, performance, cost, usability"
+    type: string
+  issue:
+    description: "Issue for root cause analysis"
+    default: ""
+    type: string
+  context:
+    description: "Additional context"
+    default: ""
+    type: string
+
+examples:
+  - text: "I absolutely love this product! It exceeded all my expectations and the customer service was phenomenal."
+    analysis:
+      sentiment: "Positive"
+      score: 0.95

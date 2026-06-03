@@ -1,0 +1,129 @@
+# RAG Pipeline Configuration for Nexus-LLM
+# Settings for Retrieval-Augmented Generation system
+
+rag:
+  enabled: true
+  pipeline_type: "hybrid"  # simple, advanced, hybrid
+
+  document_store:
+    backend: "chromadb"  # chromadb, faiss, pinecone, weaviate, qdrant
+    persist_directory: "./data/rag/storage"
+    collection_name: "nexus_documents"
+    embedding_dimension: 768
+    
+  chunking:
+    strategy: "recursive"  # fixed, sentence, paragraph, recursive, semantic
+    chunk_size: 512
+    chunk_overlap: 64
+    min_chunk_size: 100
+    separators:
+      - "\n\n"
+      - "\n"
+      - ". "
+      - "! "
+      - "? "
+      - " "
+    respect_sentence_boundary: true
+    metadata_extraction:
+      - "page_number"
+      - "section_header"
+      - "document_title"
+      - "source_url"
+
+  embeddings:
+    model: "sentence-transformers/all-MiniLM-L6-v2"
+    dimension: 384
+    batch_size: 32
+    normalize: true
+    cache_embeddings: true
+    cache_directory: "./data/rag/embedding_cache"
+    alternative_models:
+      - name: "multilingual"
+        model: "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+        dimension: 384
+      - name: "large"
+        model: "sentence-transformers/all-mpnet-base-v2"
+        dimension: 768
+      - name: "code"
+        model: "microsoft/codebert-base"
+        dimension: 768
+
+  retrieval:
+    top_k: 5
+    score_threshold: 0.7
+    search_type: "hybrid"  # semantic, keyword, hybrid
+    hybrid_weights:
+      semantic: 0.7
+      keyword: 0.3
+    reranking:
+      enabled: true
+      model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+      top_k_after_rerank: 3
+    diversity:
+      enabled: true
+      mmr_lambda: 0.5
+    filters:
+      enabled: true
+      filterable_fields:
+        - "source"
+        - "document_type"
+        - "date_range"
+        - "language"
+
+  indexing:
+    auto_index: true
+    index_on_startup: false
+    supported_formats:
+      - "pdf"
+      - "txt"
+      - "md"
+      - "docx"
+      - "html"
+      - "csv"
+      - "json"
+      - "xlsx"
+    max_file_size_mb: 50
+    max_documents: 100000
+    index_update_mode: "incremental"  # full, incremental
+    index_schedule: "0 */6 * * *"  # Every 6 hours
+
+  generation:
+    max_context_tokens: 3072
+    context_template: |
+      Based on the following retrieved context, answer the user's question. 
+      If the context doesn't contain enough information, say so honestly.
+      
+      Context:
+      {context}
+      
+      Question: {question}
+      
+      Answer:
+    citation_style: "inline"  # inline, footnote, endnote
+    include_sources: true
+    fallback_to_general_knowledge: true
+    hallucination_detection: true
+
+  query_processing:
+    query_expansion: true
+    expansion_model: "local"
+    max_expanded_queries: 3
+    query_rewriting: true
+    hyde_enabled: false  # Hypothetical Document Embeddings
+    hyde_model: "local"
+
+  memory:
+    conversation_memory: true
+    max_history_turns: 5
+    relevance_decay_factor: 0.9
+    persist_conversations: true
+    storage_path: "./data/rag/conversation_memory"
+
+  performance:
+    query_cache:
+      enabled: true
+      max_size: 1000
+      ttl_seconds: 3600
+    async_retrieval: true
+    parallel_retrievers: 3
+    connection_pool_size: 10

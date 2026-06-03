@@ -1,0 +1,7 @@
+# Experiment 28
+name: experiment_28
+temperature: 0.3
+top_p: 0.9
+max_length: 640
+epochs: 4
+learning_rate: 0.0002

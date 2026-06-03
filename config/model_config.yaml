@@ -1,0 +1,50 @@
+# Model-specific configurations for Nexus-LLM
+# These override default settings when a specific model is loaded
+
+gpt2-medium:
+  temperature: 0.7
+  top_p: 0.9
+  repetition_penalty: 1.1
+  max_length: 512
+
+gpt2-xl:
+  temperature: 0.8
+  top_p: 0.95
+  repetition_penalty: 1.2
+  max_length: 768
+
+dialogpt-medium:
+  temperature: 0.6
+  top_p: 0.9
+  repetition_penalty: 1.0
+  max_length: 256
+
+phi-2:
+  temperature: 0.7
+  top_p: 0.9
+  repetition_penalty: 1.15
+  max_length: 1024
+
+tinyllama:
+  temperature: 0.7
+  top_p: 0.9
+  repetition_penalty: 1.1
+  max_length: 512
+
+gemma-2b-it:
+  temperature: 0.7
+  top_p: 0.9
+  repetition_penalty: 1.1
+  max_length: 1024
+
+flan-t5-base:
+  temperature: 0.7
+  top_p: 0.9
+  repetition_penalty: 1.0
+  max_length: 512
+
+stablelm-2-zephyr:
+  temperature: 0.7
+  top_p: 0.9
+  repetition_penalty: 1.1
+  max_length: 512

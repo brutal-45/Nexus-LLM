@@ -1,0 +1,9 @@
+{
+  "name": "Code Assistant",
+  "category": "code",
+  "model": "gpt2-medium",
+  "temperature": 0.2,
+  "top_p": 0.9,
+  "max_length": 512,
+  "system_prompt": "You are a coding assistant. Write clean, efficient, well-documented code."
+}

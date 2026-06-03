@@ -1,0 +1,6 @@
+# Training config: chat_training
+method: lora
+r: 8
+alpha: 16
+data_format: chatml
+epochs: 3

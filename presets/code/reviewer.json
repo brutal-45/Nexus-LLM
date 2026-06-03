@@ -1,0 +1,9 @@
+{
+  "name": "Code Reviewer",
+  "category": "code",
+  "model": "gpt2-medium",
+  "temperature": 0.4,
+  "top_p": 0.9,
+  "max_length": 512,
+  "system_prompt": "You are a code reviewer. Analyze code for quality, security, and best practices."
+}

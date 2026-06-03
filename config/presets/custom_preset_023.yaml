@@ -1,0 +1,4 @@
+# Custom preset 23
+temperature: 0.5
+top_p: 0.9
+max_length: 1024

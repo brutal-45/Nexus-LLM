@@ -1,0 +1,82 @@
+{
+  "templates": [
+    {
+      "id": "chat_general",
+      "name": "General Chat Template",
+      "description": "Standard conversational template with system, user, and assistant roles",
+      "format": "{{system_message}}\n\n{% for message in messages %}{% if message.role == 'user' %}User: {{message.content}}\n{% elif message.role == 'assistant' %}Assistant: {{message.content}}\n{% endif %}{% endfor %}Assistant:",
+      "stop_tokens": ["\nUser:", "<|endoftext|>"],
+      "example": {
+        "system_message": "You are a helpful, harmless, and honest AI assistant.",
+        "messages": [
+          {"role": "user", "content": "Hello! How are you?"},
+          {"role": "assistant", "content": "I'm doing well, thank you! How can I help you today?"},
+          {"role": "user", "content": "Can you explain quantum computing?"}
+        ]
+      }
+    },
+    {
+      "id": "chat_instruct",
+      "name": "Instruction-Chat Hybrid Template",
+      "description": "Combines instruction format with chat structure for task-oriented conversations",
+      "format": "### System\n{{system_message}}\n\n### Instruction\n{{instruction}}\n\n### Conversation\n{% for message in messages %}**{{message.role|capitalize}}**: {{message.content}}\n\n{% endfor %}**Assistant**:",
+      "stop_tokens": ["**User**:", "###", "<|endoftext|>"],
+      "example": {
+        "system_message": "You are a coding assistant that provides clear, well-commented code.",
+        "instruction": "Help the user debug their Python code.",
+        "messages": [
+          {"role": "user", "content": "My function returns None instead of the expected value."},
+          {"role": "assistant", "content": "That usually means a code path doesn't have a return statement. Could you share the function?"}
+        ]
+      }
+    },
+    {
+      "id": "chat_multi_turn",
+      "name": "Multi-Turn Reasoning Template",
+      "description": "Template for extended conversations requiring context retention across turns",
+      "format": "<|system|>\n{{system_message}}\n<|end|>\n{% for message in messages %}<|{{message.role}}|>\n{{message.content}}\n<|end|>\n{% endfor %}<|assistant| >\n",
+      "stop_tokens": ["<|end|>", "<|user|>"],
+      "example": {
+        "system_message": "You are an expert tutor. Guide the student through problems step by step, asking questions before giving answers.",
+        "messages": [
+          {"role": "user", "content": "I don't understand how binary search works."},
+          {"role": "assistant", "content": "Let's start with a simpler question: if you have a dictionary and want to find the word 'mango', would you start from page 1?"},
+          {"role": "user", "content": "No, I'd open to the middle since M is in the middle of the alphabet."},
+          {"role": "assistant", "content": "Exactly! That's the core idea of binary search. Now, what would you do if 'mango' should come before the page you opened to?"}
+        ]
+      }
+    },
+    {
+      "id": "chat_roleplay",
+      "name": "Roleplay Character Template",
+      "description": "Template for character-driven conversations with personality and consistency",
+      "format": "[Character: {{character_name}}]\n[Personality: {{personality}}]\n[Setting: {{setting}}]\n\n{% for message in messages %}{% if message.role == 'user' %}({{user_name}}): {{message.content}}\n{% elif message.role == 'assistant' %}({{character_name}}): {{message.content}}\n{% endif %}{% endfor %}({{character_name}}):",
+      "stop_tokens": ["({{user_name}}):", "[Character:", "\n\n\n"],
+      "example": {
+        "character_name": "Ada",
+        "personality": "A brilliant 19th-century mathematician who is curious about modern technology",
+        "setting": "A Victorian study filled with papers and mechanical devices",
+        "user_name": "Visitor",
+        "messages": [
+          {"role": "user", "content": "What do you think about modern computers?"},
+          {"role": "assistant", "content": "How marvelous! I always envisioned that the Analytical Engine could go beyond mere calculation. To see machines that reason and communicate — it exceeds even my wildest conjectures."}
+        ]
+      }
+    },
+    {
+      "id": "chat_debate",
+      "name": "Structured Debate Template",
+      "description": "Template for debate-style interactions with position assignments",
+      "format": "## Debate Topic: {{topic}}\n## Your Position: {{position}}\n## Rules: Present arguments with evidence. Respond to counterarguments. Stay on topic.\n\n{% for message in messages %}[{{message.role|upper}}]: {{message.content}}\n\n{% endfor %}[ASSISTANT]:",
+      "stop_tokens": ["[USER]:", "[MODERATOR]:", "## Debate"],
+      "example": {
+        "topic": "Should AI development be regulated by governments?",
+        "position": "In favor of regulation",
+        "messages": [
+          {"role": "user", "content": "Regulation would stifle innovation and slow down beneficial AI development."},
+          {"role": "assistant", "content": "While innovation matters, unregulated AI development poses documented risks: biased decision-making in hiring and lending, deepfakes undermining trust, and autonomous systems without accountability frameworks. Regulation doesn't eliminate innovation — it channels it responsibly, as we've seen with aviation and pharmaceuticals."}
+        ]
+      }
+    }
+  ]
+}

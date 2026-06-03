@@ -1,0 +1,5 @@
+# Training config: dpo_alignment
+method: dpo
+beta: 0.1
+epochs: 2
+lr: 5e-05

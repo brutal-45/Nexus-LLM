@@ -1,0 +1,76 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexus-llm"
+version = "2.0.0"
+description = "Nexus-LLM - A Claude-like terminal LLM chat application with its own backend"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [{name = "Nexus-LLM Team"}]
+keywords = ["llm", "chat", "terminal", "ai", "gpt", "local-inference"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "torch>=2.0.0",
+    "transformers>=4.35.0",
+    "accelerate>=0.24.0",
+    "datasets>=2.14.0",
+    "peft>=0.6.0",
+    "bitsandbytes>=0.41.0",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "websockets>=12.0",
+    "rich>=13.7.0",
+    "prompt_toolkit>=3.0.43",
+    "pyyaml>=6.0.1",
+    "python-dotenv>=1.0.0",
+    "click>=8.1.7",
+    "markdown-it-py>=3.0.0",
+    "pygments>=2.17.0",
+    "psutil>=5.9.0",
+    "pydantic>=2.0.0",
+    "huggingface_hub>=0.19.0",
+    "aiohttp>=3.9.0",
+    "aiofiles>=23.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-cov>=4.0", "black>=23.0", "ruff>=0.1.0", "mypy>=1.0"]
+gpu = ["bitsandbytes>=0.41.0"]
+
+[project.scripts]
+nexus-llm = "nexus_llm.cli:cli"
+
+[project.urls]
+Repository = "https://github.com/brutal-45/Nexus-LLM"
+
+[tool.setuptools.packages.find]
+include = ["nexus_llm*"]
+
+[tool.setuptools.package-data]
+nexus_llm = ["py.typed"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

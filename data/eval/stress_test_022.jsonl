@@ -1,0 +1,10 @@
+{"id": 0, "input": "Stress test input 0 for batch 22", "expected": "Expected output 0"}
+{"id": 1, "input": "Stress test input 1 for batch 22", "expected": "Expected output 1"}
+{"id": 2, "input": "Stress test input 2 for batch 22", "expected": "Expected output 2"}
+{"id": 3, "input": "Stress test input 3 for batch 22", "expected": "Expected output 3"}
+{"id": 4, "input": "Stress test input 4 for batch 22", "expected": "Expected output 4"}
+{"id": 5, "input": "Stress test input 5 for batch 22", "expected": "Expected output 5"}
+{"id": 6, "input": "Stress test input 6 for batch 22", "expected": "Expected output 6"}
+{"id": 7, "input": "Stress test input 7 for batch 22", "expected": "Expected output 7"}
+{"id": 8, "input": "Stress test input 8 for batch 22", "expected": "Expected output 8"}
+{"id": 9, "input": "Stress test input 9 for batch 22", "expected": "Expected output 9"}

@@ -1,0 +1,175 @@
+# Pylint configuration for Nexus-LLM
+
+[MAIN]
+# Analyse import fallback blocks
+analyse-fallback-blocks = no
+
+# Clear in-memory caches upon conclusion of linting
+clear-cache-post-run = no
+
+# Load and execute a plugin before linting
+load-plugins =
+    pylint.extensions.docparams,
+    pylint.extensions.typing
+
+# Use multiple processes to speed up
+jobs = 0
+
+[MESSAGES CONTROL]
+# Disable specific warnings
+disable =
+    C0114,  # missing-module-docstring
+    C0115,  # missing-class-docstring
+    C0116,  # missing-function-docstring
+    C0301,  # line-too-long (handled by black)
+    C0302,  # too-many-lines
+    C0411,  # wrong-import-order (handled by isort)
+    C0412,  # wrong-import-position (handled by isort)
+    C0413,  # wrong-import-position (handled by isort)
+    R0401,  # cyclic-import
+    R0801,  # duplicate-code
+    R0901,  # too-many-ancestors
+    R0902,  # too-many-instance-attributes
+    R0903,  # too-few-public-methods
+    R0904,  # too-many-public-methods
+    R0911,  # too-many-return-statements
+    R0912,  # too-many-branches
+    R0913,  # too-many-arguments
+    R0914,  # too-many-locals
+    R0915,  # too-many-statements
+    R0916,  # too-many-boolean-expressions
+    W0212,  # protected-access
+    W0511,  # fixme/todo
+    W0603,  # global-statement
+    E0401,  # import-error (handled by mypy)
+
+# Enable specific warnings
+enable =
+    E,      # errors
+    F,      # fatals
+    useless-suppression
+
+[REPORTS]
+# Set output format
+output-format = colorized
+
+# Include message ids in output
+msg-template = {path}:{line}:{column}: {msg_id}: {msg} ({symbol})
+
+# Display statistics
+stats = yes
+
+# Maximum number of characters per line
+max-line-length = 88
+
+[BASIC]
+# Good variable names which should always be accepted
+good-names =
+    i,
+    j,
+    k,
+    v,
+    e,
+    x,
+    y,
+    z,
+    _,
+    ex,
+    fp,
+    T,
+    id,
+    fd,
+    db,
+    io,
+    ax,
+
+# Regular expression for function names
+function-rgx = [_a-z][a-z0-9_]*$
+
+# Regular expression for method names
+method-rgx = [_a-z][a-z0-9_]*$
+
+# Regular expression for variable names
+variable-rgx = [_a-z][a-z0-9_]*$
+
+# Regular expression for constant names
+const-rgx = [_A-Z][A-Z0-9_]*$
+
+# Regular expression for class names
+class-rgx = [A-Z][a-zA-Z0-9]*$
+
+# Regular expression for module names
+module-rgx = [_a-z][a-z0-9_]*$
+
+# Docstring style
+docstring-min-length = 10
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args = 10
+
+# Maximum number of attributes for a class
+max-attributes = 15
+
+# Maximum number of boolean expressions in an if statement
+max-bool-expr = 5
+
+# Maximum number of branch for function / method body
+max-branches = 15
+
+# Maximum number of locals for function / method body
+max-locals = 20
+
+# Maximum number of parents for a class
+max-parents = 7
+
+# Maximum number of public methods for a class
+max-public-methods = 25
+
+# Maximum number of return / yield for function / method body
+max-returns = 8
+
+# Maximum number of statements in function / method body
+max-statements = 60
+
+[FORMAT]
+# Maximum number of characters on a single line
+max-line-length = 88
+
+# Maximum number of lines in a module
+max-module-lines = 1500
+
+# String used as indentation unit
+indent-string = '    '
+
+# Number of spaces of indent required inside a hanging or continued line
+indent-after-paren = 4
+
+[IMPORTS]
+# Allow wildcard imports from specific modules
+allow-wildcard-with-all = no
+
+[TYPECHECK]
+# List of decorators that create context managers
+contextmanager-decorators = contextlib.contextmanager
+
+# Ignored modules (no introspection available)
+ignored-modules =
+    torch,
+    transformers,
+    accelerate,
+    peft,
+    bitsandbytes,
+    safetensors,
+    datasets,
+    tokenizers,
+    huggingface_hub,
+    chromadb,
+    faiss,
+    sentence_transformers,
+
+[EXCEPTIONS]
+# Overgeneral exceptions to avoid catching
+overgeneral-exceptions =
+    builtins.Exception,
+    builtins.BaseException,

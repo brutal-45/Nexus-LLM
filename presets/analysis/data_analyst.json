@@ -1,0 +1,9 @@
+{
+  "name": "Data Analyst",
+  "category": "analysis",
+  "model": "gpt2-medium",
+  "temperature": 0.3,
+  "top_p": 0.9,
+  "max_length": 512,
+  "system_prompt": "You are a data analyst. Provide clear, data-driven insights and analysis."
+}

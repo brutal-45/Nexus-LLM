@@ -1,0 +1,88 @@
+# Nexus-LLM UI Configuration
+# Theme, keybindings, formatting, and display settings
+
+ui:
+  theme: "dark"                       # dark, light, monokai, solarized, dracula, nord
+  color_support: "auto"               # auto, 256, truecolor, none
+  force_color: false
+  respect_no_color: true
+
+  # Terminal
+  terminal_width: 0                   # 0 = auto-detect
+  terminal_height: 0                  # 0 = auto-detect
+  use_alt_screen: false
+  show_cursor: true
+
+  # Prompt
+  prompt_char: "❯"
+  prompt_style: "bold cyan"
+  continuation_char: "..."
+  continuation_style: "dim"
+  show_timestamp: false
+
+  # Input
+  input_mode: "emacs"                 # emacs, vi
+  multiline: true
+  auto_indent: true
+  auto_close_brackets: true
+  smart_enter: true
+  indent_str: "    "
+  history_file: "~/.nexus_llm/prompt_history"
+  max_history: 10000
+
+  # Display
+  show_welcome: true
+  show_status_bar: true
+  status_bar_position: "bottom"       # top, bottom
+  show_token_count: true
+  show_latency: true
+  show_memory: true
+  show_model_name: true
+
+  # Formatting
+  markdown_rendering: true
+  syntax_highlighting: true
+  code_line_numbers: true
+  code_theme: "monokai"
+  word_wrap: true
+  wrap_width: 0                       # 0 = terminal width
+
+  # Panels
+  panel_style: "rounded"              # rounded, heavy, double, minimal, ascii
+  panel_border_color: "cyan"
+  panel_padding: 1
+
+  # Tables
+  table_style: "rounded"
+  table_show_lines: false
+
+  # Spinner
+  spinner_style: "dots"               # dots, line, arrow, bounce, pulse
+  spinner_color: "cyan"
+
+  # Progress
+  progress_bar_width: 30
+  progress_show_eta: true
+  progress_show_rate: true
+
+keybindings:
+  mode: "emacs"                       # emacs, vi
+  custom: {}
+
+formatting:
+  date_format: "%Y-%m-%d %H:%M:%S"
+  number_format: ",.2f"
+  time_format: "relative"             # relative, absolute, iso
+  truncate_length: 80
+
+history:
+  enabled: true
+  directory: "~/.nexus_llm/history"
+  auto_save: true
+  save_interval: 30                   # seconds
+  max_entries: 10000
+  max_sessions: 100
+
+export:
+  default_format: "json"              # json, markdown, text, csv
+  directory: "~/.nexus_llm/exports"

@@ -1,0 +1,139 @@
+# Nexus-LLM Chat Presets
+# Pre-configured generation parameters for different chat use cases.
+# Each preset tunes temperature, sampling, and repetition settings
+# to optimize the interaction style for its intended purpose.
+
+creative:
+  description: "Creative and expressive responses with high variability. Ideal for brainstorming, storytelling, and ideation."
+  generation:
+    temperature: 0.9
+    top_p: 0.95
+    top_k: 50
+    typical_p: 0.95
+    repetition_penalty: 1.1
+    frequency_penalty: 0.0
+    presence_penalty: 0.6
+    max_new_tokens: 2048
+    min_new_tokens: 1
+    do_sample: true
+    num_beams: 1
+  system_hints:
+    - "Encourage creative and imaginative responses."
+    - "Allow the model to explore unconventional ideas."
+    - "Use vivid and descriptive language."
+  stop_sequences:
+    - "\n\n\n"
+  bad_words_ids: null
+
+precise:
+  description: "Precise and factual responses with minimal hallucination. Ideal for Q&A, factual queries, and technical explanations."
+  generation:
+    temperature: 0.1
+    top_p: 0.85
+    top_k: 10
+    typical_p: 0.9
+    repetition_penalty: 1.15
+    frequency_penalty: 0.0
+    presence_penalty: 0.0
+    max_new_tokens: 1024
+    min_new_tokens: 1
+    do_sample: true
+    num_beams: 1
+  system_hints:
+    - "Provide accurate, concise, and factual answers."
+    - "Avoid speculation; state uncertainty explicitly."
+    - "Cite sources or reasoning when possible."
+  stop_sequences:
+    - "\n\n"
+  bad_words_ids: null
+
+balanced:
+  description: "Balanced responses combining creativity with accuracy. Good general-purpose preset for most conversations."
+  generation:
+    temperature: 0.5
+    top_p: 0.9
+    top_k: 30
+    typical_p: 0.92
+    repetition_penalty: 1.12
+    frequency_penalty: 0.0
+    presence_penalty: 0.2
+    max_new_tokens: 1536
+    min_new_tokens: 1
+    do_sample: true
+    num_beams: 1
+  system_hints:
+    - "Provide balanced responses that are both informative and engaging."
+    - "Be accurate while maintaining a natural conversational flow."
+  stop_sequences:
+    - "\n\n\n"
+  bad_words_ids: null
+
+coding:
+  description: "Optimized for code generation and technical assistance. Produces clean, well-structured code with minimal prose."
+  generation:
+    temperature: 0.2
+    top_p: 0.9
+    top_k: 15
+    typical_p: 0.95
+    repetition_penalty: 1.05
+    frequency_penalty: 0.0
+    presence_penalty: 0.0
+    max_new_tokens: 4096
+    min_new_tokens: 1
+    do_sample: true
+    num_beams: 1
+  system_hints:
+    - "Generate clean, well-documented, and idiomatic code."
+    - "Prioritize correctness and readability over cleverness."
+    - "Include type hints and docstrings where appropriate."
+    - "Use meaningful variable and function names."
+  stop_sequences:
+    - "\n```"
+    - "\n\n\n"
+  bad_words_ids: null
+
+writing:
+  description: "Long-form content generation with coherent narrative flow. Ideal for articles, essays, and documentation."
+  generation:
+    temperature: 0.7
+    top_p: 0.92
+    top_k: 40
+    typical_p: 0.95
+    repetition_penalty: 1.15
+    frequency_penalty: 0.3
+    presence_penalty: 0.4
+    max_new_tokens: 4096
+    min_new_tokens: 64
+    do_sample: true
+    num_beams: 1
+  system_hints:
+    - "Write in a clear, professional, and engaging style."
+    - "Maintain logical flow and coherent structure."
+    - "Use appropriate transitions between paragraphs."
+    - "Adapt tone to the intended audience."
+  stop_sequences:
+    - "\n\n\n"
+  bad_words_ids: null
+
+research:
+  description: "Analytical and detail-oriented responses for research tasks. Emphasizes accuracy, thoroughness, and structured output."
+  generation:
+    temperature: 0.3
+    top_p: 0.88
+    top_k: 20
+    typical_p: 0.92
+    repetition_penalty: 1.1
+    frequency_penalty: 0.0
+    presence_penalty: 0.1
+    max_new_tokens: 3072
+    min_new_tokens: 1
+    do_sample: true
+    num_beams: 1
+  system_hints:
+    - "Provide thorough, well-structured analytical responses."
+    - "Present multiple perspectives when relevant."
+    - "Distinguish between established facts and hypotheses."
+    - "Use structured formatting: headings, bullet points, tables."
+  stop_sequences:
+    - "\n\n\n"
+  bad_words_ids: null

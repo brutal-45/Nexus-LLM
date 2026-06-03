@@ -1,0 +1,10 @@
+{"prompt_id": "speed_001", "prompt": "What is the capital of France?", "expected_tokens": 5, "category": "trivial_factual"}
+{"prompt_id": "speed_002", "prompt": "List the first 10 prime numbers.", "expected_tokens": 20, "category": "simple_list"}
+{"prompt_id": "speed_003", "prompt": "Explain what an API is in one sentence.", "expected_tokens": 30, "category": "brief_explanation"}
+{"prompt_id": "speed_004", "prompt": "Write a haiku about programming.", "expected_tokens": 20, "category": "creative_short"}
+{"prompt_id": "speed_005", "prompt": "Convert 100 degrees Celsius to Fahrenheit.", "expected_tokens": 15, "category": "simple_calculation"}
+{"prompt_id": "speed_006", "prompt": "Name three popular programming languages and their primary use cases.", "expected_tokens": 50, "category": "moderate_list"}
+{"prompt_id": "speed_007", "prompt": "What is the difference between a stack and a queue? Answer briefly.", "expected_tokens": 50, "category": "brief_comparison"}
+{"prompt_id": "speed_008", "prompt": "Write a Python one-liner that reverses a string.", "expected_tokens": 15, "category": "code_snippet"}
+{"prompt_id": "speed_009", "prompt": "Define machine learning in under 50 words.", "expected_tokens": 40, "category": "constrained_definition"}
+{"prompt_id": "speed_010", "prompt": "What does HTTP status code 404 mean?", "expected_tokens": 15, "category": "trivial_factual"}

@@ -1,0 +1,20 @@
+# PyTorch with CUDA support
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch>=2.0.0+cu121
+torchvision>=0.15.0+cu121
+torchaudio>=2.0.0+cu121
+
+# Attention optimizations
+xformers>=0.0.22
+flash-attn>=2.3.0
+
+# Quantization support
+bitsandbytes>=0.41.0
+auto-gptq>=0.6.0
+optimum>=1.14.0
+
+# Distributed training
+deepspeed>=0.12.0
+
+# Triton for CUDA kernels
+triton>=2.1.0

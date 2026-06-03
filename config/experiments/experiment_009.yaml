@@ -1,0 +1,7 @@
+# Experiment 9
+name: experiment_9
+temperature: 0.5
+top_p: 0.9
+max_length: 256
+epochs: 5
+learning_rate: 0.0001

@@ -1,0 +1,99 @@
+{
+  "templates": [
+    {
+      "id": "data_analysis",
+      "name": "Data Analysis Template",
+      "description": "Template for structured data analysis and insights generation",
+      "format": "## Analysis Task: {{task}}\n## Data Context: {{context}}\n## Key Questions:\n{% for question in questions %}{{loop.index}}. {{question}}\n{% endfor %}\n## Analysis:",
+      "stop_tokens": ["## ", "---"],
+      "example": {
+        "task": "Analyze monthly sales trends and identify growth drivers",
+        "context": "E-commerce company with 2 years of monthly sales data across 5 product categories",
+        "questions": [
+          "What are the overall sales trends?",
+          "Which categories are growing fastest?",
+          "Are there seasonal patterns?",
+          "What recommendations would you make?"
+        ]
+      }
+    },
+    {
+      "id": "root_cause_analysis",
+      "name": "Root Cause Analysis Template",
+      "description": "Template for systematic investigation of problems and their causes",
+      "format": "## Problem Statement: {{problem}}\n## Observed Symptoms:\n{% for symptom in symptoms %}- {{symptom}}\n{% endfor %}\n## Analysis Framework: {{framework}}\n## Analysis:",
+      "stop_tokens": ["## ", "---"],
+      "example": {
+        "problem": "API response times increased by 300% over the past week",
+        "symptoms": [
+          "P95 latency rose from 200ms to 800ms",
+          "Error rate increased from 0.1% to 2%",
+          "Database CPU utilization at 95%",
+          "Customer complaints about timeouts"
+        ],
+        "framework": "5 Whys"
+      }
+    },
+    {
+      "id": "comparative_analysis",
+      "name": "Comparative Analysis Template",
+      "description": "Template for systematic comparison of options or technologies",
+      "format": "## Comparison: {{subject_a}} vs {{subject_b}}\n## Criteria:\n{% for criterion in criteria %}- {{criterion}}\n{% endfor %}\n## Context: {{context}}\n## Analysis:",
+      "stop_tokens": ["## ", "---"],
+      "example": {
+        "subject_a": "PostgreSQL",
+        "subject_b": "MongoDB",
+        "criteria": [
+          "Data model flexibility",
+          "Query capabilities",
+          "Scalability approach",
+          "ACID compliance",
+          "Community and ecosystem",
+          "Operational complexity"
+        ],
+        "context": "Building a SaaS application that needs to handle both structured transactional data and flexible document storage"
+      }
+    },
+    {
+      "id": "impact_analysis",
+      "name": "Impact Analysis Template",
+      "description": "Template for evaluating the effects of a proposed change",
+      "format": "## Proposed Change: {{change}}\n## Stakeholders: {{stakeholders}}\n## Impact Dimensions:\n{% for dimension in dimensions %}- {{dimension}}\n{% endfor %}\n## Risk Level: {{risk_level}}\n## Analysis:",
+      "stop_tokens": ["## ", "---"],
+      "example": {
+        "change": "Migrate from monolithic architecture to microservices for the order processing system",
+        "stakeholders": "Engineering team (15 developers), DevOps (3), QA (5), Customer Support (10), End users (50K+)",
+        "dimensions": [
+          "System availability during migration",
+          "Team productivity and learning curve",
+          "Infrastructure costs",
+          "Development velocity (short and long term)",
+          "Customer experience"
+        ],
+        "risk_level": "High"
+      }
+    },
+    {
+      "id": "trend_analysis",
+      "name": "Trend Analysis Template",
+      "description": "Template for identifying and projecting trends from data",
+      "format": "## Domain: {{domain}}\n## Time Period: {{time_period}}\n## Data Points:\n{% for point in data_points %}- {{point}}\n{% endfor %}\n## Trend Questions:\n{% for question in questions %}- {{question}}\n{% endfor %}\n## Analysis:",
+      "stop_tokens": ["## ", "---"],
+      "example": {
+        "domain": "Technology adoption in enterprise",
+        "time_period": "2019-2024",
+        "data_points": [
+          "Cloud adoption: 24% → 67%",
+          "AI/ML deployment: 8% → 45%",
+          "Remote work tools: 15% → 72%",
+          "Zero-trust security: 12% → 52%"
+        ],
+        "questions": [
+          "Which trends are accelerating vs decelerating?",
+          "What are the leading indicators of the next wave?",
+          "How should organizations prioritize investments?"
+        ]
+      }
+    }
+  ]
+}

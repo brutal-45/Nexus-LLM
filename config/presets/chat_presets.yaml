@@ -1,0 +1,123 @@
+# Chat Presets for Nexus-LLM
+# Predefined configurations optimized for different chat use cases
+
+presets:
+  casual_chat:
+    name: "Casual Chat"
+    description: "Relaxed, friendly conversation preset for everyday chat"
+    model_preferences:
+      - "llama_3_8b_instruct"
+      - "qwen_7b_chat"
+      - "phi_3_mini"
+    parameters:
+      temperature: 0.8
+      top_p: 0.9
+      top_k: 50
+      max_new_tokens: 1024
+      repetition_penalty: 1.1
+      do_sample: true
+    system_prompt: "You are a friendly, casual conversational partner. Be warm, engaging, and natural in your responses. Use a conversational tone while remaining helpful and informative."
+    features:
+      streaming: true
+      memory_enabled: true
+      memory_window: 10
+    tags:
+      - casual
+      - friendly
+      - everyday
+
+  professional_assistant:
+    name: "Professional Assistant"
+    description: "Formal, precise preset for business and professional conversations"
+    model_preferences:
+      - "llama_3_70b_instruct"
+      - "qwen_72b_chat"
+      - "llama_3_8b_instruct"
+    parameters:
+      temperature: 0.4
+      top_p: 0.85
+      top_k: 40
+      max_new_tokens: 2048
+      repetition_penalty: 1.05
+      do_sample: true
+    system_prompt: "You are a professional business assistant. Provide clear, concise, and well-structured responses. Use formal language, support your points with evidence when possible, and maintain a professional tone throughout."
+    features:
+      streaming: true
+      memory_enabled: true
+      memory_window: 20
+    tags:
+      - professional
+      - business
+      - formal
+
+  technical_support:
+    name: "Technical Support"
+    description: "Preset optimized for technical troubleshooting and support"
+    model_preferences:
+      - "phi_3_medium"
+      - "qwen_14b_chat"
+      - "llama_3_8b_instruct"
+    parameters:
+      temperature: 0.3
+      top_p: 0.9
+      top_k: 40
+      max_new_tokens: 2048
+      repetition_penalty: 1.05
+      do_sample: true
+    system_prompt: "You are a technical support specialist. Provide step-by-step troubleshooting guidance, ask clarifying questions when needed, and explain technical concepts in accessible terms. Prioritize practical solutions and verify understanding at each step."
+    features:
+      streaming: true
+      memory_enabled: true
+      memory_window: 15
+      code_highlighting: true
+    tags:
+      - technical
+      - support
+      - troubleshooting
+
+  educational_tutor:
+    name: "Educational Tutor"
+    description: "Patient, explanatory preset for learning and teaching"
+    model_preferences:
+      - "llama_3_8b_instruct"
+      - "phi_3_mini"
+      - "qwen_7b_chat"
+    parameters:
+      temperature: 0.5
+      top_p: 0.9
+      top_k: 40
+      max_new_tokens: 2048
+      repetition_penalty: 1.05
+      do_sample: true
+    system_prompt: "You are a patient and encouraging tutor. Explain concepts clearly with examples, break down complex topics into understandable parts, and check for understanding. Adapt your explanations to the student's level and learning style. Use analogies and real-world examples to make abstract concepts concrete."
+    features:
+      streaming: true
+      memory_enabled: true
+      memory_window: 25
+    tags:
+      - education
+      - tutoring
+      - learning
+
+  creative_conversationalist:
+    name: "Creative Conversationalist"
+    description: "Imaginative, playful preset for creative and fun conversations"
+    model_preferences:
+      - "llama_3_8b_instruct"
+      - "qwen_7b_chat"
+    parameters:
+      temperature: 1.0
+      top_p: 0.95
+      top_k: 60
+      max_new_tokens: 1024
+      repetition_penalty: 1.2
+      do_sample: true
+    system_prompt: "You are a creative and imaginative conversational partner. Be playful, witty, and engaging. Feel free to use metaphors, wordplay, and creative expressions. Encourage imaginative thinking while remaining helpful and kind."
+    features:
+      streaming: true
+      memory_enabled: true
+      memory_window: 15
+    tags:
+      - creative
+      - playful
+      - imaginative

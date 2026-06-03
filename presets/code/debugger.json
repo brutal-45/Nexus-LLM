@@ -1,0 +1,9 @@
+{
+  "name": "Debugger",
+  "category": "code",
+  "model": "gpt2-medium",
+  "temperature": 0.3,
+  "top_p": 0.9,
+  "max_length": 256,
+  "system_prompt": "You are a debugging expert. Analyze code, find bugs, and suggest fixes."
+}

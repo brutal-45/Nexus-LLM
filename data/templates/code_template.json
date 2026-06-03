@@ -1,0 +1,68 @@
+{
+  "templates": [
+    {
+      "id": "code_generation",
+      "name": "Code Generation Template",
+      "description": "Template for generating code from natural language descriptions",
+      "format": "### Language: {{language}}\n### Task: {{task_description}}\n### Requirements:\n{% for req in requirements %}- {{req}}\n{% endfor %}\n### Code:",
+      "stop_tokens": ["### Explanation:", "### ", "```"],
+      "example": {
+        "language": "Python",
+        "task_description": "Implement a function that validates email addresses",
+        "requirements": ["Use regex for validation", "Handle common edge cases", "Return boolean", "Include docstring"],
+        "output": "import re\n\ndef is_valid_email(email: str) -> bool:\n    \"\"\"Validate an email address using regex.\"\"\"\n    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'\n    return bool(re.match(pattern, email))"
+      }
+    },
+    {
+      "id": "code_debugging",
+      "name": "Code Debugging Template",
+      "description": "Template for identifying and fixing bugs in code",
+      "format": "### Language: {{language}}\n### Bug Description: {{bug_description}}\n### Buggy Code:\n```\n{{buggy_code}}\n```\n### Expected Behavior: {{expected_behavior}}\n### Analysis:\n",
+      "stop_tokens": ["### ", "```", "---"],
+      "example": {
+        "language": "Python",
+        "bug_description": "Function returns incorrect results for edge cases",
+        "buggy_code": "def find_max(lst):\n    max_val = 0\n    for item in lst:\n        if item > max_val:\n            max_val = item\n    return max_val",
+        "expected_behavior": "Should return the maximum value in the list, including negative numbers",
+        "output": "**Bug:** `max_val` is initialized to 0, so the function fails when all values are negative.\n\n**Fix:** Initialize to the first element or negative infinity:\n```python\ndef find_max(lst):\n    if not lst:\n        raise ValueError('Empty list has no maximum')\n    max_val = lst[0]\n    for item in lst[1:]:\n        if item > max_val:\n            max_val = item\n    return max_val\n```"
+      }
+    },
+    {
+      "id": "code_refactoring",
+      "name": "Code Refactoring Template",
+      "description": "Template for improving code quality while preserving behavior",
+      "format": "### Refactoring Goals:\n{% for goal in goals %}- {{goal}}\n{% endfor %}\n### Original Code:\n```\n{{original_code}}\n```\n### Refactored Code:\n",
+      "stop_tokens": ["### Explanation:", "---", "```"],
+      "example": {
+        "goals": ["Improve readability", "Follow DRY principle", "Add type hints"],
+        "original_code": "def calc(a,b,op):\n    if op=='add':return a+b\n    elif op=='sub':return a-b\n    elif op=='mul':return a*b\n    elif op=='div':return a/b if b!=0 else None",
+        "output": "from enum import Enum\nfrom typing import Optional\n\nclass Operation(Enum):\n    ADD = 'add'\n    SUBTRACT = 'sub'\n    MULTIPLY = 'mul'\n    DIVIDE = 'div'\n\ndef calculate(a: float, b: float, operation: Operation) -> Optional[float]:\n    \"\"\"Perform a basic arithmetic operation on two numbers.\"\"\"\n    operations = {\n        Operation.ADD: lambda: a + b,\n        Operation.SUBTRACT: lambda: a - b,\n        Operation.MULTIPLY: lambda: a * b,\n        Operation.DIVIDE: lambda: a / b if b != 0 else None,\n    }\n    return operations.get(operation, lambda: None)()"
+      }
+    },
+    {
+      "id": "code_documentation",
+      "name": "Code Documentation Template",
+      "description": "Template for generating documentation for existing code",
+      "format": "### Code:\n```\n{{code}}\n```\n### Documentation Style: {{doc_style}}\n### Documentation:\n",
+      "stop_tokens": ["### ", "---"],
+      "example": {
+        "code": "def merge_dicts(d1, d2):\n    result = d1.copy()\n    for k, v in d2.items():\n        if k in result and isinstance(result[k], dict) and isinstance(v, dict):\n            result[k] = merge_dicts(result[k], v)\n        else:\n            result[k] = v\n    return result",
+        "doc_style": "Google style docstring",
+        "output": "def merge_dicts(d1: dict, d2: dict) -> dict:\n    \"\"\"Recursively merge two dictionaries.\n\n    Deep merges d2 into d1, handling nested dictionaries by merging\n    recursively rather than overwriting. Non-dict values in d2\n    overwrite values in d1.\n\n    Args:\n        d1: The base dictionary. Will not be modified.\n        d2: The dictionary to merge into d1. Values take precedence.\n\n    Returns:\n        A new dictionary containing the merged key-value pairs.\n\n    Examples:\n        >>> merge_dicts({'a': 1, 'b': {'c': 2}}, {'b': {'d': 3}})\n        {'a': 1, 'b': {'c': 2, 'd': 3}}\n    \"\"\""
+      }
+    },
+    {
+      "id": "code_testing",
+      "name": "Test Generation Template",
+      "description": "Template for generating comprehensive unit tests for code",
+      "format": "### Code to Test:\n```\n{{code}}\n```\n### Testing Framework: {{framework}}\n### Coverage Requirements:\n{% for req in coverage_requirements %}- {{req}}\n{% endfor %}\n### Tests:\n",
+      "stop_tokens": ["### ", "---"],
+      "example": {
+        "code": "def validate_password(password: str) -> tuple[bool, list[str]]:\n    errors = []\n    if len(password) < 8:\n        errors.append('Password must be at least 8 characters')\n    if not any(c.isupper() for c in password):\n        errors.append('Password must contain an uppercase letter')\n    if not any(c.isdigit() for c in password):\n        errors.append('Password must contain a digit')\n    return len(errors) == 0, errors",
+        "framework": "pytest",
+        "coverage_requirements": ["Test valid passwords", "Test each validation rule independently", "Test edge cases: empty string, exactly 8 chars", "Test multiple simultaneous failures"],
+        "output": "import pytest\nfrom auth import validate_password\n\ndef test_valid_password():\n    is_valid, errors = validate_password('Secure123')\n    assert is_valid is True\n    assert errors == []\n\ndef test_too_short():\n    is_valid, errors = validate_password('Sh1')\n    assert is_valid is False\n    assert 'at least 8 characters' in errors[0]\n\ndef test_no_uppercase():\n    is_valid, errors = validate_password('lowercase1')\n    assert is_valid is False\n    assert 'uppercase' in errors[0]\n\ndef test_no_digit():\n    is_valid, errors = validate_password('NoDigitsHere')\n    assert is_valid is False\n    assert 'digit' in errors[0]\n\ndef test_empty_password():\n    is_valid, errors = validate_password('')\n    assert is_valid is False\n    assert len(errors) == 3\n\ndef test_exactly_eight_chars():\n    is_valid, errors = validate_password('Exactl81')\n    assert is_valid is True\n\ndef test_multiple_failures():\n    is_valid, errors = validate_password('bad')\n    assert is_valid is False\n    assert len(errors) == 3"
+      }
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+# Creative Presets for Nexus-LLM
+# Predefined configurations optimized for creative writing and content generation
+
+presets:
+  story_writer:
+    name: "Story Writer"
+    description: "Immersive fiction and narrative generation"
+    model_preferences:
+      - "llama_3_8b_instruct"
+      - "qwen_7b_chat"
+      - "llama_3_70b_instruct"
+    parameters:
+      temperature: 0.9
+      top_p: 0.95
+      top_k: 60
+      max_new_tokens: 4096
+      repetition_penalty: 1.15
+      do_sample: true
+      frequency_penalty: 0.3
+      presence_penalty: 0.3
+    system_prompt: "You are a skilled fiction writer. Create vivid, immersive narratives with compelling characters, atmospheric settings, and engaging plots. Show rather than tell. Use sensory details, natural dialogue, and varied sentence structures. Maintain consistent voice and tone. Build tension gradually and deliver satisfying resolutions."
+    features:
+      streaming: true
+      memory_enabled: true
+      memory_window: 30
+      character_tracking: true
+      plot_consistency: true
+    tags:
+      - creative
+      - fiction
+      - storytelling
+
+  poet:
+    name: "Poet"
+    description: "Poetry creation across various forms and styles"
+    model_preferences:
+      - "llama_3_8b_instruct"
+      - "qwen_7b_chat"
+    parameters:
+      temperature: 0.95
+      top_p: 0.95
+      top_k: 80
+      max_new_tokens: 1024
+      repetition_penalty: 1.3
+      do_sample: true
+    system_prompt: "You are a poet skilled in many forms and styles. Create evocative poetry with rich imagery, musical language, and emotional depth. Employ literary devices such as metaphor, alliteration, and enjambment naturally. Respect the structural requirements of chosen forms while allowing creative expression. Every word should earn its place."
+    features:
+      streaming: true
+      form_validation: true
+      rhyme_assistance: true
+    tags:
+      - creative
+      - poetry
+      - literary
+
+  content_marketer:
+    name: "Content Marketer"
+    description: "Engaging marketing and promotional content"
+    model_preferences:
+      - "llama_3_8b_instruct"
+      - "qwen_7b_chat"
+    parameters:
+      temperature: 0.7
+      top_p: 0.9
+      top_k: 50
+      max_new_tokens: 2048
+      repetition_penalty: 1.1
+      do_sample: true
+    system_prompt: "You are a content marketing expert. Write compelling copy that captures attention, communicates value, and drives action. Use persuasive techniques ethically: social proof, urgency, benefit-focused messaging, and clear calls to action. Adapt tone and style to the target audience while maintaining brand voice consistency."
+    features:
+      streaming: true
+      seo_optimization: true
+      template_library: true
+    tags:
+      - creative
+      - marketing
+      - copywriting
+
+  blogger:
+    name: "Blogger"
+    description: "Engaging blog posts and articles"
+    model_preferences:
+      - "llama_3_8b_instruct"
+      - "qwen_7b_chat"
+    parameters:
+      temperature: 0.7
+      top_p: 0.9
+      top_k: 50
+      max_new_tokens: 4096
+      repetition_penalty: 1.1
+      do_sample: true
+    system_prompt: "You are an experienced blogger. Write engaging, well-structured posts that inform and entertain. Use compelling headlines, clear subheadings, short paragraphs, and bullet points for readability. Include relevant examples, data, and actionable takeaways. Write in a conversational yet authoritative tone that builds trust with readers."
+    features:
+      streaming: true
+      outline_generation: true
+      seo_keywords: true
+    tags:
+      - creative
+      - blogging
+      - content
+
+  songwriter:
+    name: "Songwriter"
+    description: "Lyric writing and song composition assistance"
+    model_preferences:
+      - "llama_3_8b_instruct"
+      - "qwen_7b_chat"
+    parameters:
+      temperature: 0.9
+      top_p: 0.95
+      top_k: 70
+      max_new_tokens: 1024
+      repetition_penalty: 1.2
+      do_sample: true
+    system_prompt: "You are a skilled songwriter. Create lyrics with strong imagery, memorable hooks, and emotional resonance. Structure songs with verses, choruses, bridges, and pre-choruses as appropriate. Consider rhythm, rhyme, and meter. Write lyrics that feel natural when sung. Adapt to different genres and moods while maintaining authenticity."
+    features:
+      streaming: true
+      genre_templates: true
+      structure_assistance: true
+    tags:
+      - creative
+      - music
+      - songwriting

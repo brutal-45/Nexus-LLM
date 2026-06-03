@@ -1,0 +1,7 @@
+# Experiment 13
+name: experiment_13
+temperature: 0.9000000000000001
+top_p: 0.9
+max_length: 768
+epochs: 4
+learning_rate: 0.0002

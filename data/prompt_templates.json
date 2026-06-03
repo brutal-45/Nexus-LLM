@@ -1,0 +1,132 @@
+{
+  "templates": {
+    "chat": {
+      "name": "Chat",
+      "description": "General-purpose conversational template for multi-turn dialogue with context awareness.",
+      "system_prompt": "You are a helpful, harmless, and honest AI assistant. Engage in natural conversation, ask clarifying questions when needed, and provide thoughtful, well-structured responses. Be concise but thorough.",
+      "format": "{system_message}\n\n{history}\nUser: {user_message}\nAssistant:",
+      "parameters": [
+        "system_message",
+        "history",
+        "user_message"
+      ],
+      "stop_sequences": ["\nUser:", "\nHuman:"],
+      "example": {
+        "system_message": "You are a helpful assistant.",
+        "history": "User: Hello!\nAssistant: Hi there! How can I help you today?",
+        "user_message": "Tell me about the solar system."
+      }
+    },
+    "instruction": {
+      "name": "Instruction",
+      "description": "Template for following direct instructions with clear, focused responses. Best for task-oriented queries.",
+      "system_prompt": "You are an AI assistant that follows instructions precisely. Complete the task described below accurately and thoroughly. If the instruction is ambiguous, provide the most reasonable interpretation and note your assumptions.",
+      "format": "### Instruction:\n{instruction}\n\n### Response:\n{response}",
+      "parameters": [
+        "instruction",
+        "response"
+      ],
+      "stop_sequences": ["### Instruction:", "### Response:"],
+      "example": {
+        "instruction": "List the top 5 programming languages in 2024 with brief descriptions.",
+        "response": ""
+      }
+    },
+    "alpaca": {
+      "name": "Alpaca",
+      "description": "Alpaca-style template supporting optional input context. Widely compatible with fine-tuned models trained on Alpaca-format datasets.",
+      "system_prompt": "Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.",
+      "format": "### Instruction:\n{instruction}\n\n### Input:\n{input}\n\n### Response:\n{response}",
+      "parameters": [
+        "instruction",
+        "input",
+        "response"
+      ],
+      "stop_sequences": ["### Instruction:", "### Input:", "### Response:"],
+      "example": {
+        "instruction": "Convert the following text to pig latin.",
+        "input": "The quick brown fox jumps over the lazy dog.",
+        "response": ""
+      }
+    },
+    "code": {
+      "name": "Code",
+      "description": "Template optimized for code generation, debugging, and refactoring. Produces clean, well-documented code with explanations.",
+      "system_prompt": "You are an expert software engineer. Write clean, efficient, and well-documented code. Follow industry best practices, include proper error handling, and add type hints where applicable. Explain your approach before presenting the code. When debugging, identify the root cause and explain the fix.",
+      "format": "### Task:\n{task}\n\n### Language:\n{language}\n\n### Code:\n{code}",
+      "parameters": [
+        "task",
+        "language",
+        "code"
+      ],
+      "stop_sequences": ["### Task:", "### Language:", "### Code:"],
+      "example": {
+        "task": "Implement a binary search tree with insert, search, and delete operations.",
+        "language": "Python",
+        "code": ""
+      }
+    },
+    "creative": {
+      "name": "Creative",
+      "description": "Template for creative writing tasks including stories, poetry, scripts, and brainstorming. Encourages imaginative and original output.",
+      "system_prompt": "You are a creative writer with a vivid imagination. Write engaging, original content that captures the reader's attention. Use rich language, sensory details, and compelling narrative structures. Adapt your style and tone to match the requested genre. Be bold and inventive in your creations.",
+      "format": "### Genre:\n{genre}\n\n### Prompt:\n{prompt}\n\n### Style Notes:\n{style_notes}\n\n### Creation:\n{creation}",
+      "parameters": [
+        "genre",
+        "prompt",
+        "style_notes",
+        "creation"
+      ],
+      "stop_sequences": ["### Genre:", "### Prompt:", "### Creation:"],
+      "example": {
+        "genre": "Science Fiction",
+        "prompt": "A space explorer discovers a planet where time flows backward.",
+        "style_notes": "First person perspective, lyrical prose, bittersweet tone.",
+        "creation": ""
+      }
+    },
+    "analysis": {
+      "name": "Analysis",
+      "description": "Template for analytical and critical thinking tasks including data interpretation, argument evaluation, and research synthesis.",
+      "system_prompt": "You are a skilled analyst. Examine the provided information methodically, identify key patterns and insights, evaluate evidence critically, and present your findings in a structured format. Support your conclusions with specific evidence. Acknowledge limitations and alternative interpretations where relevant.",
+      "format": "### Subject:\n{subject}\n\n### Data or Context:\n{context}\n\n### Analysis:\n{analysis}\n\n### Conclusions:\n{conclusions}",
+      "parameters": [
+        "subject",
+        "context",
+        "analysis",
+        "conclusions"
+      ],
+      "stop_sequences": ["### Subject:", "### Data or Context:", "### Analysis:", "### Conclusions:"],
+      "example": {
+        "subject": "Q4 2024 Sales Performance",
+        "context": "Revenue increased 15% YoY but customer acquisition cost rose 22%. Churn rate decreased from 5.2% to 3.8%. Mobile users now represent 68% of total traffic, up from 54% in Q3.",
+        "analysis": "",
+        "conclusions": ""
+      }
+    },
+    "summarize": {
+      "name": "Summarize",
+      "description": "Template for condensing long texts into concise summaries. Supports multiple summary styles including bullet points, executive summaries, and abstracts.",
+      "system_prompt": "You are an expert at summarization. Distill the key information from the provided text into a clear, concise summary. Preserve the most important facts, arguments, and conclusions while eliminating redundancy and minor details. Maintain the original meaning and do not add information not present in the source.",
+      "format": "### Text to Summarize:\n{text}\n\n### Summary Style:\n{style}\n\n### Max Length:\n{max_length}\n\n### Summary:\n{summary}",
+      "parameters": [
+        "text",
+        "style",
+        "max_length",
+        "summary"
+      ],
+      "stop_sequences": ["### Text to Summarize:", "### Summary Style:", "### Summary:"],
+      "example": {
+        "text": "Artificial intelligence (AI) has transformed numerous industries over the past decade. In healthcare, AI-powered diagnostic tools can detect diseases with accuracy rivaling or exceeding that of human specialists. In finance, algorithmic trading and fraud detection systems process millions of transactions per second. Autonomous vehicles leverage computer vision and reinforcement learning to navigate complex environments. Natural language processing has enabled virtual assistants, real-time translation, and content generation. Despite these advances, challenges remain: bias in training data can lead to unfair outcomes, the environmental cost of training large models is significant, and questions about AI safety and alignment with human values are increasingly urgent as systems become more capable.",
+        "style": "bullet points",
+        "max_length": "150 words",
+        "summary": ""
+      }
+    }
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "created": "2025-01-15",
+    "description": "Prompt templates for Nexus-LLM. Each template defines a system prompt, format string with placeholders, required parameters, and stop sequences. Use these templates with the --template flag or via the API."
+  }
+}

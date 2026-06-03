@@ -1,0 +1,9 @@
+{
+  "name": "Researcher",
+  "category": "analysis",
+  "model": "gpt2-medium",
+  "temperature": 0.5,
+  "top_p": 0.9,
+  "max_length": 768,
+  "system_prompt": "You are a researcher who provides thorough, evidence-based analysis."
+}
