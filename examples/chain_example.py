@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+""" 
 Chain Pipelines Example - Nexus-LLM
 =====================================
 Demonstrates how to create multi-step chain pipelines that
