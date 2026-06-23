@@ -36,10 +36,10 @@ COMMANDS: Dict[str, str] = {
 
 # Global options
 GLOBAL_OPTIONS: List[Dict[str, str]] = [
-    {"flags": "--config", "-c", "desc": "Path to configuration file"},
-    {"flags": "--verbose", "-v", "desc": "Enable verbose output"},
-    {"flags": "--quiet", "-q", "desc": "Suppress non-error output"},
-    {"flags": "--help", "-h", "desc": "Show help message"},
+    {"flags": "--config -c", "desc": "Path to configuration file"},
+    {"flags": "--verbose -v", "desc": "Enable verbose output"},
+    {"flags": "--quiet -q", "desc": "Suppress non-error output"},
+    {"flags": "--help -h", "desc": "Show help message"},
     {"flags": "--version", "desc": "Show version"},
     {"flags": "--log-level", "desc": "Set log level (debug|info|warning|error)"},
     {"flags": "--no-color", "desc": "Disable colored output"},
@@ -48,10 +48,10 @@ GLOBAL_OPTIONS: List[Dict[str, str]] = [
 # Command-specific options
 COMMAND_OPTIONS: Dict[str, List[Dict[str, str]]] = {
     "chat": [
-        {"flags": "--model", "-m", "desc": "Model name or path"},
-        {"flags": "--preset", "-p", "desc": "Chat preset (creative|precise|balanced|coding|writing|research)"},
-        {"flags": "--system", "-s", "desc": "System prompt"},
-        {"flags": "--temperature", "-t", "desc": "Sampling temperature"},
+        {"flags": "--model -m", "desc": "Model name or path"},
+        {"flags": "--preset -p", "desc": "Chat preset (creative|precise|balanced|coding|writing|research)"},
+        {"flags": "--system -s", "desc": "System prompt"},
+        {"flags": "--temperature -t", "desc": "Sampling temperature"},
         {"flags": "--max-tokens", "desc": "Maximum tokens to generate"},
         {"flags": "--context", "desc": "Context window size"},
         {"flags": "--history", "desc": "Path to chat history file"},
@@ -60,39 +60,39 @@ COMMAND_OPTIONS: Dict[str, List[Dict[str, str]]] = {
     "serve": [
         {"flags": "--host", "desc": "Server host address"},
         {"flags": "--port", "desc": "Server port"},
-        {"flags": "--workers", "-w", "desc": "Number of worker processes"},
-        {"flags": "--model", "-m", "desc": "Model name or path"},
-        {"flags": "--preset", "-p", "desc": "Server preset (development|production|high_performance)"},
+        {"flags": "--workers -w", "desc": "Number of worker processes"},
+        {"flags": "--model -m", "desc": "Model name or path"},
+        {"flags": "--preset -p", "desc": "Server preset (development|production|high_performance)"},
         {"flags": "--reload", "desc": "Enable auto-reload for development"},
         {"flags": "--api-key", "desc": "API key for authentication"},
         {"flags": "--cors", "desc": "Allowed CORS origins"},
     ],
     "train": [
-        {"flags": "--model", "-m", "desc": "Base model name or path"},
-        {"flags": "--dataset", "-d", "desc": "Training dataset path"},
-        {"flags": "--preset", "-p", "desc": "Training preset (quick|standard|thorough|lora|qlora)"},
-        {"flags": "--output", "-o", "desc": "Output directory"},
-        {"flags": "--epochs", "-e", "desc": "Number of training epochs"},
-        {"flags": "--batch-size", "-b", "desc": "Training batch size"},
-        {"flags": "--learning-rate", "-l", "desc": "Learning rate"},
+        {"flags": "--model -m", "desc": "Base model name or path"},
+        {"flags": "--dataset -d", "desc": "Training dataset path"},
+        {"flags": "--preset -p", "desc": "Training preset (quick|standard|thorough|lora|qlora)"},
+        {"flags": "--output -o", "desc": "Output directory"},
+        {"flags": "--epochs -e", "desc": "Number of training epochs"},
+        {"flags": "--batch-size -b", "desc": "Training batch size"},
+        {"flags": "--learning-rate -l", "desc": "Learning rate"},
         {"flags": "--resume", "desc": "Resume from checkpoint"},
-        {"flags": "--gpus", "-g", "desc": "GPU devices to use"},
+        {"flags": "--gpus -g", "desc": "GPU devices to use"},
     ],
     "eval": [
-        {"flags": "--model", "-m", "desc": "Model name or path"},
-        {"flags": "--benchmark", "-b", "desc": "Benchmark to run"},
-        {"flags": "--output", "-o", "desc": "Output file for results"},
+        {"flags": "--model -m", "desc": "Model name or path"},
+        {"flags": "--benchmark -b", "desc": "Benchmark to run"},
+        {"flags": "--output -o", "desc": "Output file for results"},
         {"flags": "--tasks", "desc": "Specific evaluation tasks"},
     ],
     "download": [
-        {"flags": "--model", "-m", "desc": "HuggingFace model ID"},
-        {"flags": "--output", "-o", "desc": "Download directory"},
-        {"flags": "--quantization", "-q", "desc": "Quantization format"},
+        {"flags": "--model -m", "desc": "HuggingFace model ID"},
+        {"flags": "--output -o", "desc": "Download directory"},
+        {"flags": "--quantization -q", "desc": "Quantization format"},
         {"flags": "--revision", "desc": "Model revision/branch"},
     ],
     "list": [
-        {"flags": "--type", "-t", "desc": "List type (models|presets|plugins)"},
-        {"flags": "--format", "-f", "desc": "Output format (table|json|yaml)"},
+        {"flags": "--type -t", "desc": "List type (models|presets|plugins)"},
+        {"flags": "--format -f", "desc": "Output format (table|json|yaml)"},
     ],
     "config": [
         {"flags": "--get", "desc": "Get a configuration value"},
@@ -105,30 +105,30 @@ COMMAND_OPTIONS: Dict[str, List[Dict[str, str]]] = {
         {"flags": "--uninstall", "desc": "Uninstall a plugin"},
         {"flags": "--enable", "desc": "Enable a plugin"},
         {"flags": "--disable", "desc": "Disable a plugin"},
-        {"flags": "--list", "-l", "desc": "List installed plugins"},
+        {"flags": "--list -l", "desc": "List installed plugins"},
     ],
     "rag": [
         {"flags": "--index", "desc": "Index documents"},
-        {"flags": "--query", "-q", "desc": "Search query"},
-        {"flags": "--collection", "-c", "desc": "Collection name"},
+        {"flags": "--query -q", "desc": "Search query"},
+        {"flags": "--collection -c", "desc": "Collection name"},
         {"flags": "--embed-model", "desc": "Embedding model"},
     ],
     "benchmark": [
-        {"flags": "--model", "-m", "desc": "Model name or path"},
+        {"flags": "--model -m", "desc": "Model name or path"},
         {"flags": "--preset", "desc": "Benchmark preset"},
-        {"flags": "--output", "-o", "desc": "Output file"},
-        {"flags": "--iterations", "-n", "desc": "Number of iterations"},
+        {"flags": "--output -o", "desc": "Output file"},
+        {"flags": "--iterations -n", "desc": "Number of iterations"},
     ],
     "quantize": [
-        {"flags": "--model", "-m", "desc": "Model name or path"},
-        {"flags": "--bits", "-b", "desc": "Quantization bits (4|8)"},
-        {"flags": "--output", "-o", "desc": "Output path"},
-        {"flags": "--format", "-f", "desc": "Quantization format (gguf|gptq|awq)"},
+        {"flags": "--model -m", "desc": "Model name or path"},
+        {"flags": "--bits -b", "desc": "Quantization bits (4|8)"},
+        {"flags": "--output -o", "desc": "Output path"},
+        {"flags": "--format -f", "desc": "Quantization format (gguf|gptq|awq)"},
     ],
     "export": [
-        {"flags": "--model", "-m", "desc": "Model name or path"},
-        {"flags": "--format", "-f", "desc": "Export format (onnx|safetensors|gguf)"},
-        {"flags": "--output", "-o", "desc": "Output path"},
+        {"flags": "--model -m", "desc": "Model name or path"},
+        {"flags": "--format -f", "desc": "Export format (onnx|safetensors|gguf)"},
+        {"flags": "--output -o", "desc": "Output path"},
     ],
 }
 
@@ -289,9 +289,9 @@ class CompletionGenerator:
             desc = opt.get("desc", "")
             parts = flags.split()
             if len(parts) == 2:
-                lines.append(f'    "{parts[0]}[{desc}]" "{parts[1]}[{desc]}"')
+                lines.append('    "' + parts[0] + '[' + desc + ']" "' + parts[1] + '[' + desc + ']"')
             elif len(parts) == 1:
-                lines.append(f'    "{parts[0]}[{desc]}"')
+                lines.append('    "' + parts[0] + '[' + desc + ']"')
         lines.append("  )")
         lines.append("")
 
@@ -321,9 +321,9 @@ class CompletionGenerator:
                 desc = opt.get("desc", "")
                 parts = flags.split()
                 if len(parts) == 2:
-                    lines.append(f'            "{parts[0]}[{desc}]" "{parts[1]}[{desc]}"')
+                    lines.append('    "' + parts[0] + '[' + desc + ']" "' + parts[1] + '[' + desc + ']"')
                 elif len(parts) == 1:
-                    lines.append(f'            "{parts[0]}[{desc]}"')
+                    lines.append('            "' + parts[0] + '[' + desc + ']"')
             lines.append(f"          )")
             lines.append(f"          _arguments \"${{{cmd}_opts[@]}}\"")
             lines.append(f"          ;;")
