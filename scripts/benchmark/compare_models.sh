@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 # Compare Models - Nexus-LLM
 # ============================
 # Benchmarks and compares multiple models side by side.
