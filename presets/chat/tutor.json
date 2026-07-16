@@ -1,4 +1,4 @@
-{
+{ 
   "name": "Tutor",
   "category": "education",
   "model": "gpt2-medium",
