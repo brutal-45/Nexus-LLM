@@ -1,4 +1,4 @@
-{
+{ 
   "name": "Researcher",
   "category": "analysis",
   "model": "gpt2-medium",
