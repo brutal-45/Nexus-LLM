@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 
 """Speed benchmark."""
 import time
 from nexus_llm.backend.inference import InferenceEngine
