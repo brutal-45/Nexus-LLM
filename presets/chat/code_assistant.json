@@ -1,4 +1,4 @@
-{
+{ 
   "name": "Code Assistant",
   "category": "code",
   "model": "gpt2-medium",
