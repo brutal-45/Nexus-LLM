@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 
 """Memory usage benchmark."""
 import tracemalloc
 from nexus_llm.backend.inference import InferenceEngine
