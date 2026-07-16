@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 # Run Benchmarks - Nexus-LLM
 # ============================
 # Runs the standard benchmark suite against one or more models.
