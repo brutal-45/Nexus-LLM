@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 
 """Split dataset into train/val/test."""
 import json, sys
 input_file = sys.argv[1]
