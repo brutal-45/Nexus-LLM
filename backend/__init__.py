@@ -1,4 +1,4 @@
-"""Backend module for Nexus-LLM - Own inference backend."""
+"""Backend module for Nexus-LLM - Own inference backend.""" 
 
 from backend.inference import InferenceEngine
 from backend.model_manager import ModelManager
