@@ -1,4 +1,4 @@
-# Contributing to Nexus-LLM
+# Contributing to Nexus-LLM 
 
 First off, thank you for considering contributing to Nexus-LLM! It's people like you that make Nexus-LLM such a great tool.
 
