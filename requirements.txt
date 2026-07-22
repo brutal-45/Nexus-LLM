@@ -1,4 +1,4 @@
-# Nexus-LLM Dependencies
+# Nexus-LLM Dependencies 
 # ======================
 # Install with:  pip install -r requirements.txt
 # Or use:        pip install -e .  (recommended, uses pyproject.toml)
