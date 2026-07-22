@@ -1,4 +1,4 @@
-# Pylint configuration for Nexus-LLM
+# Pylint configuration for Nexus-LLM 
 
 [MAIN]
 # Analyse import fallback blocks
