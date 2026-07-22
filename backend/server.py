@@ -1,4 +1,4 @@
-"""FastAPI Backend Server - Own backend with REST + WebSocket endpoints."""
+"""FastAPI Backend Server - Own backend with REST + WebSocket endpoints.""" 
 
 import json
 import logging
