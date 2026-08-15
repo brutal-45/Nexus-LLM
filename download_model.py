@@ -1,4 +1,4 @@
-#!/usr/bin/env python3 
+#!/usr/bin/env python3
 """Model Download Script for Nexus-LLM.
 
 Download and manage LLM models from Hugging Face and other sources.
