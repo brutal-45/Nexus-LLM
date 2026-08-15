@@ -1,4 +1,4 @@
-[flake8] 
+[flake8]
 # Flake8 configuration for Nexus-LLM
 
 # Maximum line length (aligned with Black)
