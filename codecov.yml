@@ -1,4 +1,4 @@
-# Codecov configuration for Nexus-LLM 
+# Codecov configuration for Nexus-LLM
 
 codecov:
   require_ci_to_pass: true
