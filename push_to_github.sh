@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 # Push Nexus-LLM to GitHub
 # Usage: ./push_to_github.sh
 #
