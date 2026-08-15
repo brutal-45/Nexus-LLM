@@ -1,4 +1,4 @@
-# 🧠 Nexus-LLM 
+# 🧠 Nexus-LLM
 **A Terminal-Based LLM Framework — Train, Chat, Serve, and Deploy Local Language Models**
 
 [![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/brutal-45/Nexus-LLM)
