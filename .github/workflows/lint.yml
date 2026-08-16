@@ -22,3 +22,30 @@ jobs:
 
       - name: Check formatting with black
         run: black --check nexus_llm/
+
+
++++ .github/workflows/lint.yml (修改后)
+name: Lint
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install linters
+        run: pip install ruff black
+
+      - name: Lint with ruff
+        run: ruff check nexus_llm/
+
+      - name: Check formatting with black
+        run: black --check nexus_llm/
