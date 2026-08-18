@@ -4,13 +4,15 @@ Provides Prometheus-style metrics, request counters, latency histograms,
 and throughput gauges for monitoring the inference backend.
 """
 
-import time
-import threading
-import math
-from typing import Optional, Dict, Any, List, Tuple
-from dataclasses import dataclass, field
-from collections import defaultdict
+from __future__ import annotations
+
 import logging
+import math
+import threading
+import time
+from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +20,10 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MetricSample:
     """A single metric sample."""
+
     value: float
     timestamp: float = field(default_factory=time.time)
-    labels: Dict[str, str] = field(default_factory=dict)
+    labels: dict[str, str] = field(default_factory=dict)
 
 
 class Counter:
@@ -29,32 +32,32 @@ class Counter:
     Usage: track total requests, total tokens generated, total errors, etc.
     """
 
-    def __init__(self, name: str, description: str = "", label_names: Optional[List[str]] = None):
+    def __init__(self, name: str, description: str = "", label_names: list[str] | None = None):
         self.name = name
         self.description = description
         self.label_names = label_names or []
-        self._values: Dict[Tuple[str, ...], float] = defaultdict(float)
+        self._values: dict[tuple[str, ...], float] = defaultdict(float)
         self._lock = threading.RLock()
         self._created_at = time.time()
 
-    def inc(self, amount: float = 1.0, labels: Optional[Dict[str, str]] = None) -> None:
+    def inc(self, amount: float = 1.0, labels: dict[str, str] | None = None) -> None:
         """Increment the counter by the given amount."""
         key = self._labels_to_key(labels)
         with self._lock:
             self._values[key] += amount
 
-    def get(self, labels: Optional[Dict[str, str]] = None) -> float:
+    def get(self, labels: dict[str, str] | None = None) -> float:
         """Get the current counter value."""
         key = self._labels_to_key(labels)
         with self._lock:
             return self._values.get(key, 0.0)
 
-    def get_all(self) -> Dict[Tuple[str, ...], float]:
+    def get_all(self) -> dict[tuple[str, ...], float]:
         """Get all labeled values."""
         with self._lock:
             return dict(self._values)
 
-    def _labels_to_key(self, labels: Optional[Dict[str, str]]) -> Tuple[str, ...]:
+    def _labels_to_key(self, labels: dict[str, str] | None) -> tuple[str, ...]:
         if labels is None:
             return ()
         return tuple(sorted(labels.items()))
@@ -77,36 +80,36 @@ class Gauge:
     Usage: track current memory usage, active requests, queue depth, etc.
     """
 
-    def __init__(self, name: str, description: str = "", label_names: Optional[List[str]] = None):
+    def __init__(self, name: str, description: str = "", label_names: list[str] | None = None):
         self.name = name
         self.description = description
         self.label_names = label_names or []
-        self._values: Dict[Tuple[str, ...], float] = defaultdict(float)
+        self._values: dict[tuple[str, ...], float] = defaultdict(float)
         self._lock = threading.RLock()
 
-    def set(self, value: float, labels: Optional[Dict[str, str]] = None) -> None:
+    def set(self, value: float, labels: dict[str, str] | None = None) -> None:
         """Set the gauge to a specific value."""
         key = self._labels_to_key(labels)
         with self._lock:
             self._values[key] = value
 
-    def inc(self, amount: float = 1.0, labels: Optional[Dict[str, str]] = None) -> None:
+    def inc(self, amount: float = 1.0, labels: dict[str, str] | None = None) -> None:
         """Increment the gauge."""
         key = self._labels_to_key(labels)
         with self._lock:
             self._values[key] += amount
 
-    def dec(self, amount: float = 1.0, labels: Optional[Dict[str, str]] = None) -> None:
+    def dec(self, amount: float = 1.0, labels: dict[str, str] | None = None) -> None:
         """Decrement the gauge."""
         self.inc(-amount, labels)
 
-    def get(self, labels: Optional[Dict[str, str]] = None) -> float:
+    def get(self, labels: dict[str, str] | None = None) -> float:
         """Get the current gauge value."""
         key = self._labels_to_key(labels)
         with self._lock:
             return self._values.get(key, 0.0)
 
-    def _labels_to_key(self, labels: Optional[Dict[str, str]]) -> Tuple[str, ...]:
+    def _labels_to_key(self, labels: dict[str, str] | None) -> tuple[str, ...]:
         if labels is None:
             return ()
         return tuple(sorted(labels.items()))
@@ -135,19 +138,21 @@ class Histogram:
         self,
         name: str,
         description: str = "",
-        buckets: Optional[Tuple[float, ...]] = None,
-        label_names: Optional[List[str]] = None,
+        buckets: tuple[float, ...] | None = None,
+        label_names: list[str] | None = None,
     ):
         self.name = name
         self.description = description
         self.buckets = buckets or self.DEFAULT_BUCKETS
         self.label_names = label_names or []
-        self._counts: Dict[Tuple[str, ...], Dict[float, int]] = defaultdict(lambda: defaultdict(int))
-        self._sums: Dict[Tuple[str, ...], float] = defaultdict(float)
-        self._total_counts: Dict[Tuple[str, ...], int] = defaultdict(int)
+        self._counts: dict[tuple[str, ...], dict[float, int]] = defaultdict(
+            lambda: defaultdict(int)
+        )
+        self._sums: dict[tuple[str, ...], float] = defaultdict(float)
+        self._total_counts: dict[tuple[str, ...], int] = defaultdict(int)
         self._lock = threading.RLock()
 
-    def observe(self, value: float, labels: Optional[Dict[str, str]] = None) -> None:
+    def observe(self, value: float, labels: dict[str, str] | None = None) -> None:
         """Observe a value and add it to the histogram."""
         key = self._labels_to_key(labels)
         with self._lock:
@@ -158,12 +163,12 @@ class Histogram:
                     self._counts[key][bucket] += 1
             self._counts[key][float("inf")] += 1
 
-    def observe_many(self, values: List[float], labels: Optional[Dict[str, str]] = None) -> None:
+    def observe_many(self, values: list[float], labels: dict[str, str] | None = None) -> None:
         """Observe multiple values."""
         for v in values:
             self.observe(v, labels)
 
-    def get_percentile(self, percentile: float, labels: Optional[Dict[str, str]] = None) -> float:
+    def get_percentile(self, percentile: float, labels: dict[str, str] | None = None) -> float:
         """Compute an approximate percentile from the histogram."""
         key = self._labels_to_key(labels)
         total = self._total_counts.get(key, 0)
@@ -181,12 +186,14 @@ class Histogram:
                         return bucket
                     prev_bucket = self.buckets[i - 1]
                     prev_cumulative = cumulative - self._counts[key].get(bucket, 0)
-                    fraction = (target_count - prev_cumulative) / max(1, self._counts[key].get(bucket, 0))
+                    fraction = (target_count - prev_cumulative) / max(
+                        1, self._counts[key].get(bucket, 0)
+                    )
                     return prev_bucket + fraction * (bucket - prev_bucket)
 
         return self.buckets[-1] if self.buckets else 0.0
 
-    def get_stats(self, labels: Optional[Dict[str, str]] = None) -> Dict[str, float]:
+    def get_stats(self, labels: dict[str, str] | None = None) -> dict[str, float]:
         """Get histogram statistics."""
         key = self._labels_to_key(labels)
         total = self._total_counts.get(key, 0)
@@ -203,7 +210,7 @@ class Histogram:
             "p99": self.get_percentile(99, labels),
         }
 
-    def _labels_to_key(self, labels: Optional[Dict[str, str]]) -> Tuple[str, ...]:
+    def _labels_to_key(self, labels: dict[str, str] | None) -> tuple[str, ...]:
         if labels is None:
             return ()
         return tuple(sorted(labels.items()))
@@ -245,19 +252,23 @@ class MetricsRegistry:
     """Central registry for all backend metrics."""
 
     def __init__(self):
-        self._counters: Dict[str, Counter] = {}
-        self._gauges: Dict[str, Gauge] = {}
-        self._histograms: Dict[str, Histogram] = {}
+        self._counters: dict[str, Counter] = {}
+        self._gauges: dict[str, Gauge] = {}
+        self._histograms: dict[str, Histogram] = {}
         self._lock = threading.RLock()
 
-    def counter(self, name: str, description: str = "", label_names: Optional[List[str]] = None) -> Counter:
+    def counter(
+        self, name: str, description: str = "", label_names: list[str] | None = None
+    ) -> Counter:
         """Get or create a counter."""
         with self._lock:
             if name not in self._counters:
                 self._counters[name] = Counter(name, description, label_names)
             return self._counters[name]
 
-    def gauge(self, name: str, description: str = "", label_names: Optional[List[str]] = None) -> Gauge:
+    def gauge(
+        self, name: str, description: str = "", label_names: list[str] | None = None
+    ) -> Gauge:
         """Get or create a gauge."""
         with self._lock:
             if name not in self._gauges:
@@ -268,8 +279,8 @@ class MetricsRegistry:
         self,
         name: str,
         description: str = "",
-        buckets: Optional[Tuple[float, ...]] = None,
-        label_names: Optional[List[str]] = None,
+        buckets: tuple[float, ...] | None = None,
+        label_names: list[str] | None = None,
     ) -> Histogram:
         """Get or create a histogram."""
         with self._lock:
@@ -288,7 +299,7 @@ class MetricsRegistry:
             parts.append(histogram.to_prometheus())
         return "\n".join(parts)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Export all metrics as a dictionary."""
         result = {
             "counters": {},
@@ -300,7 +311,6 @@ class MetricsRegistry:
         for name, gauge in self._gauges.items():
             result["gauges"][name] = dict(gauge.get_all())
         for name, histogram in self._histograms.items():
-            key = ()
             result["histograms"][name] = histogram.get_stats()
         return result
 
@@ -308,15 +318,16 @@ class MetricsRegistry:
 class BackendMetrics:
     """Pre-configured backend metrics for common use cases."""
 
-    def __init__(self, registry: Optional[MetricsRegistry] = None):
+    def __init__(self, registry: MetricsRegistry | None = None):
         self.registry = registry or MetricsRegistry()
 
         self.request_count = self.registry.counter(
             "nexus_request_total", "Total number of inference requests", ["model", "status"]
         )
         self.request_latency = self.registry.histogram(
-            "nexus_request_latency_seconds", "Request latency in seconds",
-            label_names=["model", "endpoint"]
+            "nexus_request_latency_seconds",
+            "Request latency in seconds",
+            label_names=["model", "endpoint"],
         )
         self.tokens_generated = self.registry.counter(
             "nexus_tokens_generated_total", "Total tokens generated", ["model"]
@@ -327,9 +338,7 @@ class BackendMetrics:
         self.active_requests = self.registry.gauge(
             "nexus_active_requests", "Number of active requests"
         )
-        self.queue_depth = self.registry.gauge(
-            "nexus_queue_depth", "Current request queue depth"
-        )
+        self.queue_depth = self.registry.gauge("nexus_queue_depth", "Current request queue depth")
         self.gpu_memory_used = self.registry.gauge(
             "nexus_gpu_memory_used_mb", "GPU memory used in MB", ["gpu"]
         )
@@ -340,18 +349,24 @@ class BackendMetrics:
             "nexus_model_memory_mb", "Model memory usage in MB", ["model"]
         )
         self.batch_size = self.registry.histogram(
-            "nexus_batch_size", "Batch size distribution",
+            "nexus_batch_size",
+            "Batch size distribution",
             buckets=(1, 2, 4, 8, 16, 32),
-            label_names=["model"]
+            label_names=["model"],
         )
         self.cache_utilization = self.registry.gauge(
             "nexus_cache_utilization", "KV cache utilization", ["model"]
         )
-        self.errors = self.registry.counter(
-            "nexus_errors_total", "Total errors", ["type", "model"]
-        )
+        self.errors = self.registry.counter("nexus_errors_total", "Total errors", ["type", "model"])
 
-    def record_request(self, model: str, latency: float, tokens: int, status: str = "success", endpoint: str = "/generate") -> None:
+    def record_request(
+        self,
+        model: str,
+        latency: float,
+        tokens: int,
+        status: str = "success",
+        endpoint: str = "/generate",
+    ) -> None:
         """Record a completed inference request."""
         self.request_count.inc(labels={"model": model, "status": status})
         self.request_latency.observe(latency, labels={"model": model, "endpoint": endpoint})
@@ -363,6 +378,7 @@ class BackendMetrics:
     def update_gpu_metrics(self) -> None:
         """Update GPU memory metrics from current state."""
         import torch
+
         if not torch.cuda.is_available():
             return
         for i in range(torch.cuda.device_count()):
@@ -371,7 +387,7 @@ class BackendMetrics:
             self.gpu_memory_used.set(used / (1024 * 1024), labels={"gpu": str(i)})
             self.gpu_memory_total.set(total / (1024 * 1024), labels={"gpu": str(i)})
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get all metrics as a dictionary."""
         return self.registry.to_dict()
 
