@@ -4,19 +4,22 @@ Provides model health, GPU health, memory health, and overall service
 health checking with detailed status reporting.
 """
 
-import torch
+from __future__ import annotations
+
+import logging
 import time
-import os
-from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, field
 from enum import Enum
-import logging
+from typing import Any
+
+import torch
 
 logger = logging.getLogger(__name__)
 
 
 class HealthStatus(Enum):
     """Health check status."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -26,14 +29,15 @@ class HealthStatus(Enum):
 @dataclass
 class HealthCheckResult:
     """Result of a single health check."""
+
     name: str
     status: HealthStatus = HealthStatus.UNKNOWN
     message: str = ""
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
     latency_ms: float = 0.0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "status": self.status.value,
@@ -50,7 +54,7 @@ class ModelHealthCheck:
     def __init__(self, model_manager=None):
         self._model_manager = model_manager
 
-    def check(self, model_id: Optional[str] = None) -> HealthCheckResult:
+    def check(self, model_id: str | None = None) -> HealthCheckResult:
         """Run model health check."""
         start = time.time()
         result = HealthCheckResult(name="model_health")
@@ -111,7 +115,7 @@ class ModelHealthCheck:
 
         except Exception as e:
             result.status = HealthStatus.UNHEALTHY
-            result.message = f"Model health check failed: {str(e)}"
+            result.message = f"Model health check failed: {e!s}"
             result.details = {"error": str(e)}
 
         result.latency_ms = (time.time() - start) * 1000
@@ -121,7 +125,7 @@ class ModelHealthCheck:
 class GPUHealthCheck:
     """Checks GPU health: availability, memory, temperature, compute capability."""
 
-    def check(self, gpu_id: Optional[int] = None) -> HealthCheckResult:
+    def check(self, gpu_id: int | None = None) -> HealthCheckResult:
         """Run GPU health check."""
         start = time.time()
         result = HealthCheckResult(name="gpu_health")
@@ -165,8 +169,8 @@ class GPUHealthCheck:
                 gpu_details[f"gpu_{gid}"] = gpu_info
 
             all_healthy = all(
-                gpu_details[f"gpu_{gid}"]["compute_test"] == "passed" and
-                gpu_details[f"gpu_{gid}"]["utilization_pct"] < 95
+                gpu_details[f"gpu_{gid}"]["compute_test"] == "passed"
+                and gpu_details[f"gpu_{gid}"]["utilization_pct"] < 95
                 for gid in gpu_ids
             )
 
@@ -181,7 +185,7 @@ class GPUHealthCheck:
 
         except Exception as e:
             result.status = HealthStatus.UNHEALTHY
-            result.message = f"GPU health check failed: {str(e)}"
+            result.message = f"GPU health check failed: {e!s}"
             result.details = {"error": str(e)}
 
         result.latency_ms = (time.time() - start) * 1000
@@ -200,6 +204,7 @@ class MemoryHealthCheck:
 
         try:
             import psutil
+
             mem = psutil.virtual_memory()
             details["ram"] = {
                 "total_mb": round(mem.total / (1024 * 1024), 2),
@@ -222,10 +227,7 @@ class MemoryHealthCheck:
                     "free_mb": round(free / (1024 * 1024), 2),
                 }
             details["gpu_memory"] = gpu_mem
-            gpu_healthy = all(
-                v["used_pct"] < warning_threshold_pct
-                for v in gpu_mem.values()
-            )
+            gpu_healthy = all(v["used_pct"] < warning_threshold_pct for v in gpu_mem.values())
         else:
             gpu_healthy = True
             details["gpu_memory"] = {"status": "no GPU available"}
@@ -254,7 +256,7 @@ class ServiceHealthCheck:
         self._memory_health = MemoryHealthCheck()
         self._model_manager = model_manager
 
-    def check_all(self, model_id: Optional[str] = None) -> Dict[str, Any]:
+    def check_all(self, model_id: str | None = None) -> dict[str, Any]:
         """Run all health checks and return a comprehensive status report."""
         start = time.time()
 
@@ -287,19 +289,21 @@ class ServiceHealthCheck:
             "timestamp": time.time(),
             "total_latency_ms": round((time.time() - start) * 1000, 2),
             "checks": {name: r.to_dict() for name, r in results.items()},
-            "loaded_models": self._model_manager.list_loaded_models() if self._model_manager else [],
+            "loaded_models": (
+                self._model_manager.list_loaded_models() if self._model_manager else []
+            ),
         }
 
         return report
 
-    def liveness_check(self) -> Dict[str, Any]:
+    def liveness_check(self) -> dict[str, Any]:
         """Quick liveness check: is the service running?"""
         return {
             "status": "alive",
             "timestamp": time.time(),
         }
 
-    def readiness_check(self, model_id: Optional[str] = None) -> Dict[str, Any]:
+    def readiness_check(self, model_id: str | None = None) -> dict[str, Any]:
         """Readiness check: is the service ready to accept requests?"""
         if self._model_manager is None:
             return {
