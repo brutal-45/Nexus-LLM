@@ -9,7 +9,7 @@ import io
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -28,13 +28,13 @@ class BenchmarkReport:
     def __init__(self, title: str = "Benchmark Report") -> None:
         self.title = title
         self.created_at = datetime.now(timezone.utc).isoformat()
-        self._results: Dict[str, Dict[str, Any]] = {}
+        self._results: dict[str, dict[str, Any]] = {}
 
     # ------------------------------------------------------------------
     # Mutating operations
     # ------------------------------------------------------------------
 
-    def add_result(self, name: str, result_dict: Dict[str, Any]) -> None:
+    def add_result(self, name: str, result_dict: dict[str, Any]) -> None:
         """Add a named benchmark result to the report.
 
         Args:
@@ -53,7 +53,7 @@ class BenchmarkReport:
     # Read operations
     # ------------------------------------------------------------------
 
-    def get_results(self) -> Dict[str, Dict[str, Any]]:
+    def get_results(self) -> dict[str, dict[str, Any]]:
         """Return a deep copy of all results."""
         return {k: dict(v) for k, v in self._results.items()}
 
@@ -63,7 +63,7 @@ class BenchmarkReport:
         The summary includes the report title, creation timestamp,
         and a table of all benchmark metrics.
         """
-        lines: List[str] = [
+        lines: list[str] = [
             f"{'=' * 60}",
             f"  {self.title}",
             f"  Created: {self.created_at}",
@@ -124,7 +124,7 @@ class BenchmarkReport:
     # Comparison
     # ------------------------------------------------------------------
 
-    def compare(self, other: "BenchmarkReport") -> Dict[str, Any]:
+    def compare(self, other: "BenchmarkReport") -> dict[str, Any]:
         """Compare this report with another and return a diff.
 
         For every metric that exists in both reports a ``delta`` (other -
@@ -144,12 +144,12 @@ class BenchmarkReport:
         only_self = sorted(self_keys - other_keys)
         only_other = sorted(other_keys - self_keys)
 
-        differences: Dict[str, Dict[str, Any]] = {}
+        differences: dict[str, dict[str, Any]] = {}
         for name in shared:
             self_metrics = self._results[name]
             other_metrics = other._results[name]
             all_metric_keys = sorted(set(self_metrics) | set(other_metrics))
-            diffs: Dict[str, Any] = {}
+            diffs: dict[str, Any] = {}
 
             for mk in all_metric_keys:
                 sv = self_metrics.get(mk)
