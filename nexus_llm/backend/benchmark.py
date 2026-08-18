@@ -4,13 +4,16 @@ Provides inference speed, token throughput, memory usage, and latency
 measurement tools for benchmarking model performance.
 """
 
-import torch
-import time
-import statistics
-from typing import Optional, Dict, Any, List, Callable, Tuple
-from dataclasses import dataclass, field
-import logging
+from __future__ import annotations
+
 import json
+import logging
+import statistics
+import time
+from dataclasses import dataclass, field
+from typing import Any, Callable
+
+import torch
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class BenchmarkResult:
     """Result of a benchmark run."""
+
     name: str
     num_iterations: int = 0
     total_time_seconds: float = 0.0
@@ -36,9 +40,9 @@ class BenchmarkResult:
     memory_after_mb: float = 0.0
     memory_peak_mb: float = 0.0
     gpu_utilization_pct: float = 0.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "num_iterations": self.num_iterations,
@@ -91,8 +95,8 @@ class LatencyMeasurer:
         self,
         fn: Callable,
         iterations: int = 10,
-        args: Tuple = (),
-        kwargs: Optional[Dict] = None,
+        args: tuple = (),
+        kwargs: dict | None = None,
     ) -> BenchmarkResult:
         """Measure the latency of a function over multiple iterations."""
         kwargs = kwargs or {}
@@ -140,7 +144,7 @@ class LatencyMeasurer:
     def _compute_result(
         self,
         name: str,
-        latencies: List[float],
+        latencies: list[float],
         iterations: int,
         total_tokens: int,
     ) -> BenchmarkResult:
@@ -165,7 +169,7 @@ class LatencyMeasurer:
         return result
 
     @staticmethod
-    def _percentile(sorted_data: List[float], pct: float) -> float:
+    def _percentile(sorted_data: list[float], pct: float) -> float:
         """Compute a percentile from sorted data."""
         if not sorted_data:
             return 0.0
@@ -187,9 +191,9 @@ class ThroughputBenchmarker:
         prompt: str = "The quick brown fox jumps over the lazy dog.",
         max_new_tokens: int = 128,
         num_iterations: int = 5,
-        batch_sizes: Optional[List[int]] = None,
-        model_id: Optional[str] = None,
-    ) -> Dict[int, BenchmarkResult]:
+        batch_sizes: list[int] | None = None,
+        model_id: str | None = None,
+    ) -> dict[int, BenchmarkResult]:
         """Benchmark generation throughput at different batch sizes."""
         if batch_sizes is None:
             batch_sizes = [1]
@@ -209,7 +213,7 @@ class ThroughputBenchmarker:
         max_new_tokens: int,
         batch_size: int,
         num_iterations: int,
-        model_id: Optional[str],
+        model_id: str | None,
     ) -> BenchmarkResult:
         """Benchmark a specific batch size."""
         if self._model_manager is None:
@@ -272,9 +276,9 @@ class MemoryBenchmarker:
         model: Any,
         tokenizer: Any,
         prompt: str = "Hello, world!",
-        max_new_tokens_list: Optional[List[int]] = None,
-        batch_sizes: Optional[List[int]] = None,
-    ) -> Dict[str, Any]:
+        max_new_tokens_list: list[int] | None = None,
+        batch_sizes: list[int] | None = None,
+    ) -> dict[str, Any]:
         """Benchmark memory usage at different generation lengths and batch sizes."""
         if max_new_tokens_list is None:
             max_new_tokens_list = [32, 64, 128, 256, 512]
@@ -294,7 +298,9 @@ class MemoryBenchmarker:
                     mem_before = torch.cuda.memory_allocated() / (1024 * 1024)
 
                 prompts = [prompt] * batch_size
-                input_ids = tokenizer(prompts, return_tensors="pt", padding=True).input_ids.to(device)
+                input_ids = tokenizer(prompts, return_tensors="pt", padding=True).input_ids.to(
+                    device
+                )
 
                 with torch.no_grad():
                     _ = model.generate(input_ids, max_new_tokens=max_tokens)
@@ -321,12 +327,12 @@ class MemoryBenchmarker:
 
 def run_full_benchmark(
     model_manager,
-    model_id: Optional[str] = None,
+    model_id: str | None = None,
     prompt: str = "Write a detailed essay about artificial intelligence and its impact on society.",
     max_new_tokens: int = 256,
     num_iterations: int = 5,
-    batch_sizes: Optional[List[int]] = None,
-) -> Dict[str, Any]:
+    batch_sizes: list[int] | None = None,
+) -> dict[str, Any]:
     """Run a comprehensive benchmark suite."""
     batch_sizes = batch_sizes or [1]
 
