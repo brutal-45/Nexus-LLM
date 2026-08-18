@@ -4,17 +4,18 @@ Implements standard beam search, diverse beam search, and constrained beam searc
 with length normalization and various scoring strategies.
 """
 
-import torch
-import torch.nn.functional as F
-from typing import List, Optional, Callable, Any, Dict, Tuple
+from __future__ import annotations
+
 from dataclasses import dataclass
-import math
+
+import torch
 
 
 @dataclass
 class BeamHypothesis:
     """A single beam hypothesis during beam search."""
-    sequence: List[int]
+
+    sequence: list[int]
     score: float
     length: int
     is_done: bool = False
@@ -41,8 +42,8 @@ class BeamSearchScorer:
         self.length_penalty = length_penalty
         self.early_stopping = early_stopping
         self.num_return_sequences = num_return_sequences
-        self.beams: List[List[BeamHypothesis]] = []
-        self._done: List[bool] = []
+        self.beams: list[list[BeamHypothesis]] = []
+        self._done: list[bool] = []
 
     def initialize(self, batch_size: int) -> None:
         """Initialize beams for each batch."""
@@ -54,19 +55,25 @@ class BeamSearchScorer:
         input_ids: torch.LongTensor,
         next_scores: torch.FloatTensor,
         next_tokens: torch.LongTensor,
-        eos_token_id: Optional[int] = None,
-    ) -> Tuple[torch.LongTensor, torch.LongTensor]:
+        eos_token_id: int | None = None,
+    ) -> tuple[torch.LongTensor, torch.LongTensor]:
         """Process one step of beam search. Returns selected tokens and beam indices."""
         batch_size = input_ids.shape[0] // self.num_beams
         device = input_ids.device
 
-        next_beam_scores = torch.zeros((batch_size, self.num_beams), dtype=next_scores.dtype, device=device)
-        next_beam_tokens = torch.zeros((batch_size, self.num_beams), dtype=next_tokens.dtype, device=device)
-        next_beam_indices = torch.zeros((batch_size, self.num_beams), dtype=torch.long, device=device)
+        next_beam_scores = torch.zeros(
+            (batch_size, self.num_beams), dtype=next_scores.dtype, device=device
+        )
+        next_beam_tokens = torch.zeros(
+            (batch_size, self.num_beams), dtype=next_tokens.dtype, device=device
+        )
+        next_beam_indices = torch.zeros(
+            (batch_size, self.num_beams), dtype=torch.long, device=device
+        )
 
         for batch_idx in range(batch_size):
-            beam_tokens = next_tokens[batch_idx * self.num_beams: (batch_idx + 1) * self.num_beams]
-            beam_scores = next_scores[batch_idx * self.num_beams: (batch_idx + 1) * self.num_beams]
+            beam_tokens = next_tokens[batch_idx * self.num_beams : (batch_idx + 1) * self.num_beams]
+            beam_scores = next_scores[batch_idx * self.num_beams : (batch_idx + 1) * self.num_beams]
 
             if self._done[batch_idx]:
                 next_beam_scores[batch_idx] = torch.zeros(self.num_beams, device=device)
@@ -105,8 +112,8 @@ class BeamSearchScorer:
         self,
         input_ids: torch.LongTensor,
         final_beam_scores: torch.FloatTensor,
-        eos_token_id: Optional[int] = None,
-    ) -> Tuple[torch.LongTensor, torch.FloatTensor]:
+        eos_token_id: int | None = None,
+    ) -> tuple[torch.LongTensor, torch.FloatTensor]:
         """Finalize beam search and return best sequences."""
         batch_size = input_ids.shape[0] // self.num_beams
 
@@ -129,7 +136,7 @@ class BeamSearchScorer:
                 key=lambda h: h.normalized_score(self.length_penalty),
                 reverse=True,
             )
-            best = sorted_hypotheses[:self.num_return_sequences]
+            best = sorted_hypotheses[: self.num_return_sequences]
             for hyp in best:
                 output_sequences.append(hyp.sequence)
                 output_scores.append(hyp.normalized_score(self.length_penalty))
@@ -141,7 +148,7 @@ class BeamSearchScorer:
             dtype=torch.long,
         )
         for i, seq in enumerate(output_sequences):
-            padded[i, :len(seq)] = torch.tensor(seq)
+            padded[i, : len(seq)] = torch.tensor(seq)
 
         scores_tensor = torch.tensor(output_scores)
         return padded, scores_tensor
@@ -167,35 +174,41 @@ class DiverseBeamSearchScorer:
         self.length_penalty = length_penalty
         self.num_return_sequences = num_return_sequences
         self.beams_per_group = num_beams // num_beam_groups
-        self._group_scores: Optional[torch.FloatTensor] = None
+        self._group_scores: torch.FloatTensor | None = None
 
     def initialize(self, batch_size: int, device: torch.device = None) -> None:
         """Initialize diversity tracking."""
-        self._group_scores = torch.zeros(
-            (batch_size, self.num_beam_groups), device=device
-        )
+        self._group_scores = torch.zeros((batch_size, self.num_beam_groups), device=device)
 
     def process(
         self,
         input_ids: torch.LongTensor,
         next_scores: torch.FloatTensor,
         next_tokens: torch.LongTensor,
-        eos_token_id: Optional[int] = None,
-    ) -> Tuple[torch.LongTensor, torch.LongTensor]:
+        eos_token_id: int | None = None,
+    ) -> tuple[torch.LongTensor, torch.LongTensor]:
         """Process one step with diversity penalty between groups."""
         batch_size = input_ids.shape[0] // self.num_beams
         device = input_ids.device
 
-        next_beam_scores = torch.zeros((batch_size, self.num_beams), dtype=next_scores.dtype, device=device)
-        next_beam_tokens = torch.zeros((batch_size, self.num_beams), dtype=next_tokens.dtype, device=device)
-        next_beam_indices = torch.zeros((batch_size, self.num_beams), dtype=torch.long, device=device)
+        next_beam_scores = torch.zeros(
+            (batch_size, self.num_beams), dtype=next_scores.dtype, device=device
+        )
+        next_beam_tokens = torch.zeros(
+            (batch_size, self.num_beams), dtype=next_tokens.dtype, device=device
+        )
+        next_beam_indices = torch.zeros(
+            (batch_size, self.num_beams), dtype=torch.long, device=device
+        )
 
         for batch_idx in range(batch_size):
             for group_idx in range(self.num_beam_groups):
                 start = group_idx * self.beams_per_group
                 end = start + self.beams_per_group
 
-                group_beam_scores = next_scores[batch_idx * self.num_beams + start: batch_idx * self.num_beams + end].clone()
+                group_beam_scores = next_scores[
+                    batch_idx * self.num_beams + start : batch_idx * self.num_beams + end
+                ].clone()
 
                 diversity_bonus = torch.zeros_like(group_beam_scores)
                 for other_group in range(self.num_beam_groups):
@@ -207,8 +220,12 @@ class DiverseBeamSearchScorer:
                 for beam_idx_in_group in range(self.beams_per_group):
                     global_beam_idx = batch_idx * self.num_beams + start + beam_idx_in_group
                     best_idx = adjusted_scores[beam_idx_in_group].argmax()
-                    next_beam_scores[batch_idx, start + beam_idx_in_group] = adjusted_scores[beam_idx_in_group, best_idx]
-                    next_beam_tokens[batch_idx, start + beam_idx_in_group] = next_tokens[global_beam_idx, best_idx]
+                    next_beam_scores[batch_idx, start + beam_idx_in_group] = adjusted_scores[
+                        beam_idx_in_group, best_idx
+                    ]
+                    next_beam_tokens[batch_idx, start + beam_idx_in_group] = next_tokens[
+                        global_beam_idx, best_idx
+                    ]
                     next_beam_indices[batch_idx, start + beam_idx_in_group] = beam_idx_in_group
 
                 self._group_scores[batch_idx, group_idx] = adjusted_scores.max().item()
@@ -219,11 +236,11 @@ class DiverseBeamSearchScorer:
         self,
         input_ids: torch.LongTensor,
         final_beam_scores: torch.FloatTensor,
-        eos_token_id: Optional[int] = None,
-    ) -> Tuple[torch.LongTensor, torch.FloatTensor]:
+        eos_token_id: int | None = None,
+    ) -> tuple[torch.LongTensor, torch.FloatTensor]:
         """Finalize diverse beam search."""
         batch_size = input_ids.shape[0] // self.num_beams
-        all_hypotheses: List[List[BeamHypothesis]] = [[] for _ in range(batch_size)]
+        all_hypotheses: list[list[BeamHypothesis]] = [[] for _ in range(batch_size)]
 
         for batch_idx in range(batch_size):
             for beam_idx in range(self.num_beams):
@@ -244,7 +261,7 @@ class DiverseBeamSearchScorer:
                 key=lambda h: h.normalized_score(self.length_penalty),
                 reverse=True,
             )
-            best = sorted_hyps[:self.num_return_sequences]
+            best = sorted_hyps[: self.num_return_sequences]
             for hyp in best:
                 output_sequences.append(hyp.sequence)
                 output_scores.append(hyp.normalized_score(self.length_penalty))
@@ -256,7 +273,7 @@ class DiverseBeamSearchScorer:
             dtype=torch.long,
         )
         for i, seq in enumerate(output_sequences):
-            padded[i, :len(seq)] = torch.tensor(seq)
+            padded[i, : len(seq)] = torch.tensor(seq)
 
         return padded, torch.tensor(output_scores)
 
@@ -267,7 +284,7 @@ class ConstrainedBeamSearchScorer:
     def __init__(
         self,
         num_beams: int,
-        constraints: Optional[List[List[int]]] = None,
+        constraints: list[list[int]] | None = None,
         length_penalty: float = 1.0,
         num_return_sequences: int = 1,
     ):
@@ -275,15 +292,15 @@ class ConstrainedBeamSearchScorer:
         self.constraints = constraints or []
         self.length_penalty = length_penalty
         self.num_return_sequences = num_return_sequences
-        self.beams: List[List[BeamHypothesis]] = []
+        self.beams: list[list[BeamHypothesis]] = []
 
-    def _satisfies_constraints(self, sequence: List[int]) -> bool:
+    def _satisfies_constraints(self, sequence: list[int]) -> bool:
         """Check if a sequence satisfies all constraints."""
         for constraint_tokens in self.constraints:
             constraint_len = len(constraint_tokens)
             found = False
             for i in range(len(sequence) - constraint_len + 1):
-                if sequence[i:i + constraint_len] == constraint_tokens:
+                if sequence[i : i + constraint_len] == constraint_tokens:
                     found = True
                     break
             if not found:
@@ -295,25 +312,33 @@ class ConstrainedBeamSearchScorer:
         input_ids: torch.LongTensor,
         next_scores: torch.FloatTensor,
         next_tokens: torch.LongTensor,
-        eos_token_id: Optional[int] = None,
-    ) -> Tuple[torch.LongTensor, torch.LongTensor]:
+        eos_token_id: int | None = None,
+    ) -> tuple[torch.LongTensor, torch.LongTensor]:
         """Process one step, prioritizing beams closer to satisfying constraints."""
         batch_size = input_ids.shape[0] // self.num_beams
         device = input_ids.device
 
-        next_beam_scores = torch.zeros((batch_size, self.num_beams), dtype=next_scores.dtype, device=device)
-        next_beam_tokens = torch.zeros((batch_size, self.num_beams), dtype=next_tokens.dtype, device=device)
-        next_beam_indices = torch.zeros((batch_size, self.num_beams), dtype=torch.long, device=device)
+        next_beam_scores = torch.zeros(
+            (batch_size, self.num_beams), dtype=next_scores.dtype, device=device
+        )
+        next_beam_tokens = torch.zeros(
+            (batch_size, self.num_beams), dtype=next_tokens.dtype, device=device
+        )
+        next_beam_indices = torch.zeros(
+            (batch_size, self.num_beams), dtype=torch.long, device=device
+        )
 
         for batch_idx in range(batch_size):
             beam_idx = 0
             beam_start = batch_idx * self.num_beams
             beam_end = beam_start + self.num_beams
 
-            for rank, (token, score) in enumerate(zip(
-                next_tokens[beam_start:beam_end],
-                next_scores[beam_start:beam_end],
-            )):
+            for rank, (token, score) in enumerate(
+                zip(
+                    next_tokens[beam_start:beam_end],
+                    next_scores[beam_start:beam_end],
+                )
+            ):
                 if beam_idx >= self.num_beams:
                     break
 
@@ -344,8 +369,8 @@ class ConstrainedBeamSearchScorer:
         self,
         input_ids: torch.LongTensor,
         final_beam_scores: torch.FloatTensor,
-        eos_token_id: Optional[int] = None,
-    ) -> Tuple[torch.LongTensor, torch.FloatTensor]:
+        eos_token_id: int | None = None,
+    ) -> tuple[torch.LongTensor, torch.FloatTensor]:
         """Finalize constrained beam search."""
         batch_size = input_ids.shape[0] // self.num_beams
 
@@ -366,14 +391,16 @@ class ConstrainedBeamSearchScorer:
         output_scores = []
 
         for batch_idx in range(batch_size):
-            constrained = [h for h in self.beams[batch_idx] if self._satisfies_constraints(h.sequence)]
+            constrained = [
+                h for h in self.beams[batch_idx] if self._satisfies_constraints(h.sequence)
+            ]
             candidates = constrained if constrained else self.beams[batch_idx]
             sorted_hyps = sorted(
                 candidates,
                 key=lambda h: h.normalized_score(self.length_penalty),
                 reverse=True,
             )
-            best = sorted_hyps[:self.num_return_sequences]
+            best = sorted_hyps[: self.num_return_sequences]
             for hyp in best:
                 output_sequences.append(hyp.sequence)
                 output_scores.append(hyp.normalized_score(self.length_penalty))
@@ -385,6 +412,6 @@ class ConstrainedBeamSearchScorer:
             dtype=torch.long,
         )
         for i, seq in enumerate(output_sequences):
-            padded[i, :len(seq)] = torch.tensor(seq)
+            padded[i, : len(seq)] = torch.tensor(seq)
 
         return padded, torch.tensor(output_scores)
