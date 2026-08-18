@@ -4,10 +4,13 @@ Implements various stopping conditions: max length, EOS token, string match,
 length penalty, and custom criteria composition.
 """
 
-import torch
-from typing import List, Optional, Callable, Any, Set
-from dataclasses import dataclass, field
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from typing import Any, Callable
+
+import torch
 
 
 class StoppingCriterion(ABC):
@@ -16,11 +19,9 @@ class StoppingCriterion(ABC):
     @abstractmethod
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
         """Return True if generation should stop."""
-        pass
 
     def reset(self) -> None:
         """Reset any internal state for a new generation."""
-        pass
 
 
 class MaxLengthCriteria(StoppingCriterion):
@@ -48,7 +49,7 @@ class MaxNewTokensCriteria(StoppingCriterion):
 class EosTokenCriteria(StoppingCriterion):
     """Stop when an end-of-sequence token is generated."""
 
-    def __init__(self, eos_token_id: Optional[int] = None, eos_token_ids: Optional[List[int]] = None):
+    def __init__(self, eos_token_id: int | None = None, eos_token_ids: list[int] | None = None):
         if eos_token_id is not None and eos_token_ids is not None:
             self.eos_token_ids = set([eos_token_id] + eos_token_ids)
         elif eos_token_id is not None:
@@ -57,7 +58,7 @@ class EosTokenCriteria(StoppingCriterion):
             self.eos_token_ids = set(eos_token_ids)
         else:
             self.eos_token_ids = set()
-        self._finished: Set[int] = set()
+        self._finished: set[int] = set()
 
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
         if not self.eos_token_ids:
@@ -81,10 +82,10 @@ class EosTokenCriteria(StoppingCriterion):
 class StringMatchCriteria(StoppingCriterion):
     """Stop when a specific string appears in the decoded output."""
 
-    def __init__(self, stop_strings: List[str], tokenizer: Any):
+    def __init__(self, stop_strings: list[str], tokenizer: Any):
         self.stop_strings = stop_strings
         self.tokenizer = tokenizer
-        self._finished: Set[int] = set()
+        self._finished: set[int] = set()
 
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
         batch_size = input_ids.shape[0]
@@ -102,9 +103,9 @@ class StringMatchCriteria(StoppingCriterion):
 class StopTokenIdsCriteria(StoppingCriterion):
     """Stop when any of the specified token IDs are generated."""
 
-    def __init__(self, stop_token_ids: List[int]):
+    def __init__(self, stop_token_ids: list[int]):
         self.stop_token_ids = set(stop_token_ids)
-        self._finished: Set[int] = set()
+        self._finished: set[int] = set()
 
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
         batch_size = input_ids.shape[0]
@@ -152,10 +153,11 @@ class TimeLimitCriteria(StoppingCriterion):
 
     def __init__(self, max_time_seconds: float):
         self.max_time_seconds = max_time_seconds
-        self._start_time: Optional[float] = None
+        self._start_time: float | None = None
 
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
         import time
+
         if self._start_time is None:
             self._start_time = time.time()
         elapsed = time.time() - self._start_time
@@ -181,7 +183,7 @@ class CustomFunctionCriteria(StoppingCriterion):
 class CompositeStoppingCriteria(StoppingCriterion):
     """Combine multiple stopping criteria. Stops when ANY criterion returns True."""
 
-    def __init__(self, criteria: List[StoppingCriterion], mode: str = "any"):
+    def __init__(self, criteria: list[StoppingCriterion], mode: str = "any"):
         self.criteria = criteria
         self.mode = mode
         if mode not in ("any", "all"):
@@ -202,41 +204,45 @@ class CompositeStoppingCriteria(StoppingCriterion):
 class StoppingCriteriaBuilder:
     """Builder for composing stopping criteria fluently."""
 
-    criteria: List[StoppingCriterion] = field(default_factory=list)
+    criteria: list[StoppingCriterion] = field(default_factory=list)
 
-    def max_length(self, max_length: int) -> "StoppingCriteriaBuilder":
+    def max_length(self, max_length: int) -> StoppingCriteriaBuilder:
         self.criteria.append(MaxLengthCriteria(max_length))
         return self
 
-    def max_new_tokens(self, prompt_length: int, max_new_tokens: int) -> "StoppingCriteriaBuilder":
+    def max_new_tokens(self, prompt_length: int, max_new_tokens: int) -> StoppingCriteriaBuilder:
         self.criteria.append(MaxNewTokensCriteria(prompt_length, max_new_tokens))
         return self
 
-    def eos_token(self, eos_token_id: Optional[int] = None, eos_token_ids: Optional[List[int]] = None) -> "StoppingCriteriaBuilder":
+    def eos_token(
+        self, eos_token_id: int | None = None, eos_token_ids: list[int] | None = None
+    ) -> StoppingCriteriaBuilder:
         self.criteria.append(EosTokenCriteria(eos_token_id, eos_token_ids))
         return self
 
-    def string_match(self, stop_strings: List[str], tokenizer: Any) -> "StoppingCriteriaBuilder":
+    def string_match(self, stop_strings: list[str], tokenizer: Any) -> StoppingCriteriaBuilder:
         self.criteria.append(StringMatchCriteria(stop_strings, tokenizer))
         return self
 
-    def stop_token_ids(self, stop_token_ids: List[int]) -> "StoppingCriteriaBuilder":
+    def stop_token_ids(self, stop_token_ids: list[int]) -> StoppingCriteriaBuilder:
         self.criteria.append(StopTokenIdsCriteria(stop_token_ids))
         return self
 
-    def min_length(self, min_length: int, eos_token_id: int) -> "StoppingCriteriaBuilder":
+    def min_length(self, min_length: int, eos_token_id: int) -> StoppingCriteriaBuilder:
         self.criteria.append(MinLengthCriteria(min_length, eos_token_id))
         return self
 
-    def min_new_tokens(self, prompt_length: int, min_new_tokens: int, eos_token_id: int) -> "StoppingCriteriaBuilder":
+    def min_new_tokens(
+        self, prompt_length: int, min_new_tokens: int, eos_token_id: int
+    ) -> StoppingCriteriaBuilder:
         self.criteria.append(MinNewTokensCriteria(prompt_length, min_new_tokens, eos_token_id))
         return self
 
-    def time_limit(self, max_time_seconds: float) -> "StoppingCriteriaBuilder":
+    def time_limit(self, max_time_seconds: float) -> StoppingCriteriaBuilder:
         self.criteria.append(TimeLimitCriteria(max_time_seconds))
         return self
 
-    def custom(self, stop_fn: Callable) -> "StoppingCriteriaBuilder":
+    def custom(self, stop_fn: Callable) -> StoppingCriteriaBuilder:
         self.criteria.append(CustomFunctionCriteria(stop_fn))
         return self
 
