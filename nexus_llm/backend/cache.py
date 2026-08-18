@@ -4,19 +4,23 @@ Implements cache allocation, eviction, memory tracking, and PagedAttention-style
 management for efficient attention key-value cache handling.
 """
 
-import torch
-from typing import Optional, Dict, List, Tuple, Any
-from dataclasses import dataclass, field
-from enum import Enum
-import threading
-import math
+from __future__ import annotations
+
 import logging
+import math
+import threading
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any
+
+import torch
 
 logger = logging.getLogger(__name__)
 
 
 class CacheStatus(Enum):
     """Status of a cache block."""
+
     FREE = "free"
     OCCUPIED = "occupied"
     EVICTABLE = "evictable"
@@ -26,13 +30,14 @@ class CacheStatus(Enum):
 @dataclass
 class CacheBlock:
     """A single block in the paged KV cache."""
+
     block_id: int
     status: CacheStatus = CacheStatus.FREE
     ref_count: int = 0
     last_access_step: int = 0
     device: str = "gpu"
-    key_tensor: Optional[torch.Tensor] = None
-    value_tensor: Optional[torch.Tensor] = None
+    key_tensor: torch.Tensor | None = None
+    value_tensor: torch.Tensor | None = None
 
     def mark_accessed(self, step: int) -> None:
         self.last_access_step = step
@@ -48,8 +53,9 @@ class CacheBlock:
 @dataclass
 class CacheEntry:
     """Metadata for a cached sequence."""
+
     sequence_id: str
-    block_ids: List[int]
+    block_ids: list[int]
     num_tokens: int
     created_step: int
     last_access_step: int
@@ -82,22 +88,24 @@ class PagedKVCache:
         self.dtype = dtype
         self.device = device
 
-        self._blocks: Dict[int, CacheBlock] = {
+        self._blocks: dict[int, CacheBlock] = {
             i: CacheBlock(block_id=i, device=device) for i in range(num_blocks)
         }
-        self._entries: Dict[str, CacheEntry] = {}
-        self._free_blocks: List[int] = list(range(num_blocks))
+        self._entries: dict[str, CacheEntry] = {}
+        self._free_blocks: list[int] = list(range(num_blocks))
         self._step_counter = 0
         self._lock = threading.RLock()
 
-        self._key_cache: Optional[List[torch.Tensor]] = None
-        self._value_cache: Optional[List[torch.Tensor]] = None
+        self._key_cache: list[torch.Tensor] | None = None
+        self._value_cache: list[torch.Tensor] | None = None
         self._initialize_cache_tensors()
 
     def _initialize_cache_tensors(self) -> None:
         """Pre-allocate the physical cache tensors for all blocks."""
         try:
-            target_device = torch.device(self.device) if torch.cuda.is_available() else torch.device("cpu")
+            target_device = (
+                torch.device(self.device) if torch.cuda.is_available() else torch.device("cpu")
+            )
             self._key_cache = [
                 torch.zeros(
                     (self.num_blocks, self.block_size, self.num_heads, self.head_dim),
@@ -166,7 +174,7 @@ class PagedKVCache:
         total_bytes = per_block_bytes * self.num_blocks * self.num_layers * 2
         return total_bytes / (1024 * 1024)
 
-    def allocate_blocks(self, sequence_id: str, num_tokens: int, priority: int = 0) -> List[int]:
+    def allocate_blocks(self, sequence_id: str, num_tokens: int, priority: int = 0) -> list[int]:
         """Allocate cache blocks for a sequence.
 
         Args:
@@ -181,7 +189,9 @@ class PagedKVCache:
             num_needed = math.ceil(num_tokens / self.block_size)
 
             if num_needed > self.num_free_blocks:
-                freed = self._evict_blocks(num_needed - self.num_free_blocks, exclude_seq=sequence_id)
+                freed = self._evict_blocks(
+                    num_needed - self.num_free_blocks, exclude_seq=sequence_id
+                )
                 if freed < num_needed - self.num_free_blocks:
                     raise RuntimeError(
                         f"Cannot allocate {num_needed} blocks for '{sequence_id}'. "
@@ -238,7 +248,7 @@ class PagedKVCache:
             logger.debug(f"Freed {freed_count} blocks for sequence '{sequence_id}'")
             return freed_count
 
-    def _evict_blocks(self, num_needed: int, exclude_seq: Optional[str] = None) -> int:
+    def _evict_blocks(self, num_needed: int, exclude_seq: str | None = None) -> int:
         """Evict blocks using LRU policy, respecting priorities.
 
         Returns the number of blocks freed.
@@ -288,7 +298,9 @@ class PagedKVCache:
 
                 entry.num_tokens = new_total
 
-    def get_cache_tensors(self, sequence_id: str) -> Optional[Tuple[List[torch.Tensor], List[torch.Tensor]]]:
+    def get_cache_tensors(
+        self, sequence_id: str
+    ) -> tuple[list[torch.Tensor], list[torch.Tensor]] | None:
         """Get the key and value cache tensors for a specific sequence."""
         entry = self._entries.get(sequence_id)
         if entry is None:
@@ -327,8 +339,12 @@ class PagedKVCache:
             physical_block = entry.block_ids[block_idx]
             if self._key_cache is not None and self._value_cache is not None:
                 write_len = min(key_tensor.shape[0], self.block_size - offset_in_block)
-                self._key_cache[layer_idx][physical_block, offset_in_block:offset_in_block + write_len] = key_tensor[:write_len]
-                self._value_cache[layer_idx][physical_block, offset_in_block:offset_in_block + write_len] = value_tensor[:write_len]
+                self._key_cache[layer_idx][
+                    physical_block, offset_in_block : offset_in_block + write_len
+                ] = key_tensor[:write_len]
+                self._value_cache[layer_idx][
+                    physical_block, offset_in_block : offset_in_block + write_len
+                ] = value_tensor[:write_len]
 
     def clear(self) -> None:
         """Clear all cache entries and free all blocks."""
@@ -343,7 +359,7 @@ class PagedKVCache:
             self._free_blocks = list(range(self.num_blocks))
             self._step_counter = 0
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         return {
             "total_blocks": self.num_blocks,
@@ -365,7 +381,9 @@ class PagedKVCache:
         """Resize the cache to a new number of blocks. Frees all existing entries."""
         self.clear()
         self.num_blocks = new_num_blocks
-        self._blocks = {i: CacheBlock(block_id=i, device=self.device) for i in range(new_num_blocks)}
+        self._blocks = {
+            i: CacheBlock(block_id=i, device=self.device) for i in range(new_num_blocks)
+        }
         self._free_blocks = list(range(new_num_blocks))
         self._initialize_cache_tensors()
 
