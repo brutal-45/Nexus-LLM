@@ -1,10 +1,9 @@
 """API documentation: OpenAPI schema customization, example responses."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
-
 
 API_TITLE = "Nexus-LLM API"
 API_VERSION = "1.0.0"
@@ -164,7 +163,7 @@ EXAMPLE_MODELS_LIST_RESPONSE = {
 }
 
 
-def custom_openapi(app: FastAPI) -> Dict[str, Any]:
+def custom_openapi(app: FastAPI) -> dict[str, Any]:
     """Generate a customized OpenAPI schema for the Nexus-LLM API.
 
     Args:

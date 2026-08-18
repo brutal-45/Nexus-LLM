@@ -1,11 +1,13 @@
 """Rate limiting: token bucket, sliding window, per-user limits."""
 
+from __future__ import annotations
+
 import logging
 import threading
 import time
 from collections import defaultdict
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any
 
 from nexus_llm.api.errors import RateLimitExceededError
 
@@ -15,6 +17,7 @@ logger = logging.getLogger("nexus_llm.api.rate_limit")
 @dataclass
 class RateLimitConfig:
     """Configuration for rate limiting."""
+
     requests_per_minute: int = 60
     requests_per_hour: int = 3600
     requests_per_day: int = 86400
@@ -35,7 +38,7 @@ class TokenBucket:
         self,
         capacity: int,
         refill_rate: float,
-        initial_tokens: Optional[int] = None,
+        initial_tokens: int | None = None,
     ):
         self.capacity = capacity
         self.refill_rate = refill_rate
@@ -125,8 +128,8 @@ class SlidingWindowCounter:
 
     def __init__(
         self,
-        window_sizes: Optional[List[int]] = None,
-        max_requests: Optional[Dict[int, int]] = None,
+        window_sizes: list[int] | None = None,
+        max_requests: dict[int, int] | None = None,
     ):
         self.window_sizes = window_sizes or [60, 3600, 86400]
         self.max_requests = max_requests or {
@@ -134,12 +137,12 @@ class SlidingWindowCounter:
             3600: 3600,
             86400: 86400,
         }
-        self._counters: Dict[str, Dict[int, List[Tuple[float, int]]]] = defaultdict(
+        self._counters: dict[str, dict[int, list[tuple[float, int]]]] = defaultdict(
             lambda: {ws: [] for ws in self.window_sizes}
         )
         self._lock = threading.Lock()
 
-    def check(self, key: str, increment: int = 1) -> Tuple[bool, Dict[str, Any]]:
+    def check(self, key: str, increment: int = 1) -> tuple[bool, dict[str, Any]]:
         """Check if a request is within rate limits.
 
         Args:
@@ -153,14 +156,12 @@ class SlidingWindowCounter:
             now = time.time()
             user_counters = self._counters[key]
             is_allowed = True
-            info: Dict[str, Any] = {}
+            info: dict[str, Any] = {}
 
             for window_size in self.window_sizes:
                 window_start = now - window_size
                 user_counters[window_size] = [
-                    (ts, count)
-                    for ts, count in user_counters[window_size]
-                    if ts > window_start
+                    (ts, count) for ts, count in user_counters[window_size] if ts > window_start
                 ]
 
                 current_count = sum(c for _, c in user_counters[window_size])
@@ -178,9 +179,7 @@ class SlidingWindowCounter:
                         "current": current_count,
                         "limit": max_for_window,
                         "remaining": max(0, max_for_window - current_count),
-                        "reset_at": time.strftime(
-                            "%Y-%m-%dT%H:%M:%S", time.localtime(reset_at)
-                        ),
+                        "reset_at": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(reset_at)),
                     }
                 else:
                     info[f"window_{window_size}s"] = {
@@ -195,7 +194,7 @@ class SlidingWindowCounter:
 
             return is_allowed, info
 
-    def get_usage(self, key: str) -> Dict[str, Any]:
+    def get_usage(self, key: str) -> dict[str, Any]:
         """Get current usage stats for a key.
 
         Args:
@@ -223,7 +222,7 @@ class SlidingWindowCounter:
 
             return result
 
-    def reset(self, key: Optional[str] = None) -> None:
+    def reset(self, key: str | None = None) -> None:
         """Reset counters for a specific key or all keys.
 
         Args:
@@ -251,8 +250,7 @@ class SlidingWindowCounter:
                 for window_size in self.window_sizes:
                     before = len(self._counters[key][window_size])
                     self._counters[key][window_size] = [
-                        (ts, c) for ts, c in self._counters[key][window_size]
-                        if now - ts < max_age
+                        (ts, c) for ts, c in self._counters[key][window_size] if now - ts < max_age
                     ]
                     removed += before - len(self._counters[key][window_size])
             return removed
@@ -265,9 +263,9 @@ class RateLimiter:
     limiting (sliding window) with per-user and per-model granularity.
     """
 
-    def __init__(self, config: Optional[RateLimitConfig] = None):
+    def __init__(self, config: RateLimitConfig | None = None):
         self.config = config or RateLimitConfig()
-        self._token_buckets: Dict[str, TokenBucket] = {}
+        self._token_buckets: dict[str, TokenBucket] = {}
         self._sliding_window = SlidingWindowCounter(
             max_requests={
                 60: self.config.requests_per_minute,
@@ -275,15 +273,15 @@ class RateLimiter:
                 86400: self.config.requests_per_day,
             }
         )
-        self._token_usage: Dict[str, TokenBucket] = {}
+        self._token_usage: dict[str, TokenBucket] = {}
         self._lock = threading.Lock()
 
     def check_rate(
         self,
         key: str,
         tokens: int = 1,
-        model: Optional[str] = None,
-    ) -> Tuple[bool, Dict[str, Any]]:
+        model: str | None = None,
+    ) -> tuple[bool, dict[str, Any]]:
         """Check if a request is within rate limits.
 
         Args:
@@ -325,8 +323,8 @@ class RateLimiter:
         self,
         key: str,
         tokens: int = 1,
-        model: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        model: str | None = None,
+    ) -> dict[str, Any]:
         """Enforce rate limits, raising an error if exceeded.
 
         Args:
@@ -349,7 +347,7 @@ class RateLimiter:
             )
         return info
 
-    def get_status(self, key: str) -> Dict[str, Any]:
+    def get_status(self, key: str) -> dict[str, Any]:
         """Get rate limit status for a user.
 
         Args:
@@ -374,7 +372,7 @@ class RateLimiter:
             },
         }
 
-    def reset(self, key: Optional[str] = None) -> None:
+    def reset(self, key: str | None = None) -> None:
         """Reset rate limit counters.
 
         Args:
@@ -411,7 +409,7 @@ class RateLimiter:
 
 
 # Global rate limiter
-_rate_limiter: Optional[RateLimiter] = None
+_rate_limiter: RateLimiter | None = None
 
 
 def get_rate_limiter() -> RateLimiter:
@@ -422,7 +420,7 @@ def get_rate_limiter() -> RateLimiter:
     return _rate_limiter
 
 
-def init_rate_limiter(config: Optional[RateLimitConfig] = None) -> RateLimiter:
+def init_rate_limiter(config: RateLimitConfig | None = None) -> RateLimiter:
     """Initialize the global rate limiter with configuration."""
     global _rate_limiter
     _rate_limiter = RateLimiter(config)

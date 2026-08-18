@@ -1,7 +1,9 @@
 """CORS configuration: origins, methods, headers, credentials."""
 
+from __future__ import annotations
+
 import logging
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,17 +19,23 @@ class CORSConfig:
 
     def __init__(
         self,
-        allow_origins: Optional[List[str]] = None,
-        allow_methods: Optional[List[str]] = None,
-        allow_headers: Optional[List[str]] = None,
-        expose_headers: Optional[List[str]] = None,
+        allow_origins: list[str] | None = None,
+        allow_methods: list[str] | None = None,
+        allow_headers: list[str] | None = None,
+        expose_headers: list[str] | None = None,
         allow_credentials: bool = False,
         max_age: int = 86400,
-        allow_origin_regex: Optional[str] = None,
+        allow_origin_regex: str | None = None,
     ):
         self.allow_origins = allow_origins or ["*"]
         self.allow_methods = allow_methods or [
-            "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD",
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "OPTIONS",
+            "PATCH",
+            "HEAD",
         ]
         self.allow_headers = allow_headers or [
             "Accept",
@@ -46,13 +54,13 @@ class CORSConfig:
         self.max_age = max_age
         self.allow_origin_regex = allow_origin_regex
 
-    def to_cors_middleware_kwargs(self) -> Dict[str, Any]:
+    def to_cors_middleware_kwargs(self) -> dict[str, Any]:
         """Convert to keyword arguments for FastAPI CORSMiddleware.
 
         Returns:
             Dictionary suitable for app.add_middleware(CORSMiddleware, **kwargs).
         """
-        kwargs: Dict[str, Any] = {
+        kwargs: dict[str, Any] = {
             "allow_origins": self.allow_origins,
             "allow_methods": self.allow_methods,
             "allow_headers": self.allow_headers,
@@ -64,13 +72,13 @@ class CORSConfig:
             kwargs["allow_origin_regex"] = self.allow_origin_regex
         return kwargs
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate the CORS configuration.
 
         Returns:
             List of warning messages for potential issues.
         """
-        warnings: List[str] = []
+        warnings: list[str] = []
 
         if "*" in self.allow_origins and self.allow_credentials:
             warnings.append(
@@ -133,7 +141,7 @@ class CORSConfig:
         if header not in self.expose_headers:
             self.expose_headers.append(header)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Export configuration as a dictionary."""
         return {
             "allow_origins": self.allow_origins,
@@ -150,89 +158,84 @@ class CORSConfigBuilder:
     """Builder pattern for constructing CORS configurations."""
 
     def __init__(self) -> None:
-        self._origins: List[str] = []
-        self._methods: List[str] = []
-        self._headers: List[str] = []
-        self._expose_headers: List[str] = []
+        self._origins: list[str] = []
+        self._methods: list[str] = []
+        self._headers: list[str] = []
+        self._expose_headers: list[str] = []
         self._credentials: bool = False
         self._max_age: int = 86400
-        self._origin_regex: Optional[str] = None
+        self._origin_regex: str | None = None
 
-    def allow_all_origins(self) -> "CORSConfigBuilder":
+    def allow_all_origins(self) -> CORSConfigBuilder:
         """Allow all origins (wildcard)."""
         self._origins = ["*"]
         return self
 
-    def add_origin(self, origin: str) -> "CORSConfigBuilder":
+    def add_origin(self, origin: str) -> CORSConfigBuilder:
         """Add a specific allowed origin."""
         if "*" in self._origins:
             self._origins.remove("*")
         self._origins.append(origin)
         return self
 
-    def add_origins(self, origins: List[str]) -> "CORSConfigBuilder":
+    def add_origins(self, origins: list[str]) -> CORSConfigBuilder:
         """Add multiple allowed origins."""
         for origin in origins:
             self.add_origin(origin)
         return self
 
-    def allow_all_methods(self) -> "CORSConfigBuilder":
+    def allow_all_methods(self) -> CORSConfigBuilder:
         """Allow all standard HTTP methods."""
         self._methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"]
         return self
 
-    def add_method(self, method: str) -> "CORSConfigBuilder":
+    def add_method(self, method: str) -> CORSConfigBuilder:
         """Add an allowed HTTP method."""
         method = method.upper()
         if method not in self._methods:
             self._methods.append(method)
         return self
 
-    def allow_all_headers(self) -> "CORSConfigBuilder":
+    def allow_all_headers(self) -> CORSConfigBuilder:
         """Allow all headers (wildcard)."""
         self._headers = ["*"]
         return self
 
-    def add_header(self, header: str) -> "CORSConfigBuilder":
+    def add_header(self, header: str) -> CORSConfigBuilder:
         """Add an allowed request header."""
         if "*" in self._headers:
             self._headers.remove("*")
         self._headers.append(header)
         return self
 
-    def expose_header(self, header: str) -> "CORSConfigBuilder":
+    def expose_header(self, header: str) -> CORSConfigBuilder:
         """Add a header to expose to clients."""
         self._expose_headers.append(header)
         return self
 
-    def allow_credentials(self, enabled: bool = True) -> "CORSConfigBuilder":
+    def allow_credentials(self, enabled: bool = True) -> CORSConfigBuilder:
         """Set whether credentials (cookies, auth) are allowed."""
         self._credentials = enabled
         return self
 
-    def max_age(self, seconds: int) -> "CORSConfigBuilder":
+    def max_age(self, seconds: int) -> CORSConfigBuilder:
         """Set the preflight cache duration in seconds."""
         self._max_age = seconds
         return self
 
-    def origin_regex(self, pattern: str) -> "CORSConfigBuilder":
+    def origin_regex(self, pattern: str) -> CORSConfigBuilder:
         """Set a regex pattern for matching origins."""
         self._origin_regex = pattern
         return self
 
-    def development_preset(self) -> "CORSConfigBuilder":
+    def development_preset(self) -> CORSConfigBuilder:
         """Apply development-friendly CORS settings."""
-        return (
-            self.allow_all_origins()
-            .allow_all_methods()
-            .allow_all_headers()
-            .max_age(600)
-        )
+        return self.allow_all_origins().allow_all_methods().allow_all_headers().max_age(600)
 
     def production_preset(
         self,
-        domains: Optional[List[str]] = None,
-    ) -> "CORSConfigBuilder":
+        domains: list[str] | None = None,
+    ) -> CORSConfigBuilder:
         """Apply production-hardened CORS settings.
 
         Args:
@@ -269,7 +272,7 @@ class CORSConfigBuilder:
         )
 
 
-def setup_cors(app: Any, config: Optional[CORSConfig] = None) -> None:
+def setup_cors(app: Any, config: CORSConfig | None = None) -> None:
     """Configure and add CORS middleware to a FastAPI application.
 
     Args:
@@ -299,6 +302,6 @@ def create_development_cors() -> CORSConfig:
     return CORSConfigBuilder().development_preset().build()
 
 
-def create_production_cors(domains: Optional[List[str]] = None) -> CORSConfig:
+def create_production_cors(domains: list[str] | None = None) -> CORSConfig:
     """Create a restrictive CORS config for production."""
     return CORSConfigBuilder().production_preset(domains).build()

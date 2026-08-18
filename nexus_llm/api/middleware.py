@@ -1,13 +1,15 @@
 """Middleware: logging, timing, error handling, request ID."""
 
+from __future__ import annotations
+
 import logging
 import time
 import uuid
-from typing import Any, Callable, Optional
+from typing import Any
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
-from starlette.responses import Response, StreamingResponse
+from starlette.responses import Response
 
 logger = logging.getLogger("nexus_llm.api.middleware")
 
@@ -23,12 +25,8 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
     state and added to the response headers.
     """
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
-        request_id = request.headers.get(
-            _REQUEST_ID_HEADER, str(uuid.uuid4())
-        )
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        request_id = request.headers.get(_REQUEST_ID_HEADER, str(uuid.uuid4()))
         request.state.request_id = request_id
 
         response = await call_next(request)
@@ -43,9 +41,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
     timing information for monitoring and debugging.
     """
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         start_time = time.perf_counter()
 
         response = await call_next(request)
@@ -77,7 +73,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         self,
         app: Any,
         log_level: str = "INFO",
-        exclude_paths: Optional[list] = None,
+        exclude_paths: list | None = None,
         log_body: bool = False,
         max_body_length: int = 1000,
     ):
@@ -87,9 +83,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         self.log_body = log_body
         self.max_body_length = max_body_length
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if request.url.path in self.exclude_paths:
             return await call_next(request)
 
@@ -109,7 +103,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 body = await request.body()
                 body_str = body.decode("utf-8", errors="replace")
                 if len(body_str) > self.max_body_length:
-                    body_str = body_str[:self.max_body_length] + "...[truncated]"
+                    body_str = body_str[: self.max_body_length] + "...[truncated]"
                 log_data["body"] = body_str
             except Exception:
                 log_data["body"] = "[failed to read body]"
@@ -137,9 +131,7 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
     all errors are properly logged with request context.
     """
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         try:
             response = await call_next(request)
             return response
@@ -154,9 +146,10 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
                 str(exc),
             )
 
-            from nexus_llm.api.schemas import ErrorResponse
-            from datetime import datetime
             import json
+            from datetime import datetime
+
+            from nexus_llm.api.schemas import ErrorResponse
 
             error_response = ErrorResponse(
                 error="Internal server error",
@@ -185,20 +178,21 @@ class CORSPreflightMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app: Any,
-        allow_origins: Optional[list] = None,
-        allow_methods: Optional[list] = None,
-        allow_headers: Optional[list] = None,
+        allow_origins: list | None = None,
+        allow_methods: list | None = None,
+        allow_headers: list | None = None,
     ):
         super().__init__(app)
         self.allow_origins = allow_origins or ["*"]
         self.allow_methods = allow_methods or ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
         self.allow_headers = allow_headers or [
-            "Content-Type", "Authorization", "X-API-Key", "X-Request-ID"
+            "Content-Type",
+            "Authorization",
+            "X-API-Key",
+            "X-Request-ID",
         ]
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if request.method == "OPTIONS":
             origin = request.headers.get("origin", "*")
             response = Response(status_code=204)

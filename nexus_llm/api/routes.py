@@ -1,36 +1,36 @@
 """REST API routes: /v1/generate, /v1/chat, /v1/models, /v1/health, /v1/config, /v1/training."""
 
+from __future__ import annotations
+
 import logging
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 
-from nexus_llm.api.auth import AuthManager, APIKey, get_auth_manager
+from nexus_llm.api.auth import APIKey, get_auth_manager
 from nexus_llm.api.errors import (
     ContentFilterError,
     GenerationError,
     ModelNotFoundError,
-    NexusAPIError,
 )
-from nexus_llm.api.rate_limit import RateLimiter, get_rate_limiter
+from nexus_llm.api.rate_limit import get_rate_limiter
 from nexus_llm.api.schemas import (
+    ChatMessage,
     ChatRequest,
     ChatResponse,
     ConfigResponse,
     ConfigUpdateRequest,
     ErrorResponse,
+    FinishReason,
     GenerateRequest,
     GenerateResponse,
     HealthResponse,
     ModelInfoResponse,
     ModelsListResponse,
-    StreamChunk,
     TrainingRequest,
     TrainingResponse,
-    ChatMessage,
-    FinishReason,
 )
 
 logger = logging.getLogger("nexus_llm.api.routes")
@@ -41,9 +41,9 @@ router = APIRouter()
 _start_time = time.time()
 
 # In-memory model manager reference (set during app initialization)
-_model_manager: Optional[Any] = None
-_safety_manager: Optional[Any] = None
-_training_jobs: Dict[str, Dict[str, Any]] = {}
+_model_manager: Any | None = None
+_safety_manager: Any | None = None
+_training_jobs: dict[str, dict[str, Any]] = {}
 
 
 def set_model_manager(manager: Any) -> None:
@@ -58,7 +58,7 @@ def set_safety_manager(manager: Any) -> None:
     _safety_manager = manager
 
 
-def _get_model(model_name: Optional[str]) -> Any:
+def _get_model(model_name: str | None) -> Any:
     """Resolve and return a model instance by name.
 
     Args:
@@ -264,24 +264,26 @@ async def list_models(
 
     for model in models:
         info = model.get_info()
-        model_responses.append(ModelInfoResponse(
-            name=info.name,
-            model_type=info.model_type.value,
-            description=info.description,
-            parameters=info.parameters,
-            size_bytes=info.size_bytes,
-            size_gb=info.size_gb,
-            parameters_billions=info.parameters_billions,
-            context_length=info.context_length,
-            vocab_size=info.vocab_size,
-            hidden_size=info.hidden_size,
-            num_layers=info.num_layers,
-            num_heads=info.num_heads,
-            quantization=info.quantization,
-            device=info.device,
-            status=info.status.value,
-            metadata=info.metadata,
-        ))
+        model_responses.append(
+            ModelInfoResponse(
+                name=info.name,
+                model_type=info.model_type.value,
+                description=info.description,
+                parameters=info.parameters,
+                size_bytes=info.size_bytes,
+                size_gb=info.size_gb,
+                parameters_billions=info.parameters_billions,
+                context_length=info.context_length,
+                vocab_size=info.vocab_size,
+                hidden_size=info.hidden_size,
+                num_layers=info.num_layers,
+                num_heads=info.num_heads,
+                quantization=info.quantization,
+                device=info.device,
+                status=info.status.value,
+                metadata=info.metadata,
+            )
+        )
 
     return ModelsListResponse(models=model_responses, total=len(model_responses))
 
@@ -371,7 +373,9 @@ async def get_config(
     if _safety_manager:
         config_data["safety"] = _safety_manager.get_config()
     rate_limiter = get_rate_limiter()
-    config_data["rate_limit"] = rate_limiter.config.to_dict() if hasattr(rate_limiter.config, "to_dict") else {}
+    config_data["rate_limit"] = (
+        rate_limiter.config.to_dict() if hasattr(rate_limiter.config, "to_dict") else {}
+    )
     return ConfigResponse(config=config_data)
 
 
@@ -387,7 +391,9 @@ async def update_config(
     """Update runtime configuration parameters."""
     auth_mgr = get_auth_manager()
     if not auth_mgr.is_admin(auth_key):
-        raise HTTPException(status_code=403, detail="Admin access required for configuration changes.")
+        raise HTTPException(
+            status_code=403, detail="Admin access required for configuration changes."
+        )
 
     updated = False
     for key, value in request.config.items():
@@ -396,6 +402,7 @@ async def update_config(
             updated = True
         elif key == "rate_limit":
             from nexus_llm.api.rate_limit import RateLimitConfig, init_rate_limiter
+
             new_config = RateLimitConfig(**value) if isinstance(value, dict) else RateLimitConfig()
             init_rate_limiter(new_config)
             updated = True
@@ -443,7 +450,10 @@ async def create_training_job(
 
     logger.info(
         "Training job submitted: %s (model=%s, method=%s, user=%s)",
-        job_id, request.model, request.method, auth_key.name,
+        job_id,
+        request.model,
+        request.method,
+        auth_key.name,
     )
 
     return TrainingResponse(
@@ -461,7 +471,7 @@ async def create_training_job(
 async def get_training_status(
     job_id: str,
     auth_key: APIKey = Depends(lambda: get_auth_manager().authenticate_request),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Get the status of a training job."""
     if job_id not in _training_jobs:
         raise HTTPException(status_code=404, detail=f"Training job '{job_id}' not found.")
@@ -474,6 +484,6 @@ async def get_training_status(
 )
 async def list_training_jobs(
     auth_key: APIKey = Depends(lambda: get_auth_manager().authenticate_request),
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """List all training jobs."""
     return list(_training_jobs.values())

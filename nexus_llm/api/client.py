@@ -4,11 +4,16 @@ Provides both synchronous REST and asynchronous WebSocket interfaces with
 automatic reconnection, error handling, and streaming support.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import time
+from collections.abc import Generator
 from enum import Enum
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any
+
+from typing_extensions import Self
 
 from nexus_llm.core.exceptions import ServerError
 
@@ -19,8 +24,10 @@ logger = logging.getLogger(__name__)
 # Connection state
 # ---------------------------------------------------------------------------
 
+
 class ConnectionState(str, Enum):
     """Client connection state."""
+
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
     CONNECTED = "connected"
@@ -30,6 +37,7 @@ class ConnectionState(str, Enum):
 # ---------------------------------------------------------------------------
 # NexusClient
 # ---------------------------------------------------------------------------
+
 
 class NexusClient:
     """REST and WebSocket client for the Nexus-LLM server.
@@ -55,7 +63,7 @@ class NexusClient:
     def __init__(
         self,
         base_url: str = "http://localhost:8000",
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         timeout: float = 30.0,
         max_retries: int = 3,
         retry_delay: float = 1.0,
@@ -66,7 +74,7 @@ class NexusClient:
         self._max_retries = max_retries
         self._retry_delay = retry_delay
         self._state = ConnectionState.DISCONNECTED
-        self._session: Optional[Any] = None
+        self._session: Any | None = None
 
     # ------------------------------------------------------------------
     # Properties
@@ -143,11 +151,11 @@ class NexusClient:
     def chat(
         self,
         message: str,
-        model: Optional[str] = None,
+        model: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 512,
-        history: Optional[List[Dict[str, str]]] = None,
-    ) -> Dict[str, Any]:
+        history: list[dict[str, str]] | None = None,
+    ) -> dict[str, Any]:
         """Send a chat message and return the full response.
 
         Args:
@@ -161,7 +169,7 @@ class NexusClient:
         Returns:
             The server's JSON response.
         """
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "message": message,
             "temperature": temperature,
             "max_tokens": max_tokens,
@@ -176,10 +184,10 @@ class NexusClient:
     def chat_stream(
         self,
         message: str,
-        model: Optional[str] = None,
+        model: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 512,
-        history: Optional[List[Dict[str, str]]] = None,
+        history: list[dict[str, str]] | None = None,
     ) -> Generator[str, None, None]:
         """Send a chat message and yield streamed tokens.
 
@@ -195,7 +203,7 @@ class NexusClient:
         Yields:
             Individual token strings as they arrive.
         """
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "message": message,
             "temperature": temperature,
             "max_tokens": max_tokens,
@@ -214,7 +222,9 @@ class NexusClient:
         except ImportError as exc:
             raise ServerError("'requests' is required for streaming.") from exc
 
-        with requests.post(url, json=payload, headers=headers, stream=True, timeout=self._timeout) as resp:
+        with requests.post(
+            url, json=payload, headers=headers, stream=True, timeout=self._timeout
+        ) as resp:
             resp.raise_for_status()
             for line in resp.iter_lines(decode_unicode=True):
                 if not line:
@@ -238,12 +248,12 @@ class NexusClient:
     def generate(
         self,
         prompt: str,
-        model: Optional[str] = None,
+        model: str | None = None,
         max_length: int = 256,
         temperature: float = 0.7,
         top_p: float = 0.9,
         top_k: int = 50,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate text from a prompt.
 
         Args:
@@ -257,7 +267,7 @@ class NexusClient:
         Returns:
             The server's JSON response with generated text.
         """
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "prompt": prompt,
             "max_length": max_length,
             "temperature": temperature,
@@ -278,7 +288,7 @@ class NexusClient:
         model_id: str,
         device: str = "auto",
         precision: str = "fp32",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Request the server to load a model.
 
         Args:
@@ -292,7 +302,7 @@ class NexusClient:
         payload = {"model_id": model_id, "device": device, "precision": precision}
         return self._request("POST", "/model/load", json_data=payload)
 
-    def unload_model(self) -> Dict[str, Any]:
+    def unload_model(self) -> dict[str, Any]:
         """Request the server to unload the current model.
 
         Returns:
@@ -300,7 +310,7 @@ class NexusClient:
         """
         return self._request("POST", "/model/unload")
 
-    def get_model_info(self) -> Dict[str, Any]:
+    def get_model_info(self) -> dict[str, Any]:
         """Get information about the currently loaded model on the server.
 
         Returns:
@@ -308,7 +318,7 @@ class NexusClient:
         """
         return self._request("GET", "/model/info")
 
-    def list_models(self) -> List[Dict[str, Any]]:
+    def list_models(self) -> list[dict[str, Any]]:
         """List available models on the server.
 
         Returns:
@@ -321,7 +331,7 @@ class NexusClient:
     # Server info
     # ------------------------------------------------------------------
 
-    def health(self) -> Dict[str, Any]:
+    def health(self) -> dict[str, Any]:
         """Check the server health.
 
         Returns:
@@ -333,7 +343,7 @@ class NexusClient:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _build_headers(self) -> Dict[str, str]:
+    def _build_headers(self) -> dict[str, str]:
         """Build HTTP headers including optional API key."""
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         if self._api_key:
@@ -344,9 +354,9 @@ class NexusClient:
         self,
         method: str,
         endpoint: str,
-        json_data: Optional[Dict[str, Any]] = None,
+        json_data: dict[str, Any] | None = None,
         retry: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute an HTTP request with retry and error handling.
 
         Args:
@@ -365,7 +375,7 @@ class NexusClient:
             raise ServerError("Not connected. Call connect() first.")
 
         url = f"{self._base_url}{endpoint}"
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
         attempts = self._max_retries if retry else 1
 
         for attempt in range(1, attempts + 1):
@@ -385,24 +395,30 @@ class NexusClient:
                     delay = self._retry_delay * (2 ** (attempt - 1))
                     logger.warning(
                         "Request %s %s failed (attempt %d/%d): %s — retrying in %.1fs",
-                        method, endpoint, attempt, attempts, exc, delay,
+                        method,
+                        endpoint,
+                        attempt,
+                        attempts,
+                        exc,
+                        delay,
                     )
                     time.sleep(delay)
                 else:
                     logger.error(
                         "Request %s %s failed after %d attempts: %s",
-                        method, endpoint, attempts, exc,
+                        method,
+                        endpoint,
+                        attempts,
+                        exc,
                     )
 
-        raise ServerError(
-            f"Request {method} {endpoint} failed: {last_error}"
-        ) from last_error
+        raise ServerError(f"Request {method} {endpoint} failed: {last_error}") from last_error
 
     # ------------------------------------------------------------------
     # Context manager support
     # ------------------------------------------------------------------
 
-    def __enter__(self) -> "NexusClient":
+    def __enter__(self) -> Self:
         self.connect()
         return self
 

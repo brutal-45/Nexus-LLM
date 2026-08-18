@@ -1,11 +1,13 @@
 """WebSocket handlers: streaming generation, real-time chat, progress updates."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
 import time
 import uuid
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -22,11 +24,11 @@ class ConnectionManager:
     """
 
     def __init__(self) -> None:
-        self._connections: Dict[str, WebSocket] = {}
-        self._channels: Dict[str, Set[str]] = {}
-        self._metadata: Dict[str, Dict[str, Any]] = {}
+        self._connections: dict[str, WebSocket] = {}
+        self._channels: dict[str, set[str]] = {}
+        self._metadata: dict[str, dict[str, Any]] = {}
 
-    async def connect(self, websocket: WebSocket, client_id: Optional[str] = None) -> str:
+    async def connect(self, websocket: WebSocket, client_id: str | None = None) -> str:
         """Accept and register a new WebSocket connection.
 
         Args:
@@ -60,7 +62,7 @@ class ConnectionManager:
                     self._channels[channel].discard(client_id)
         logger.info("WebSocket client disconnected: %s", client_id)
 
-    async def send_message(self, client_id: str, message: Dict[str, Any]) -> bool:
+    async def send_message(self, client_id: str, message: dict[str, Any]) -> bool:
         """Send a JSON message to a specific client.
 
         Args:
@@ -81,7 +83,7 @@ class ConnectionManager:
             self.disconnect(client_id)
             return False
 
-    async def broadcast(self, message: Dict[str, Any], channel: Optional[str] = None) -> int:
+    async def broadcast(self, message: dict[str, Any], channel: str | None = None) -> int:
         """Broadcast a message to all or channel-specific connections.
 
         Args:
@@ -126,11 +128,11 @@ class ConnectionManager:
         """Return the number of active connections."""
         return len(self._connections)
 
-    def get_channel_members(self, channel: str) -> Set[str]:
+    def get_channel_members(self, channel: str) -> set[str]:
         """Return client IDs subscribed to a channel."""
         return self._channels.get(channel, set())
 
-    def list_channels(self) -> List[str]:
+    def list_channels(self) -> list[str]:
         """Return all active channel names."""
         return [ch for ch, members in self._channels.items() if members]
 
@@ -152,7 +154,7 @@ class WebSocketMessageHandler:
     """
 
     def __init__(self) -> None:
-        self._model_manager: Optional[Any] = None
+        self._model_manager: Any | None = None
         self.manager = get_connection_manager()
 
     def set_model_manager(self, manager: Any) -> None:
@@ -163,7 +165,7 @@ class WebSocketMessageHandler:
         """
         self._model_manager = manager
 
-    async def handle_message(self, client_id: str, data: Dict[str, Any]) -> None:
+    async def handle_message(self, client_id: str, data: dict[str, Any]) -> None:
         """Route and handle an incoming WebSocket message.
 
         Args:
@@ -186,20 +188,26 @@ class WebSocketMessageHandler:
             try:
                 await handler(client_id, data)
             except Exception as e:
-                await self.manager.send_message(client_id, {
-                    "type": "error",
-                    "error": str(e),
-                    "error_type": type(e).__name__,
-                    "request_id": data.get("request_id"),
-                })
+                await self.manager.send_message(
+                    client_id,
+                    {
+                        "type": "error",
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                        "request_id": data.get("request_id"),
+                    },
+                )
         else:
-            await self.manager.send_message(client_id, {
-                "type": "error",
-                "error": f"Unknown message type: {msg_type}",
-                "valid_types": list(handlers.keys()),
-            })
+            await self.manager.send_message(
+                client_id,
+                {
+                    "type": "error",
+                    "error": f"Unknown message type: {msg_type}",
+                    "valid_types": list(handlers.keys()),
+                },
+            )
 
-    async def _handle_generate(self, client_id: str, data: Dict[str, Any]) -> None:
+    async def _handle_generate(self, client_id: str, data: dict[str, Any]) -> None:
         """Handle a streaming generation request.
 
         Args:
@@ -207,10 +215,13 @@ class WebSocketMessageHandler:
             data: Message data with prompt and config.
         """
         if self._model_manager is None:
-            await self.manager.send_message(client_id, {
-                "type": "error",
-                "error": "Model manager not configured",
-            })
+            await self.manager.send_message(
+                client_id,
+                {
+                    "type": "error",
+                    "error": "Model manager not configured",
+                },
+            )
             return
 
         model_name = data.get("model", "default")
@@ -218,21 +229,27 @@ class WebSocketMessageHandler:
         request_id = data.get("request_id", str(uuid.uuid4()))
 
         if not prompt:
-            await self.manager.send_message(client_id, {
-                "type": "error",
-                "error": "Prompt is required",
-                "request_id": request_id,
-            })
+            await self.manager.send_message(
+                client_id,
+                {
+                    "type": "error",
+                    "error": "Prompt is required",
+                    "request_id": request_id,
+                },
+            )
             return
 
         try:
             model = self._model_manager.get_model(model_name)
         except Exception as e:
-            await self.manager.send_message(client_id, {
-                "type": "error",
-                "error": f"Model not available: {e}",
-                "request_id": request_id,
-            })
+            await self.manager.send_message(
+                client_id,
+                {
+                    "type": "error",
+                    "error": f"Model not available: {e}",
+                    "request_id": request_id,
+                },
+            )
             return
 
         config = GenerationConfig(
@@ -242,11 +259,14 @@ class WebSocketMessageHandler:
             do_sample=data.get("do_sample", True),
         )
 
-        await self.manager.send_message(client_id, {
-            "type": "generate_start",
-            "request_id": request_id,
-            "model": model_name,
-        })
+        await self.manager.send_message(
+            client_id,
+            {
+                "type": "generate_start",
+                "request_id": request_id,
+                "model": model_name,
+            },
+        )
 
         start_time = time.time()
         full_text = ""
@@ -256,31 +276,40 @@ class WebSocketMessageHandler:
             for chunk in model.stream(prompt, config=config):
                 full_text += chunk
                 token_count += 1
-                await self.manager.send_message(client_id, {
-                    "type": "generate_chunk",
-                    "request_id": request_id,
-                    "chunk": chunk,
-                })
+                await self.manager.send_message(
+                    client_id,
+                    {
+                        "type": "generate_chunk",
+                        "request_id": request_id,
+                        "chunk": chunk,
+                    },
+                )
                 await asyncio.sleep(0)
         except Exception as e:
-            await self.manager.send_message(client_id, {
-                "type": "error",
-                "error": f"Generation failed: {e}",
-                "request_id": request_id,
-            })
+            await self.manager.send_message(
+                client_id,
+                {
+                    "type": "error",
+                    "error": f"Generation failed: {e}",
+                    "request_id": request_id,
+                },
+            )
             return
 
         elapsed = time.time() - start_time
-        await self.manager.send_message(client_id, {
-            "type": "generate_complete",
-            "request_id": request_id,
-            "model": model_name,
-            "total_tokens": token_count,
-            "elapsed_seconds": round(elapsed, 3),
-            "tokens_per_second": round(token_count / elapsed, 2) if elapsed > 0 else 0,
-        })
+        await self.manager.send_message(
+            client_id,
+            {
+                "type": "generate_complete",
+                "request_id": request_id,
+                "model": model_name,
+                "total_tokens": token_count,
+                "elapsed_seconds": round(elapsed, 3),
+                "tokens_per_second": round(token_count / elapsed, 2) if elapsed > 0 else 0,
+            },
+        )
 
-    async def _handle_chat(self, client_id: str, data: Dict[str, Any]) -> None:
+    async def _handle_chat(self, client_id: str, data: dict[str, Any]) -> None:
         """Handle a real-time chat message.
 
         Args:
@@ -288,9 +317,13 @@ class WebSocketMessageHandler:
             data: Message data with messages list and config.
         """
         if self._model_manager is None:
-            await self.manager.send_message(client_id, {
-                "type": "error", "error": "Model manager not configured",
-            })
+            await self.manager.send_message(
+                client_id,
+                {
+                    "type": "error",
+                    "error": "Model manager not configured",
+                },
+            )
             return
 
         model_name = data.get("model", "default")
@@ -298,19 +331,27 @@ class WebSocketMessageHandler:
         request_id = data.get("request_id", str(uuid.uuid4()))
 
         if not messages:
-            await self.manager.send_message(client_id, {
-                "type": "error", "error": "Messages are required",
-                "request_id": request_id,
-            })
+            await self.manager.send_message(
+                client_id,
+                {
+                    "type": "error",
+                    "error": "Messages are required",
+                    "request_id": request_id,
+                },
+            )
             return
 
         try:
             model = self._model_manager.get_model(model_name)
         except Exception as e:
-            await self.manager.send_message(client_id, {
-                "type": "error", "error": f"Model not available: {e}",
-                "request_id": request_id,
-            })
+            await self.manager.send_message(
+                client_id,
+                {
+                    "type": "error",
+                    "error": f"Model not available: {e}",
+                    "request_id": request_id,
+                },
+            )
             return
 
         config = GenerationConfig(
@@ -319,70 +360,98 @@ class WebSocketMessageHandler:
             top_p=data.get("top_p", 0.9),
         )
 
-        await self.manager.send_message(client_id, {
-            "type": "chat_start",
-            "request_id": request_id,
-        })
+        await self.manager.send_message(
+            client_id,
+            {
+                "type": "chat_start",
+                "request_id": request_id,
+            },
+        )
 
         full_response = ""
         try:
             for chunk in model.stream(
-                messages[-1].get("content", "") if isinstance(messages[-1], dict) else str(messages[-1]),
+                (
+                    messages[-1].get("content", "")
+                    if isinstance(messages[-1], dict)
+                    else str(messages[-1])
+                ),
                 config=config,
             ):
                 full_response += chunk
-                await self.manager.send_message(client_id, {
-                    "type": "chat_chunk",
-                    "request_id": request_id,
-                    "chunk": chunk,
-                })
+                await self.manager.send_message(
+                    client_id,
+                    {
+                        "type": "chat_chunk",
+                        "request_id": request_id,
+                        "chunk": chunk,
+                    },
+                )
                 await asyncio.sleep(0)
         except Exception as e:
-            await self.manager.send_message(client_id, {
-                "type": "error",
-                "error": f"Chat generation failed: {e}",
-                "request_id": request_id,
-            })
+            await self.manager.send_message(
+                client_id,
+                {
+                    "type": "error",
+                    "error": f"Chat generation failed: {e}",
+                    "request_id": request_id,
+                },
+            )
             return
 
-        await self.manager.send_message(client_id, {
-            "type": "chat_complete",
-            "request_id": request_id,
-            "message": {"role": "assistant", "content": full_response},
-        })
+        await self.manager.send_message(
+            client_id,
+            {
+                "type": "chat_complete",
+                "request_id": request_id,
+                "message": {"role": "assistant", "content": full_response},
+            },
+        )
 
-    async def _handle_subscribe(self, client_id: str, data: Dict[str, Any]) -> None:
+    async def _handle_subscribe(self, client_id: str, data: dict[str, Any]) -> None:
         """Handle channel subscription request."""
         channel = data.get("channel", "general")
         self.manager.subscribe(client_id, channel)
-        await self.manager.send_message(client_id, {
-            "type": "subscribed",
-            "channel": channel,
-        })
+        await self.manager.send_message(
+            client_id,
+            {
+                "type": "subscribed",
+                "channel": channel,
+            },
+        )
 
-    async def _handle_unsubscribe(self, client_id: str, data: Dict[str, Any]) -> None:
+    async def _handle_unsubscribe(self, client_id: str, data: dict[str, Any]) -> None:
         """Handle channel unsubscription request."""
         channel = data.get("channel", "")
         self.manager.unsubscribe(client_id, channel)
-        await self.manager.send_message(client_id, {
-            "type": "unsubscribed",
-            "channel": channel,
-        })
+        await self.manager.send_message(
+            client_id,
+            {
+                "type": "unsubscribed",
+                "channel": channel,
+            },
+        )
 
-    async def _handle_ping(self, client_id: str, data: Dict[str, Any]) -> None:
+    async def _handle_ping(self, client_id: str, data: dict[str, Any]) -> None:
         """Handle ping message with pong response."""
-        await self.manager.send_message(client_id, {
-            "type": "pong",
-            "timestamp": time.time(),
-        })
+        await self.manager.send_message(
+            client_id,
+            {
+                "type": "pong",
+                "timestamp": time.time(),
+            },
+        )
 
-    async def _handle_cancel(self, client_id: str, data: Dict[str, Any]) -> None:
+    async def _handle_cancel(self, client_id: str, data: dict[str, Any]) -> None:
         """Handle generation cancellation request."""
         request_id = data.get("request_id")
-        await self.manager.send_message(client_id, {
-            "type": "cancelled",
-            "request_id": request_id,
-        })
+        await self.manager.send_message(
+            client_id,
+            {
+                "type": "cancelled",
+                "request_id": request_id,
+            },
+        )
 
 
 async def websocket_endpoint(websocket: WebSocket) -> None:
@@ -405,10 +474,13 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             try:
                 data = json.loads(raw_data)
             except json.JSONDecodeError:
-                await manager.send_message(client_id, {
-                    "type": "error",
-                    "error": "Invalid JSON message",
-                })
+                await manager.send_message(
+                    client_id,
+                    {
+                        "type": "error",
+                        "error": "Invalid JSON message",
+                    },
+                )
                 continue
 
             await handler.handle_message(client_id, data)

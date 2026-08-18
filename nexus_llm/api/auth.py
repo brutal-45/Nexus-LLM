@@ -1,16 +1,17 @@
 """Authentication: API key auth, token auth, rate limit per key."""
 
+from __future__ import annotations
+
 import hashlib
-import hmac
 import json
 import logging
 import os
 import secrets
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
-from fastapi import Depends, HTTPException, Request, Security
+from fastapi import Security
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 
 from nexus_llm.api.errors import AuthenticationError
@@ -21,6 +22,7 @@ logger = logging.getLogger("nexus_llm.api.auth")
 @dataclass
 class APIKey:
     """Represents an API key with associated metadata and permissions."""
+
     key_hash: str
     name: str
     created_at: float = 0.0
@@ -28,10 +30,10 @@ class APIKey:
     is_active: bool = True
     rate_limit: int = 60
     rate_limit_period: int = 60
-    allowed_models: Optional[List[str]] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    allowed_models: list[str] | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "created_at": self.created_at,
@@ -50,8 +52,8 @@ class KeyStore:
     key generation, validation, and lookup.
     """
 
-    def __init__(self, persistence_path: Optional[str] = None):
-        self._keys: Dict[str, APIKey] = {}
+    def __init__(self, persistence_path: str | None = None):
+        self._keys: dict[str, APIKey] = {}
         self._persistence_path = persistence_path
         if persistence_path and os.path.isfile(persistence_path):
             self._load_from_file()
@@ -61,7 +63,7 @@ class KeyStore:
         name: str,
         rate_limit: int = 60,
         rate_limit_period: int = 60,
-        allowed_models: Optional[List[str]] = None,
+        allowed_models: list[str] | None = None,
     ) -> str:
         """Generate a new API key.
 
@@ -91,7 +93,7 @@ class KeyStore:
         logger.info("API key generated: %s", name)
         return raw_key
 
-    def validate_key(self, raw_key: str) -> Tuple[bool, Optional[APIKey]]:
+    def validate_key(self, raw_key: str) -> tuple[bool, APIKey | None]:
         """Validate an API key and return its metadata.
 
         Args:
@@ -122,7 +124,7 @@ class KeyStore:
         Returns:
             True if the key was found and revoked.
         """
-        for key_hash, api_key in self._keys.items():
+        for api_key in self._keys.values():
             if api_key.name == name:
                 api_key.is_active = False
                 self._persist()
@@ -151,11 +153,11 @@ class KeyStore:
             return True
         return False
 
-    def list_keys(self) -> List[Dict[str, Any]]:
+    def list_keys(self) -> list[dict[str, Any]]:
         """List all API keys (without revealing the actual key values)."""
         return [api_key.to_dict() for api_key in self._keys.values()]
 
-    def get_key_by_name(self, name: str) -> Optional[APIKey]:
+    def get_key_by_name(self, name: str) -> APIKey | None:
         """Find an API key by name."""
         for api_key in self._keys.values():
             if api_key.name == name:
@@ -172,10 +174,16 @@ class KeyStore:
             return
         data = {kh: ak.to_dict() for kh, ak in self._keys.items()}
         data["__key_hashes"] = {
-            kh: {"key_hash": ak.key_hash, "name": ak.name, "is_active": ak.is_active,
-                 "created_at": ak.created_at, "last_used_at": ak.last_used_at,
-                 "rate_limit": ak.rate_limit, "rate_limit_period": ak.rate_limit_period,
-                 "allowed_models": ak.allowed_models}
+            kh: {
+                "key_hash": ak.key_hash,
+                "name": ak.name,
+                "is_active": ak.is_active,
+                "created_at": ak.created_at,
+                "last_used_at": ak.last_used_at,
+                "rate_limit": ak.rate_limit,
+                "rate_limit_period": ak.rate_limit_period,
+                "allowed_models": ak.allowed_models,
+            }
             for kh, ak in self._keys.items()
         }
         try:
@@ -188,7 +196,7 @@ class KeyStore:
     def _load_from_file(self) -> None:
         """Load key store from file."""
         try:
-            with open(self._persistence_path, "r") as f:
+            with open(self._persistence_path) as f:
                 data = json.load(f)
             hashes = data.get("__key_hashes", data)
             for kh, ak_data in hashes.items():
@@ -221,21 +229,21 @@ class AuthManager:
 
     def __init__(
         self,
-        key_store: Optional[KeyStore] = None,
+        key_store: KeyStore | None = None,
         require_auth: bool = True,
-        admin_key: Optional[str] = None,
+        admin_key: str | None = None,
     ):
         self.key_store = key_store or KeyStore()
         self.require_auth = require_auth
         self.admin_key = admin_key
-        self._bearer_tokens: Dict[str, Dict[str, Any]] = {}
+        self._bearer_tokens: dict[str, dict[str, Any]] = {}
 
     def register_bearer_token(
         self,
         token: str,
         name: str = "default",
         rate_limit: int = 60,
-        allowed_models: Optional[List[str]] = None,
+        allowed_models: list[str] | None = None,
     ) -> None:
         """Register a Bearer token for authentication.
 
@@ -256,8 +264,8 @@ class AuthManager:
 
     async def authenticate_request(
         self,
-        api_key: Optional[str] = Security(_api_key_header),
-        bearer: Optional[HTTPAuthorizationCredentials] = Security(_bearer_scheme),
+        api_key: str | None = Security(_api_key_header),
+        bearer: HTTPAuthorizationCredentials | None = Security(_bearer_scheme),
     ) -> APIKey:
         """Authenticate an incoming request.
 
@@ -299,7 +307,9 @@ class AuthManager:
                 )
             raise AuthenticationError("Invalid bearer token")
 
-        raise AuthenticationError("No authentication provided. Use X-API-Key header or Bearer token.")
+        raise AuthenticationError(
+            "No authentication provided. Use X-API-Key header or Bearer token."
+        )
 
     def check_model_access(self, api_key: APIKey, model_name: str) -> bool:
         """Check if an API key has access to a specific model.
@@ -330,7 +340,7 @@ class AuthManager:
 
 
 # Global auth manager
-_auth_manager: Optional[AuthManager] = None
+_auth_manager: AuthManager | None = None
 
 
 def get_auth_manager() -> AuthManager:
@@ -342,9 +352,9 @@ def get_auth_manager() -> AuthManager:
 
 
 def init_auth(
-    key_store: Optional[KeyStore] = None,
+    key_store: KeyStore | None = None,
     require_auth: bool = True,
-    admin_key: Optional[str] = None,
+    admin_key: str | None = None,
 ) -> AuthManager:
     """Initialize the global authentication manager.
 

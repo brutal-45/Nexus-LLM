@@ -1,10 +1,12 @@
 """Error handling: custom exceptions, error responses, error logging."""
 
+from __future__ import annotations
+
 import logging
 import traceback
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -22,8 +24,8 @@ class NexusAPIError(Exception):
         message: str,
         status_code: int = 500,
         error_type: str = "InternalError",
-        detail: Optional[str] = None,
-        request_id: Optional[str] = None,
+        detail: str | None = None,
+        request_id: str | None = None,
     ):
         self.message = message
         self.status_code = status_code
@@ -46,7 +48,7 @@ class NexusAPIError(Exception):
 class ModelNotFoundError(NexusAPIError):
     """Raised when a requested model is not found or not loaded."""
 
-    def __init__(self, model_name: str, request_id: Optional[str] = None):
+    def __init__(self, model_name: str, request_id: str | None = None):
         super().__init__(
             message=f"Model '{model_name}' not found",
             status_code=404,
@@ -59,7 +61,7 @@ class ModelNotFoundError(NexusAPIError):
 class ModelNotLoadedError(NexusAPIError):
     """Raised when a model exists but is not loaded into memory."""
 
-    def __init__(self, model_name: str, request_id: Optional[str] = None):
+    def __init__(self, model_name: str, request_id: str | None = None):
         super().__init__(
             message=f"Model '{model_name}' is not loaded",
             status_code=503,
@@ -72,7 +74,7 @@ class ModelNotLoadedError(NexusAPIError):
 class ModelLoadError(NexusAPIError):
     """Raised when a model fails to load."""
 
-    def __init__(self, model_name: str, reason: str = "", request_id: Optional[str] = None):
+    def __init__(self, model_name: str, reason: str = "", request_id: str | None = None):
         super().__init__(
             message=f"Failed to load model '{model_name}'",
             status_code=500,
@@ -85,7 +87,7 @@ class ModelLoadError(NexusAPIError):
 class GenerationError(NexusAPIError):
     """Raised when text generation fails."""
 
-    def __init__(self, reason: str = "", request_id: Optional[str] = None):
+    def __init__(self, reason: str = "", request_id: str | None = None):
         super().__init__(
             message="Generation failed",
             status_code=500,
@@ -98,7 +100,7 @@ class GenerationError(NexusAPIError):
 class InvalidRequestError(NexusAPIError):
     """Raised when a request is malformed or invalid."""
 
-    def __init__(self, detail: str, request_id: Optional[str] = None):
+    def __init__(self, detail: str, request_id: str | None = None):
         super().__init__(
             message="Invalid request",
             status_code=400,
@@ -111,7 +113,9 @@ class InvalidRequestError(NexusAPIError):
 class ContentFilterError(NexusAPIError):
     """Raised when content is blocked by safety filters."""
 
-    def __init__(self, reason: str = "Content blocked by safety filter", request_id: Optional[str] = None):
+    def __init__(
+        self, reason: str = "Content blocked by safety filter", request_id: str | None = None
+    ):
         super().__init__(
             message="Content filtered",
             status_code=422,
@@ -127,8 +131,8 @@ class RateLimitExceededError(NexusAPIError):
     def __init__(
         self,
         limit: str = "",
-        reset_at: Optional[str] = None,
-        request_id: Optional[str] = None,
+        reset_at: str | None = None,
+        request_id: str | None = None,
     ):
         detail = f"Rate limit exceeded: {limit}"
         if reset_at:
@@ -145,7 +149,7 @@ class RateLimitExceededError(NexusAPIError):
 class AuthenticationError(NexusAPIError):
     """Raised when authentication fails."""
 
-    def __init__(self, detail: str = "Invalid or missing API key", request_id: Optional[str] = None):
+    def __init__(self, detail: str = "Invalid or missing API key", request_id: str | None = None):
         super().__init__(
             message="Authentication failed",
             status_code=401,
@@ -158,7 +162,7 @@ class AuthenticationError(NexusAPIError):
 class InsufficientResourcesError(NexusAPIError):
     """Raised when server resources are insufficient."""
 
-    def __init__(self, detail: str = "", request_id: Optional[str] = None):
+    def __init__(self, detail: str = "", request_id: str | None = None):
         super().__init__(
             message="Insufficient resources",
             status_code=507,
@@ -171,7 +175,7 @@ class InsufficientResourcesError(NexusAPIError):
 class TimeoutError(NexusAPIError):
     """Raised when a request times out."""
 
-    def __init__(self, timeout_seconds: float = 0.0, request_id: Optional[str] = None):
+    def __init__(self, timeout_seconds: float = 0.0, request_id: str | None = None):
         super().__init__(
             message="Request timed out",
             status_code=504,
@@ -184,7 +188,7 @@ class TimeoutError(NexusAPIError):
 class TrainingError(NexusAPIError):
     """Raised when a training job fails."""
 
-    def __init__(self, detail: str = "", request_id: Optional[str] = None):
+    def __init__(self, detail: str = "", request_id: str | None = None):
         super().__init__(
             message="Training job failed",
             status_code=500,
@@ -281,9 +285,12 @@ def register_error_handlers(app: Any) -> None:
     app.add_exception_handler(Exception, unhandled_error_handler)
 
     for exc_class in _EXCEPTION_MAP:
+
         def make_handler(exc_cls):
             async def handler(request: Request, exc: Exception) -> JSONResponse:
                 mapped = _EXCEPTION_MAP[exc_cls](str(exc))
                 return await nexus_error_handler(request, mapped)
+
             return handler
+
         app.add_exception_handler(exc_class, make_handler(exc_class))
