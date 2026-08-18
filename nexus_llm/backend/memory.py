@@ -4,16 +4,18 @@ Provides GPU memory tracking, memory estimation, garbage collection,
 and memory-mapped loading for efficient model memory usage.
 """
 
-import torch
+from __future__ import annotations
+
 import gc
-import os
+import logging
 import mmap
-import struct
-from typing import Optional, Dict, Any, List, Tuple
-from dataclasses import dataclass, field
+import os
 import threading
 import time
-import logging
+from dataclasses import dataclass, field
+from typing import Any
+
+import torch
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +23,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MemorySnapshot:
     """Snapshot of current memory state."""
+
     timestamp: float = field(default_factory=time.time)
     gpu_total_mb: float = 0.0
     gpu_used_mb: float = 0.0
@@ -34,7 +37,7 @@ class MemorySnapshot:
     model_memory_mb: float = 0.0
     cache_memory_mb: float = 0.0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "timestamp": self.timestamp,
             "gpu_total_mb": round(self.gpu_total_mb, 2),
@@ -55,7 +58,7 @@ class MemoryTracker:
     """Tracks GPU and CPU memory usage over time."""
 
     def __init__(self, history_size: int = 100):
-        self._history: List[MemorySnapshot] = []
+        self._history: list[MemorySnapshot] = []
         self._history_size = history_size
         self._lock = threading.RLock()
         self._model_memory_mb: float = 0.0
@@ -81,6 +84,7 @@ class MemoryTracker:
 
         try:
             import psutil
+
             mem = psutil.virtual_memory()
             snapshot.ram_total_mb = mem.total / (1024 * 1024)
             snapshot.ram_available_mb = mem.available / (1024 * 1024)
@@ -99,18 +103,18 @@ class MemoryTracker:
 
         return snapshot
 
-    def get_history(self) -> List[MemorySnapshot]:
+    def get_history(self) -> list[MemorySnapshot]:
         """Get memory usage history."""
         with self._lock:
             return list(self._history)
 
-    def get_peak_usage(self) -> Optional[MemorySnapshot]:
+    def get_peak_usage(self) -> MemorySnapshot | None:
         """Get the snapshot with peak GPU memory usage."""
         if not self._history:
             return None
         return max(self._history, key=lambda s: s.gpu_used_mb)
 
-    def get_average_usage(self) -> Optional[MemorySnapshot]:
+    def get_average_usage(self) -> MemorySnapshot | None:
         """Get average memory usage over history."""
         if not self._history:
             return None
@@ -148,8 +152,13 @@ class MemoryEstimator:
             Estimated memory in MB.
         """
         bytes_per_param = {
-            "float32": 4, "float16": 2, "bfloat16": 2,
-            "int8": 1, "int4": 0.5, "nf4": 0.5, "fp4": 0.5,
+            "float32": 4,
+            "float16": 2,
+            "bfloat16": 2,
+            "int8": 1,
+            "int4": 0.5,
+            "nf4": 0.5,
+            "fp4": 0.5,
         }
         b = bytes_per_param.get(dtype, 2)
         base_mb = num_parameters * b / (1024 * 1024)
@@ -179,7 +188,7 @@ class MemoryEstimator:
         num_layers: int = 32,
         num_heads: int = 32,
         head_dim: int = 128,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Estimate total inference memory requirements in MB."""
         model_mb = MemoryEstimator.estimate_model_memory(num_parameters, dtype)
         kv_cache_mb = MemoryEstimator.estimate_kv_cache_memory(
@@ -202,7 +211,7 @@ class MemoryEstimator:
         dtype: str = "float32",
         optimizer: str = "adam",
         gradient_checkpointing: bool = False,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Estimate training memory requirements in MB."""
         bytes_per_param = {"float32": 4, "float16": 2, "bfloat16": 2}.get(dtype, 4)
         model_mb = num_parameters * bytes_per_param / (1024 * 1024)
@@ -229,7 +238,7 @@ class GarbageCollector:
     """Manages garbage collection for GPU and CPU memory."""
 
     @staticmethod
-    def collect_gpu() -> Dict[int, Dict[str, float]]:
+    def collect_gpu() -> dict[int, dict[str, float]]:
         """Run garbage collection on all GPUs."""
         results = {}
         if not torch.cuda.is_available():
@@ -250,11 +259,12 @@ class GarbageCollector:
         return results
 
     @staticmethod
-    def collect_cpu() -> Dict[str, float]:
+    def collect_cpu() -> dict[str, float]:
         """Run garbage collection on CPU."""
         before = 0
         try:
             import psutil
+
             before = psutil.virtual_memory().available
         except ImportError:
             pass
@@ -266,6 +276,7 @@ class GarbageCollector:
         after = 0
         try:
             import psutil
+
             after = psutil.virtual_memory().available
         except ImportError:
             pass
@@ -276,7 +287,7 @@ class GarbageCollector:
         }
 
     @staticmethod
-    def collect_all() -> Dict[str, Any]:
+    def collect_all() -> dict[str, Any]:
         """Run full garbage collection on GPU and CPU."""
         gpu_results = GarbageCollector.collect_gpu()
         cpu_results = GarbageCollector.collect_cpu()
@@ -300,7 +311,9 @@ class MemoryMappedLoader:
         """Open the file with memory mapping."""
         self._file = open(self._file_path, "rb")
         self._mmap = mmap.mmap(self._file.fileno(), 0, access=mmap.ACCESS_READ)
-        logger.info(f"Memory-mapped file opened: {self._file_path} ({os.path.getsize(self._file_path) / (1024**3):.2f} GB)")
+        logger.info(
+            f"Memory-mapped file opened: {self._file_path} ({os.path.getsize(self._file_path) / (1024**3):.2f} GB)"
+        )
 
     def close(self) -> None:
         """Close the memory-mapped file."""
@@ -311,7 +324,7 @@ class MemoryMappedLoader:
             self._file.close()
             self._file = None
 
-    def read_tensor(self, offset: int, shape: Tuple[int, ...], dtype: torch.dtype) -> torch.Tensor:
+    def read_tensor(self, offset: int, shape: tuple[int, ...], dtype: torch.dtype) -> torch.Tensor:
         """Read a tensor from a specific offset in the memory-mapped file."""
         if self._mmap is None:
             raise RuntimeError("Memory-mapped file is not open")
@@ -341,6 +354,7 @@ class MemoryMappedLoader:
         """Load weights from a safetensors file using memory mapping."""
         try:
             from safetensors.torch import load_file
+
             state_dict = load_file(self._file_path)
             model.load_state_dict(state_dict, strict=False)
             logger.info(f"Loaded safetensors weights via memory mapping: {self._file_path}")
