@@ -7,25 +7,25 @@ Uses the modern ``lifespan`` context manager for startup/shutdown
 (replaces the deprecated ``@app.on_event`` pattern).
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Dict, List, Optional, Any
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from nexus_llm.backend.inference import InferenceEngine
-from nexus_llm.backend.model_manager import ModelManager, ModelState
-from nexus_llm.backend.tokenizer_utils import TokenizerManager
 from nexus_llm.core.exceptions import (
     InferenceError,
     ModelLoadError,
     ModelNotFoundError,
 )
-from nexus_llm.core.model_catalog import MODEL_CATALOG
 
 logger = logging.getLogger(__name__)
 
@@ -34,16 +34,19 @@ logger = logging.getLogger(__name__)
 # Pydantic request / response models
 # ==================================================================
 
+
 class LoadModelRequest(BaseModel):
     """Request body for ``POST /model/load``."""
+
     model_id: str = Field(..., description="Short model ID from the catalogue")
     device: str = Field("auto", description="Device: auto|cuda|mps|cpu")
     precision: str = Field("fp32", description="Precision: fp32|fp16|bf16|8bit|4bit")
-    cache_dir: Optional[str] = Field(None, description="HuggingFace cache directory")
+    cache_dir: str | None = Field(None, description="HuggingFace cache directory")
 
 
 class GenerateRequest(BaseModel):
     """Request body for ``POST /generate``."""
+
     prompt: str = Field(..., min_length=1, description="Input prompt")
     max_new_tokens: int = Field(256, ge=1, le=4096)
     temperature: float = Field(0.7, ge=0.0, le=2.0)
@@ -56,7 +59,8 @@ class GenerateRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     """Request body for ``POST /chat``."""
-    messages: List[Dict[str, str]] = Field(
+
+    messages: list[dict[str, str]] = Field(
         ..., min_length=1, description="List of {role, content} dicts"
     )
     max_new_tokens: int = Field(512, ge=1, le=4096)
@@ -68,12 +72,14 @@ class ChatRequest(BaseModel):
 
 class SimpleResponse(BaseModel):
     """Generic status response."""
+
     status: str
     message: str = ""
 
 
 class ErrorResponse(BaseModel):
     """Error response body."""
+
     error: str
     detail: str = ""
 
@@ -81,6 +87,7 @@ class ErrorResponse(BaseModel):
 # ==================================================================
 # Lifespan (startup / shutdown)
 # ==================================================================
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -101,6 +108,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 # ==================================================================
 # App factory
 # ==================================================================
+
 
 def create_app() -> FastAPI:
     """Build and return the FastAPI application."""
@@ -134,6 +142,7 @@ def create_app() -> FastAPI:
 # Route registration
 # ==================================================================
 
+
 def _register_routes(app: FastAPI) -> None:
     """Attach all REST and WebSocket routes to *app*."""
 
@@ -145,7 +154,7 @@ def _register_routes(app: FastAPI) -> None:
         return SimpleResponse(status="ok", message="Nexus-LLM server is running")
 
     @app.get("/health")
-    async def health() -> Dict[str, Any]:
+    async def health() -> dict[str, Any]:
         """Health check including model state."""
         engine: InferenceEngine = app.state.engine
         return {
@@ -185,9 +194,9 @@ def _register_routes(app: FastAPI) -> None:
 
     @app.post("/model/reload")
     async def reload_model(
-        device: Optional[str] = None,
-        precision: Optional[str] = None,
-        cache_dir: Optional[str] = None,
+        device: str | None = None,
+        precision: str | None = None,
+        cache_dir: str | None = None,
     ):
         """Reload the current model (optionally with new settings)."""
         engine: InferenceEngine = app.state.engine
@@ -333,10 +342,12 @@ def _register_routes(app: FastAPI) -> None:
                     for token in gen:
                         await websocket.send_json({"token": token})
 
-                    await websocket.send_json({
-                        "status": "done",
-                        "stats": engine.get_stats(),
-                    })
+                    await websocket.send_json(
+                        {
+                            "status": "done",
+                            "stats": engine.get_stats(),
+                        }
+                    )
 
                 except InferenceError as exc:
                     await websocket.send_json({"error": str(exc)})
@@ -358,6 +369,7 @@ def _register_routes(app: FastAPI) -> None:
 # LLMServer convenience wrapper
 # ==================================================================
 
+
 class LLMServer:
     """Convenience wrapper around the FastAPI application.
 
@@ -369,12 +381,12 @@ class LLMServer:
         self,
         host: str = "127.0.0.1",
         port: int = 8000,
-        cors_origins: Optional[List[str]] = None,
+        cors_origins: list[str] | None = None,
     ) -> None:
         self.host = host
         self.port = port
         self.cors_origins = cors_origins or ["*"]
-        self._app: Optional[FastAPI] = None
+        self._app: FastAPI | None = None
 
     @property
     def app(self) -> FastAPI:
