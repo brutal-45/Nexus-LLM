@@ -4,17 +4,21 @@ Supports 4-bit and 8-bit quantization using bitsandbytes, GGML format
 support, and quantization configuration management.
 """
 
-import torch
-from typing import Optional, Dict, Any, List, Union
+from __future__ import annotations
+
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
-import logging
+from typing import Any
+
+import torch
 
 logger = logging.getLogger(__name__)
 
 
 class QuantizationType(Enum):
     """Supported quantization types."""
+
     NONE = "none"
     INT8 = "int8"
     INT4 = "int4"
@@ -32,11 +36,12 @@ class QuantizationType(Enum):
 @dataclass
 class QuantizationConfig:
     """Configuration for model quantization."""
+
     quant_type: QuantizationType = QuantizationType.NONE
     load_in_4bit: bool = False
     load_in_8bit: bool = False
     llm_int8_threshold: float = 6.0
-    llm_int8_skip_modules: List[str] = field(default_factory=lambda: ["lm_head"])
+    llm_int8_skip_modules: list[str] = field(default_factory=lambda: ["lm_head"])
     bnb_4bit_quant_type: str = "nf4"
     bnb_4bit_use_double_quant: bool = True
     bnb_4bit_compute_dtype: str = "bfloat16"
@@ -48,8 +53,8 @@ class QuantizationConfig:
     awq_group_size: int = 128
     awq_zero_point: bool = True
     ggml_type: str = "q4_0"
-    compute_dtype: Optional[str] = None
-    quant_method: Optional[str] = None
+    compute_dtype: str | None = None
+    quant_method: str | None = None
 
     def to_bitsandbytes_config(self) -> Any:
         """Convert to a bitsandbytes configuration object."""
@@ -80,7 +85,7 @@ class QuantizationConfig:
             )
         return None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize config to dictionary."""
         result = {}
         for f in self.__dataclass_fields__:
@@ -94,7 +99,7 @@ class QuantizationConfig:
         return result
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "QuantizationConfig":
+    def from_dict(cls, d: dict[str, Any]) -> QuantizationConfig:
         """Create config from dictionary."""
         if "quant_type" in d and isinstance(d["quant_type"], str):
             d["quant_type"] = QuantizationType(d["quant_type"])
@@ -107,7 +112,11 @@ class QuantizationConfig:
         """Effective number of bits per parameter."""
         if self.load_in_8bit or self.quant_type == QuantizationType.INT8:
             return 8
-        if self.load_in_4bit or self.quant_type in (QuantizationType.INT4, QuantizationType.FP4, QuantizationType.NF4):
+        if self.load_in_4bit or self.quant_type in (
+            QuantizationType.INT4,
+            QuantizationType.FP4,
+            QuantizationType.NF4,
+        ):
             return 4
         if self.quant_type == QuantizationType.GPTQ:
             return self.gptq_bits
@@ -132,36 +141,46 @@ class QuantizationConfig:
 class QuantizationManager:
     """Manages model quantization configurations and application."""
 
-    _PRESETS: Dict[str, QuantizationConfig] = {
+    _PRESETS: dict[str, QuantizationConfig] = {
         "int8": QuantizationConfig(quant_type=QuantizationType.INT8, load_in_8bit=True),
         "int4_nf4": QuantizationConfig(
-            quant_type=QuantizationType.NF4, load_in_4bit=True,
-            bnb_4bit_quant_type="nf4", bnb_4bit_use_double_quant=True,
+            quant_type=QuantizationType.NF4,
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
             bnb_4bit_compute_dtype="bfloat16",
         ),
         "int4_fp4": QuantizationConfig(
-            quant_type=QuantizationType.FP4, load_in_4bit=True,
-            bnb_4bit_quant_type="fp4", bnb_4bit_use_double_quant=False,
+            quant_type=QuantizationType.FP4,
+            load_in_4bit=True,
+            bnb_4bit_quant_type="fp4",
+            bnb_4bit_use_double_quant=False,
             bnb_4bit_compute_dtype="float16",
         ),
         "gptq_4bit": QuantizationConfig(
             quant_type=QuantizationType.GPTQ,
-            gptq_bits=4, gptq_group_size=128, gptq_desc_act=False,
+            gptq_bits=4,
+            gptq_group_size=128,
+            gptq_desc_act=False,
         ),
         "awq_4bit": QuantizationConfig(
             quant_type=QuantizationType.AWQ,
-            awq_bits=4, awq_group_size=128, awq_zero_point=True,
+            awq_bits=4,
+            awq_group_size=128,
+            awq_zero_point=True,
         ),
         "ggml_q4_0": QuantizationConfig(
-            quant_type=QuantizationType.GGML_Q4_0, ggml_type="q4_0",
+            quant_type=QuantizationType.GGML_Q4_0,
+            ggml_type="q4_0",
         ),
         "ggml_q8_0": QuantizationConfig(
-            quant_type=QuantizationType.GGML_Q8_0, ggml_type="q8_0",
+            quant_type=QuantizationType.GGML_Q8_0,
+            ggml_type="q8_0",
         ),
     }
 
     def __init__(self):
-        self._configs: Dict[str, QuantizationConfig] = {}
+        self._configs: dict[str, QuantizationConfig] = {}
 
     def get_preset(self, name: str) -> QuantizationConfig:
         """Get a quantization preset by name."""
@@ -170,7 +189,7 @@ class QuantizationManager:
             raise ValueError(f"Unknown quantization preset '{name}'. Available: {available}")
         return self._PRESETS[name]
 
-    def list_presets(self) -> List[str]:
+    def list_presets(self) -> list[str]:
         """List available quantization presets."""
         return list(self._PRESETS.keys())
 
@@ -178,7 +197,7 @@ class QuantizationManager:
         """Save a named quantization configuration."""
         self._configs[name] = config
 
-    def get_config(self, name: str) -> Optional[QuantizationConfig]:
+    def get_config(self, name: str) -> QuantizationConfig | None:
         """Retrieve a saved quantization configuration."""
         return self._configs.get(name)
 
@@ -196,8 +215,12 @@ class QuantizationManager:
             logger.info("No quantization configured, returning model unchanged")
             return model
 
-        if config.quant_type in (QuantizationType.INT8, QuantizationType.INT4,
-                                  QuantizationType.FP4, QuantizationType.NF4):
+        if config.quant_type in (
+            QuantizationType.INT8,
+            QuantizationType.INT4,
+            QuantizationType.FP4,
+            QuantizationType.NF4,
+        ):
             logger.info(
                 f"BitsAndBytes quantization ({config.quant_type.value}) is applied during "
                 "model loading. Use config.to_bitsandbytes_config() when loading."
@@ -217,12 +240,14 @@ class QuantizationManager:
         try:
             from auto_gptq import AutoGPTQForCausalLM, BaseQuantizeConfig
 
-            quantize_config = BaseQuantizeConfig(
+            BaseQuantizeConfig(
                 bits=config.gptq_bits,
                 group_size=config.gptq_group_size,
                 desc_act=config.gptq_desc_act,
             )
-            logger.info(f"GPTQ quantization configured: {config.gptq_bits}-bit, group_size={config.gptq_group_size}")
+            logger.info(
+                f"GPTQ quantization configured: {config.gptq_bits}-bit, group_size={config.gptq_group_size}"
+            )
             return model
         except ImportError:
             logger.error("auto-gptq is required for GPTQ quantization")
@@ -233,7 +258,9 @@ class QuantizationManager:
         try:
             from awq import AutoAWQForCausalLM
 
-            logger.info(f"AWQ quantization configured: {config.awq_bits}-bit, group_size={config.awq_group_size}")
+            logger.info(
+                f"AWQ quantization configured: {config.awq_bits}-bit, group_size={config.awq_group_size}"
+            )
             return model
         except ImportError:
             logger.error("autoawq is required for AWQ quantization")
@@ -243,7 +270,7 @@ class QuantizationManager:
         self,
         model_size_gb: float,
         config: QuantizationConfig,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Estimate memory savings from quantization."""
         original_bits = 16  # assume float16 baseline
         quantized_bits = config.bits
@@ -258,12 +285,13 @@ class QuantizationManager:
             "effective_bits": quantized_bits,
         }
 
-    def detect_quantization(self, model_path: str) -> Optional[QuantizationConfig]:
+    def detect_quantization(self, model_path: str) -> QuantizationConfig | None:
         """Auto-detect quantization format from model path/config files."""
         config = QuantizationConfig()
 
         try:
             from transformers import AutoConfig
+
             hf_config = AutoConfig.from_pretrained(model_path, trust_remote_code=True)
 
             quant_config = getattr(hf_config, "quantization_config", None)
