@@ -6,14 +6,16 @@ optimises the policy from preference pairs without a separate reward
 model, while RLHF uses the reward model as a signal source.
 """
 
+from __future__ import annotations
+
 import copy
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from nexus_llm.alignment.config import RLHFConfig
-from nexus_llm.alignment.preference import PreferenceDataset, PreferenceSample
+from nexus_llm.alignment.preference import PreferenceDataset
 from nexus_llm.alignment.reward import RewardModel
 
 logger = logging.getLogger(__name__)
@@ -41,8 +43,8 @@ class AlignmentTrainer:
 
     def __init__(
         self,
-        reward_model: Optional[RewardModel] = None,
-        reference_model: Optional[Any] = None,
+        reward_model: RewardModel | None = None,
+        reference_model: Any | None = None,
         checkpoint_dir: str = "checkpoints/alignment",
     ) -> None:
         """Initialise the AlignmentTrainer.
@@ -67,7 +69,7 @@ class AlignmentTrainer:
         self,
         model: Any,
         dataset: PreferenceDataset,
-        config: Optional[RLHFConfig] = None,
+        config: RLHFConfig | None = None,
     ) -> Any:
         """Align *model* with the preference data.
 
@@ -128,7 +130,6 @@ class AlignmentTrainer:
             \\right)\\right]
         """
         import torch
-        import torch.nn.functional as F
 
         # Create frozen reference model
         ref_model = self._reference_model
@@ -301,8 +302,14 @@ class AlignmentTrainer:
         """
         import torch
 
-        chosen = chosen_logps if isinstance(chosen_logps, torch.Tensor) else torch.tensor(chosen_logps)
-        rejected = rejected_logps if isinstance(rejected_logps, torch.Tensor) else torch.tensor(rejected_logps)
+        chosen = (
+            chosen_logps if isinstance(chosen_logps, torch.Tensor) else torch.tensor(chosen_logps)
+        )
+        rejected = (
+            rejected_logps
+            if isinstance(rejected_logps, torch.Tensor)
+            else torch.tensor(rejected_logps)
+        )
 
         logits = beta * (chosen - rejected)
         loss = -torch.nn.functional.logsigmoid(logits)
@@ -313,7 +320,7 @@ class AlignmentTrainer:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _tokenise(prompt: str, response: str, device: str) -> Dict[str, Any]:
+    def _tokenise(prompt: str, response: str, device: str) -> dict[str, Any]:
         """Tokenise a prompt + response pair.
 
         Falls back to a simple whitespace tokeniser if no HuggingFace
@@ -338,7 +345,7 @@ class AlignmentTrainer:
         return {"input_ids": input_ids, "attention_mask": attention_mask}
 
     @staticmethod
-    def _get_sequence_logp(model: Any, inputs: Dict[str, Any]) -> Any:
+    def _get_sequence_logp(model: Any, inputs: dict[str, Any]) -> Any:
         """Compute the log-probability of a token sequence under *model*.
 
         Returns the mean log-probability across all tokens.
@@ -375,7 +382,6 @@ class AlignmentTrainer:
     def _resolve_device(model: Any) -> str:
         """Determine the device a model lives on."""
         try:
-            import torch
             return str(next(model.parameters()).device)
         except Exception:
             return "cpu"

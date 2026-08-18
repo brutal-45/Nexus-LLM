@@ -6,12 +6,14 @@ Supports programmatic construction, JSONL serialisation, and batched
 sampling.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import random
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +32,9 @@ class PreferenceSample:
     prompt: str
     chosen: str
     rejected: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialise to a plain dictionary."""
         return {
             "prompt": self.prompt,
@@ -42,7 +44,7 @@ class PreferenceSample:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "PreferenceSample":
+    def from_dict(cls, data: dict[str, Any]) -> PreferenceSample:
         """Deserialise from a plain dictionary."""
         return cls(
             prompt=data["prompt"],
@@ -70,13 +72,13 @@ class PreferenceDataset:
         print(ds2.size())
     """
 
-    def __init__(self, seed: Optional[int] = None) -> None:
+    def __init__(self, seed: int | None = None) -> None:
         """Initialise an empty PreferenceDataset.
 
         Args:
             seed: Optional random seed for reproducible batch sampling.
         """
-        self._samples: List[PreferenceSample] = []
+        self._samples: list[PreferenceSample] = []
         self._rng = random.Random(seed)
 
     # ------------------------------------------------------------------
@@ -88,7 +90,7 @@ class PreferenceDataset:
         prompt: str,
         chosen: str,
         rejected: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Add a preference sample to the dataset.
 
@@ -110,7 +112,7 @@ class PreferenceDataset:
     # Sampling
     # ------------------------------------------------------------------
 
-    def get_batch(self, n: int) -> List[PreferenceSample]:
+    def get_batch(self, n: int) -> list[PreferenceSample]:
         """Randomly sample *n* preference pairs (with replacement).
 
         If *n* exceeds the dataset size, the entire dataset is
@@ -148,7 +150,7 @@ class PreferenceDataset:
         return iter(self._samples)
 
     @property
-    def samples(self) -> List[PreferenceSample]:
+    def samples(self) -> list[PreferenceSample]:
         """Read-only view of all samples."""
         return list(self._samples)
 
@@ -169,13 +171,14 @@ class PreferenceDataset:
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(file_path, "w", encoding="utf-8") as f:
-            for sample in self._samples:
-                f.write(json.dumps(sample.to_dict(), ensure_ascii=False) + "\n")
+            f.writelines(
+                json.dumps(sample.to_dict(), ensure_ascii=False) + "\n" for sample in self._samples
+            )
 
         logger.info("Wrote %d samples to %s", len(self._samples), path)
 
     @classmethod
-    def from_jsonl(cls, path: str, seed: Optional[int] = None) -> "PreferenceDataset":
+    def from_jsonl(cls, path: str, seed: int | None = None) -> PreferenceDataset:
         """Load a PreferenceDataset from a JSONL file.
 
         Args:
@@ -195,7 +198,7 @@ class PreferenceDataset:
         if not file_path.exists():
             raise FileNotFoundError(f"JSONL file not found: {path}")
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             for line_no, line in enumerate(f, 1):
                 line = line.strip()
                 if not line:

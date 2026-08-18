@@ -5,7 +5,7 @@ selection, loss hyper-parameters, and the training schedule.
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, Literal
+from typing import Any, Literal
 
 # Valid alignment methods
 AlignMethod = Literal["dpo", "rlhf"]
@@ -54,27 +54,19 @@ class RLHFConfig:
                 f"Choose from: {', '.join(VALID_METHODS)}"
             )
         if self.beta <= 0:
-            raise ValueError(
-                f"beta must be positive, got {self.beta}"
-            )
+            raise ValueError(f"beta must be positive, got {self.beta}")
         if self.learning_rate <= 0:
-            raise ValueError(
-                f"learning_rate must be positive, got {self.learning_rate}"
-            )
+            raise ValueError(f"learning_rate must be positive, got {self.learning_rate}")
         if self.batch_size <= 0:
-            raise ValueError(
-                f"batch_size must be a positive integer, got {self.batch_size}"
-            )
+            raise ValueError(f"batch_size must be a positive integer, got {self.batch_size}")
         if self.epochs <= 0:
-            raise ValueError(
-                f"epochs must be a positive integer, got {self.epochs}"
-            )
+            raise ValueError(f"epochs must be a positive integer, got {self.epochs}")
 
     # ------------------------------------------------------------------
     # Serialisation helpers
     # ------------------------------------------------------------------
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialise the configuration to a plain dictionary."""
         return {
             "method": self.method,
@@ -85,7 +77,7 @@ class RLHFConfig:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "RLHFConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "RLHFConfig":
         """Deserialise a configuration from a plain dictionary.
 
         Args:

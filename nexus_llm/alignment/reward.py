@@ -7,9 +7,11 @@ both a mock scoring mode (for testing and pipeline development) and
 a pluggable backend for real reward models.
 """
 
+from __future__ import annotations
+
 import hashlib
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +33,9 @@ class RewardModel:
 
     def __init__(
         self,
-        scorer_fn: Optional[Any] = None,
-        model: Optional[Any] = None,
-        device: Optional[str] = None,
+        scorer_fn: Any | None = None,
+        model: Any | None = None,
+        device: str | None = None,
     ) -> None:
         """Initialise the RewardModel.
 
@@ -51,7 +53,7 @@ class RewardModel:
         self._model = model
         self._device = device
         self._trained = False
-        self._preference_buffer: List[Dict[str, str]] = []
+        self._preference_buffer: list[dict[str, str]] = []
 
     # ------------------------------------------------------------------
     # Scoring
@@ -87,8 +89,8 @@ class RewardModel:
     def rank_responses(
         self,
         prompt: str,
-        responses: List[str],
-    ) -> List[Tuple[str, float]]:
+        responses: list[str],
+    ) -> list[tuple[str, float]]:
         """Score and rank a list of candidate responses.
 
         Args:
@@ -109,10 +111,10 @@ class RewardModel:
 
     def train_from_preferences(
         self,
-        preferences: List[Dict[str, str]],
+        preferences: list[dict[str, str]],
         epochs: int = 1,
         learning_rate: float = 1e-5,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Train the reward model from preference data (mock).
 
         In a full implementation this would fine-tune the reward model
