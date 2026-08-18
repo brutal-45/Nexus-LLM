@@ -5,11 +5,14 @@ temperature scaling, top-k filtering, top-p filtering, min-length suppression,
 no-repeat n-gram suppression, and custom processors.
 """
 
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from collections import defaultdict
+from typing import Callable
+
 import torch
 import torch.nn.functional as F
-from typing import List, Optional, Callable, Dict, Set, Any
-from collections import defaultdict
-from abc import ABC, abstractmethod
 
 
 class LogitsProcessor(ABC):
@@ -18,11 +21,9 @@ class LogitsProcessor(ABC):
     @abstractmethod
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
         """Process logits and return modified scores."""
-        pass
 
     def reset(self) -> None:
         """Reset internal state for a new generation."""
-        pass
 
 
 class RepetitionPenaltyLogitsProcessor(LogitsProcessor):
@@ -109,7 +110,7 @@ class TopPLogitsProcessor(LogitsProcessor):
         cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
 
         sorted_indices_to_remove = cumulative_probs - F.softmax(sorted_logits, dim=-1) >= self.top_p
-        sorted_indices_to_remove[..., :self.min_tokens_to_keep] = False
+        sorted_indices_to_remove[..., : self.min_tokens_to_keep] = False
 
         indices_to_remove = sorted_indices_to_remove.scatter(
             dim=-1, index=sorted_indices, src=sorted_indices_to_remove
@@ -158,14 +159,14 @@ class NoRepeatNGramLogitsProcessor(LogitsProcessor):
             if input_ids.shape[-1] < self.ngram_size:
                 continue
 
-            ngrams: Dict[tuple, Set[int]] = defaultdict(set)
+            ngrams: dict[tuple, set[int]] = defaultdict(set)
             seq = input_ids[batch_idx].tolist()
             for i in range(len(seq) - self.ngram_size + 1):
-                ngram = tuple(seq[i:i + self.ngram_size - 1])
+                ngram = tuple(seq[i : i + self.ngram_size - 1])
                 next_token = seq[i + self.ngram_size - 1]
                 ngrams[ngram].add(next_token)
 
-            recent_ngram = tuple(seq[-(self.ngram_size - 1):])
+            recent_ngram = tuple(seq[-(self.ngram_size - 1) :])
             if recent_ngram in ngrams:
                 for token_id in ngrams[recent_ngram]:
                     scores[batch_idx, token_id] = float("-inf")
@@ -176,10 +177,10 @@ class NoRepeatNGramLogitsProcessor(LogitsProcessor):
 class NoBadWordsLogitsProcessor(LogitsProcessor):
     """Suppress specified token sequences (bad words)."""
 
-    def __init__(self, bad_words_ids: List[List[int]], eos_token_id: int):
+    def __init__(self, bad_words_ids: list[list[int]], eos_token_id: int):
         self.bad_words_ids = bad_words_ids
         self.eos_token_id = eos_token_id
-        self._static_bad_words: Set[int] = set()
+        self._static_bad_words: set[int] = set()
         for word_ids in bad_words_ids:
             if len(word_ids) == 1:
                 self._static_bad_words.add(word_ids[0])
@@ -195,7 +196,7 @@ class NoBadWordsLogitsProcessor(LogitsProcessor):
                     continue
                 word_len = len(word_ids)
                 if len(seq) >= word_len - 1:
-                    tail = seq[-(word_len - 1):]
+                    tail = seq[-(word_len - 1) :]
                     if tail == word_ids[:-1]:
                         scores[batch_idx, word_ids[-1]] = float("-inf")
         return scores
@@ -211,7 +212,7 @@ class EpsilonLogitsProcessor(LogitsProcessor):
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
         probs = F.softmax(scores, dim=-1)
         indices_to_remove = probs < self.epsilon
-        indices_to_remove[..., :self.min_tokens_to_keep] = False
+        indices_to_remove[..., : self.min_tokens_to_keep] = False
         return scores.masked_fill(indices_to_remove, float("-inf"))
 
 
@@ -227,18 +228,17 @@ class EtaLogitsProcessor(LogitsProcessor):
         log_probs = F.log_softmax(scores, dim=-1)
         entropy = -torch.nansum(probs * log_probs, dim=-1, keepdim=True)
         eta_threshold = torch.min(
-            self.eta * torch.exp(-entropy),
-            torch.tensor(1.0, device=scores.device)
+            self.eta * torch.exp(-entropy), torch.tensor(1.0, device=scores.device)
         )
         indices_to_remove = probs < eta_threshold
-        indices_to_remove[..., :self.min_tokens_to_keep] = False
+        indices_to_remove[..., : self.min_tokens_to_keep] = False
         return scores.masked_fill(indices_to_remove, float("-inf"))
 
 
 class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
     """Penalize/reward tokens based on presence in the encoder input."""
 
-    def __init__(self, penalty: float = 1.2, encoder_input_ids: Optional[torch.LongTensor] = None):
+    def __init__(self, penalty: float = 1.2, encoder_input_ids: torch.LongTensor | None = None):
         self.penalty = penalty
         self.encoder_input_ids = encoder_input_ids
 
@@ -259,7 +259,9 @@ class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
 class CustomLogitsProcessor(LogitsProcessor):
     """Wrap a custom function as a logits processor."""
 
-    def __init__(self, processor_fn: Callable[[torch.LongTensor, torch.FloatTensor], torch.FloatTensor]):
+    def __init__(
+        self, processor_fn: Callable[[torch.LongTensor, torch.FloatTensor], torch.FloatTensor]
+    ):
         self.processor_fn = processor_fn
 
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
@@ -269,8 +271,8 @@ class CustomLogitsProcessor(LogitsProcessor):
 class LogitsProcessorList:
     """Compose multiple logits processors, applied in order."""
 
-    def __init__(self, processors: Optional[List[LogitsProcessor]] = None):
-        self.processors: List[LogitsProcessor] = processors or []
+    def __init__(self, processors: list[LogitsProcessor] | None = None):
+        self.processors: list[LogitsProcessor] = processors or []
 
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
         for processor in self.processors:
@@ -280,7 +282,7 @@ class LogitsProcessorList:
     def append(self, processor: LogitsProcessor) -> None:
         self.processors.append(processor)
 
-    def extend(self, processors: List[LogitsProcessor]) -> None:
+    def extend(self, processors: list[LogitsProcessor]) -> None:
         self.processors.extend(processors)
 
     def reset(self) -> None:
