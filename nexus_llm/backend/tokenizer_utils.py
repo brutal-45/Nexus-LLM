@@ -3,20 +3,22 @@
 Handles loading tokenizers, managing chat templates, and encoding/decoding.
 """
 
+from __future__ import annotations
+
 import logging
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
 
 from transformers import AutoTokenizer
 
 from nexus_llm.core.exceptions import ModelLoadError, ModelNotFoundError
-from nexus_llm.core.model_catalog import MODEL_CATALOG, get_model_info
+from nexus_llm.core.model_catalog import get_model_info
 
 logger = logging.getLogger(__name__)
 
 
 class ChatTemplate(str, Enum):
     """Supported chat template formats."""
+
     GPT2 = "gpt2"
     DIALOGPT = "dialogpt"
     LLAMA = "llama"
@@ -28,7 +30,7 @@ class ChatTemplate(str, Enum):
 
 
 # Mapping from model category to chat template
-_CATEGORY_TEMPLATE_MAP: Dict[str, ChatTemplate] = {
+_CATEGORY_TEMPLATE_MAP: dict[str, ChatTemplate] = {
     "gpt2": ChatTemplate.GPT2,
     "dialogpt": ChatTemplate.DIALOGPT,
     "llama": ChatTemplate.LLAMA,
@@ -49,8 +51,8 @@ class TokenizerManager:
     """Manages tokenizer loading, chat templates, and token operations."""
 
     def __init__(self) -> None:
-        self._tokenizer: Optional[AutoTokenizer] = None
-        self._model_id: Optional[str] = None
+        self._tokenizer: AutoTokenizer | None = None
+        self._model_id: str | None = None
         self._template: ChatTemplate = ChatTemplate.DEFAULT
         self._pad_token_set: bool = False
 
@@ -58,7 +60,7 @@ class TokenizerManager:
     # Loading
     # ------------------------------------------------------------------
 
-    def load(self, model_id: str, cache_dir: Optional[str] = None) -> None:
+    def load(self, model_id: str, cache_dir: str | None = None) -> None:
         """Load a tokenizer for the given model ID.
 
         Args:
@@ -78,7 +80,7 @@ class TokenizerManager:
         logger.info("Loading tokenizer for %s (%s)", model_id, hf_id)
 
         try:
-            kwargs: Dict = {"trust_remote_code": True}
+            kwargs: dict = {"trust_remote_code": True}
             if cache_dir:
                 kwargs["cache_dir"] = cache_dir
 
@@ -119,12 +121,12 @@ class TokenizerManager:
         return self._tokenizer is not None
 
     @property
-    def model_id(self) -> Optional[str]:
+    def model_id(self) -> str | None:
         """The model ID of the currently loaded tokenizer."""
         return self._model_id
 
     @property
-    def tokenizer(self) -> Optional[AutoTokenizer]:
+    def tokenizer(self) -> AutoTokenizer | None:
         """The underlying HuggingFace tokenizer."""
         return self._tokenizer
 
@@ -150,7 +152,7 @@ class TokenizerManager:
             and self._tokenizer.chat_template is not None
         ):
             tmpl_str = str(self._tokenizer.chat_template).lower()
-            if "llama" in tmpl_str or "<|im_start|>" not in tmpl_str and "system" in tmpl_str:
+            if "llama" in tmpl_str or ("<|im_start|>" not in tmpl_str and "system" in tmpl_str):
                 return ChatTemplate.LLAMA
             if "<|im_start|>" in tmpl_str:
                 return ChatTemplate.CHATML
@@ -169,8 +171,8 @@ class TokenizerManager:
 
     def format_conversation(
         self,
-        messages: List[Dict[str, str]],
-        template: Optional[ChatTemplate] = None,
+        messages: list[dict[str, str]],
+        template: ChatTemplate | None = None,
     ) -> str:
         """Format a list of chat messages into a single prompt string.
 
@@ -193,8 +195,13 @@ class TokenizerManager:
         tmpl = template or self._template
 
         # Try the tokenizer's native apply_chat_template first for supported templates
-        if tmpl in (ChatTemplate.LLAMA, ChatTemplate.CHATML, ChatTemplate.PHI,
-                    ChatTemplate.QWEN, ChatTemplate.GEMMA):
+        if tmpl in (
+            ChatTemplate.LLAMA,
+            ChatTemplate.CHATML,
+            ChatTemplate.PHI,
+            ChatTemplate.QWEN,
+            ChatTemplate.GEMMA,
+        ):
             try:
                 if hasattr(self._tokenizer, "apply_chat_template"):
                     formatted = self._tokenizer.apply_chat_template(
@@ -223,8 +230,8 @@ class TokenizerManager:
     # -- Individual template formatters --------------------------------
 
     @staticmethod
-    def _format_gpt2(messages: List[Dict[str, str]]) -> str:
-        parts: List[str] = []
+    def _format_gpt2(messages: list[dict[str, str]]) -> str:
+        parts: list[str] = []
         for msg in messages:
             role = msg["role"]
             content = msg["content"]
@@ -238,21 +245,23 @@ class TokenizerManager:
         return "".join(parts)
 
     @staticmethod
-    def _format_dialogpt(messages: List[Dict[str, str]]) -> str:
-        parts: List[str] = []
+    def _format_dialogpt(messages: list[dict[str, str]]) -> str:
+        parts: list[str] = []
         for msg in messages:
             role = msg["role"]
             content = msg["content"]
             if role == "user":
-                parts.append(f"{content}{AutoTokenizer.from_pretrained('microsoft/DialoGPT-medium').eos_token if False else ''}")
+                parts.append(
+                    f"{content}{AutoTokenizer.from_pretrained('microsoft/DialoGPT-medium').eos_token if False else ''}"
+                )
             elif role == "assistant":
                 parts.append(content)
         # DialoGPT uses eos_token between turns
         return "<|endoftext|>".join(parts) + "<|endoftext|>"
 
     @staticmethod
-    def _format_llama(messages: List[Dict[str, str]]) -> str:
-        parts: List[str] = []
+    def _format_llama(messages: list[dict[str, str]]) -> str:
+        parts: list[str] = []
         for msg in messages:
             role = msg["role"]
             content = msg["content"]
@@ -265,8 +274,8 @@ class TokenizerManager:
         return "".join(parts)
 
     @staticmethod
-    def _format_chatml(messages: List[Dict[str, str]]) -> str:
-        parts: List[str] = []
+    def _format_chatml(messages: list[dict[str, str]]) -> str:
+        parts: list[str] = []
         for msg in messages:
             role = msg["role"]
             content = msg["content"]
@@ -275,8 +284,8 @@ class TokenizerManager:
         return "".join(parts)
 
     @staticmethod
-    def _format_phi(messages: List[Dict[str, str]]) -> str:
-        parts: List[str] = []
+    def _format_phi(messages: list[dict[str, str]]) -> str:
+        parts: list[str] = []
         for msg in messages:
             role = msg["role"]
             content = msg["content"]
@@ -290,8 +299,8 @@ class TokenizerManager:
         return "".join(parts)
 
     @staticmethod
-    def _format_qwen(messages: List[Dict[str, str]]) -> str:
-        parts: List[str] = []
+    def _format_qwen(messages: list[dict[str, str]]) -> str:
+        parts: list[str] = []
         for msg in messages:
             role = msg["role"]
             content = msg["content"]
@@ -300,8 +309,8 @@ class TokenizerManager:
         return "".join(parts)
 
     @staticmethod
-    def _format_gemma(messages: List[Dict[str, str]]) -> str:
-        parts: List[str] = []
+    def _format_gemma(messages: list[dict[str, str]]) -> str:
+        parts: list[str] = []
         for msg in messages:
             role = msg["role"]
             content = msg["content"]
@@ -310,8 +319,8 @@ class TokenizerManager:
         return "".join(parts)
 
     @staticmethod
-    def _format_default(messages: List[Dict[str, str]]) -> str:
-        parts: List[str] = []
+    def _format_default(messages: list[dict[str, str]]) -> str:
+        parts: list[str] = []
         for msg in messages:
             role = msg["role"]
             content = msg["content"]
@@ -328,7 +337,7 @@ class TokenizerManager:
     # Encoding / decoding
     # ------------------------------------------------------------------
 
-    def encode(self, text: str, add_special_tokens: bool = True) -> List[int]:
+    def encode(self, text: str, add_special_tokens: bool = True) -> list[int]:
         """Encode text to token IDs.
 
         Args:
@@ -345,7 +354,7 @@ class TokenizerManager:
             raise ModelLoadError("No tokenizer loaded. Call load() first.")
         return self._tokenizer.encode(text, add_special_tokens=add_special_tokens)  # type: ignore[union-attr]
 
-    def decode(self, token_ids: List[int], skip_special_tokens: bool = True) -> str:
+    def decode(self, token_ids: list[int], skip_special_tokens: bool = True) -> str:
         """Decode token IDs back to text.
 
         Args:
@@ -380,10 +389,10 @@ class TokenizerManager:
 
     def truncate_conversation(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         max_tokens: int,
         keep_system: bool = True,
-    ) -> List[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
         """Truncate a conversation to fit within a token budget.
 
         Removes the oldest messages first while optionally preserving the
@@ -404,8 +413,8 @@ class TokenizerManager:
             raise ModelLoadError("No tokenizer loaded. Call load() first.")
 
         # Separate system messages if they must be kept
-        system_msgs: List[Dict[str, str]] = []
-        chat_msgs: List[Dict[str, str]] = []
+        system_msgs: list[dict[str, str]] = []
+        chat_msgs: list[dict[str, str]] = []
 
         for msg in messages:
             if msg["role"] == "system":
@@ -423,7 +432,7 @@ class TokenizerManager:
             return system_msgs if keep_system else []
 
         # Add chat messages from newest to oldest until budget is exhausted
-        result_msgs: List[Dict[str, str]] = []
+        result_msgs: list[dict[str, str]] = []
         used_tokens = 0
 
         for msg in reversed(chat_msgs):
@@ -440,28 +449,28 @@ class TokenizerManager:
     # ------------------------------------------------------------------
 
     @property
-    def eos_token(self) -> Optional[str]:
+    def eos_token(self) -> str | None:
         """The end-of-sequence token, or None if not loaded."""
         if not self.is_loaded:
             return None
         return self._tokenizer.eos_token  # type: ignore[union-attr]
 
     @property
-    def eos_token_id(self) -> Optional[int]:
+    def eos_token_id(self) -> int | None:
         """The end-of-sequence token ID, or None if not loaded."""
         if not self.is_loaded:
             return None
         return self._tokenizer.eos_token_id  # type: ignore[union-attr]
 
     @property
-    def pad_token(self) -> Optional[str]:
+    def pad_token(self) -> str | None:
         """The padding token, or None if not loaded."""
         if not self.is_loaded:
             return None
         return self._tokenizer.pad_token  # type: ignore[union-attr]
 
     @property
-    def pad_token_id(self) -> Optional[int]:
+    def pad_token_id(self) -> int | None:
         """The padding token ID, or None if not loaded."""
         if not self.is_loaded:
             return None
@@ -474,7 +483,7 @@ class TokenizerManager:
             return 0
         return len(self._tokenizer)  # type: ignore[arg-type]
 
-    def get_info(self) -> Dict[str, object]:
+    def get_info(self) -> dict[str, object]:
         """Return a summary dict of the current tokenizer state."""
         return {
             "model_id": self._model_id,
