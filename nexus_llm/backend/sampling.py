@@ -4,16 +4,18 @@ Implements various sampling methods: greedy, multinomial, top-k, top-p (nucleus)
 typical, eta, epsilon sampling, and temperature-based scaling.
 """
 
+from __future__ import annotations
+
+from dataclasses import dataclass
+
 import torch
 import torch.nn.functional as F
-import math
-from typing import Optional, List
-from dataclasses import dataclass
 
 
 @dataclass
 class SamplingConfig:
     """Configuration for sampling parameters."""
+
     temperature: float = 1.0
     top_k: int = 0
     top_p: float = 1.0
@@ -21,13 +23,13 @@ class SamplingConfig:
     eta_cutoff: float = 0.0
     epsilon_cutoff: float = 0.0
     min_tokens_to_keep: int = 1
-    seed: Optional[int] = None
+    seed: int | None = None
 
 
 class SamplingStrategy:
     """Base class for sampling strategies."""
 
-    def __init__(self, config: Optional[SamplingConfig] = None):
+    def __init__(self, config: SamplingConfig | None = None):
         self.config = config or SamplingConfig()
 
     def sample(self, logits: torch.Tensor) -> torch.Tensor:
@@ -101,7 +103,7 @@ class TopPSampling(SamplingStrategy):
         cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
 
         sorted_indices_to_remove = cumulative_probs - F.softmax(sorted_logits, dim=-1) >= top_p
-        sorted_indices_to_remove[..., :self.config.min_tokens_to_keep] = False
+        sorted_indices_to_remove[..., : self.config.min_tokens_to_keep] = False
 
         indices_to_remove = sorted_indices_to_remove.scatter(
             dim=-1, index=sorted_indices, src=sorted_indices_to_remove
@@ -118,7 +120,6 @@ class TopPSampling(SamplingStrategy):
 
 class NucleusSampling(TopPSampling):
     """Alias for Top-P sampling (nucleus sampling is the same as top-p)."""
-    pass
 
 
 class TypicalSampling(SamplingStrategy):
@@ -142,18 +143,20 @@ class TypicalSampling(SamplingStrategy):
         entropy = torch.nansum(probs * neg_log_probs, dim=-1, keepdim=True)
         deviation = torch.abs(neg_log_probs - entropy)
 
-        sorted_deviation, sorted_indices = torch.sort(deviation)
+        _sorted_deviation, sorted_indices = torch.sort(deviation)
         sorted_probs = probs.gather(dim=-1, index=sorted_indices)
         cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
 
         sorted_indices_to_remove = cumulative_probs >= typical_p
-        sorted_indices_to_remove[..., :self.config.min_tokens_to_keep] = False
+        sorted_indices_to_remove[..., : self.config.min_tokens_to_keep] = False
 
         indices_to_remove = sorted_indices_to_remove.scatter(
             dim=-1, index=sorted_indices, src=sorted_indices_to_remove
         )
         filtered_logits = logits.masked_fill(indices_to_remove, float("-inf"))
-        filtered_probs = F.softmax(filtered_logits / (temperature if temperature > 0 else 1.0), dim=-1)
+        filtered_probs = F.softmax(
+            filtered_logits / (temperature if temperature > 0 else 1.0), dim=-1
+        )
 
         return torch.multinomial(filtered_probs, num_samples=1).squeeze(-1)
 
@@ -177,14 +180,15 @@ class EtaSampling(SamplingStrategy):
         entropy = -torch.nansum(probs * log_probs, dim=-1, keepdim=True)
 
         eta_threshold = torch.min(
-            eta_cutoff * torch.exp(-entropy),
-            torch.tensor(1.0, device=logits.device)
+            eta_cutoff * torch.exp(-entropy), torch.tensor(1.0, device=logits.device)
         )
         indices_to_remove = probs < eta_threshold
-        indices_to_remove[..., :self.config.min_tokens_to_keep] = False
+        indices_to_remove[..., : self.config.min_tokens_to_keep] = False
 
         filtered_logits = logits.masked_fill(indices_to_remove, float("-inf"))
-        filtered_probs = F.softmax(filtered_logits / (temperature if temperature > 0 else 1.0), dim=-1)
+        filtered_probs = F.softmax(
+            filtered_logits / (temperature if temperature > 0 else 1.0), dim=-1
+        )
 
         return torch.multinomial(filtered_probs, num_samples=1).squeeze(-1)
 
@@ -206,10 +210,12 @@ class EpsilonSampling(SamplingStrategy):
         probs = F.softmax(scaled_logits, dim=-1)
 
         indices_to_remove = probs < epsilon_cutoff
-        indices_to_remove[..., :self.config.min_tokens_to_keep] = False
+        indices_to_remove[..., : self.config.min_tokens_to_keep] = False
 
         filtered_logits = logits.masked_fill(indices_to_remove, float("-inf"))
-        filtered_probs = F.softmax(filtered_logits / (temperature if temperature > 0 else 1.0), dim=-1)
+        filtered_probs = F.softmax(
+            filtered_logits / (temperature if temperature > 0 else 1.0), dim=-1
+        )
 
         return torch.multinomial(filtered_probs, num_samples=1).squeeze(-1)
 
@@ -223,14 +229,18 @@ class CombinedSampling(SamplingStrategy):
 
         if config.top_k > 0:
             top_k = min(config.top_k, filtered_logits.size(-1))
-            indices_to_remove = filtered_logits < torch.topk(filtered_logits, top_k)[0][..., -1, None]
+            indices_to_remove = (
+                filtered_logits < torch.topk(filtered_logits, top_k)[0][..., -1, None]
+            )
             filtered_logits = filtered_logits.masked_fill(indices_to_remove, float("-inf"))
 
         if config.top_p < 1.0:
             sorted_logits, sorted_indices = torch.sort(filtered_logits, descending=True)
             cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
-            sorted_indices_to_remove = cumulative_probs - F.softmax(sorted_logits, dim=-1) >= config.top_p
-            sorted_indices_to_remove[..., :config.min_tokens_to_keep] = False
+            sorted_indices_to_remove = (
+                cumulative_probs - F.softmax(sorted_logits, dim=-1) >= config.top_p
+            )
+            sorted_indices_to_remove[..., : config.min_tokens_to_keep] = False
             indices_to_remove = sorted_indices_to_remove.scatter(
                 dim=-1, index=sorted_indices, src=sorted_indices_to_remove
             )
@@ -241,11 +251,11 @@ class CombinedSampling(SamplingStrategy):
             log_probs = F.log_softmax(filtered_logits, dim=-1)
             entropy = -torch.nansum(probs * log_probs, dim=-1, keepdim=True)
             deviation = torch.abs(-log_probs - entropy)
-            sorted_deviation, sorted_indices = torch.sort(deviation)
+            _sorted_deviation, sorted_indices = torch.sort(deviation)
             sorted_probs = probs.gather(dim=-1, index=sorted_indices)
             cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
             sorted_indices_to_remove = cumulative_probs >= config.typical_p
-            sorted_indices_to_remove[..., :config.min_tokens_to_keep] = False
+            sorted_indices_to_remove[..., : config.min_tokens_to_keep] = False
             indices_to_remove = sorted_indices_to_remove.scatter(
                 dim=-1, index=sorted_indices, src=sorted_indices_to_remove
             )
@@ -254,7 +264,7 @@ class CombinedSampling(SamplingStrategy):
         if config.epsilon_cutoff > 0.0:
             probs = F.softmax(filtered_logits, dim=-1)
             indices_to_remove = probs < config.epsilon_cutoff
-            indices_to_remove[..., :config.min_tokens_to_keep] = False
+            indices_to_remove[..., : config.min_tokens_to_keep] = False
             filtered_logits = filtered_logits.masked_fill(indices_to_remove, float("-inf"))
 
         if config.eta_cutoff > 0.0:
@@ -262,11 +272,10 @@ class CombinedSampling(SamplingStrategy):
             log_probs = F.log_softmax(filtered_logits, dim=-1)
             entropy = -torch.nansum(probs * log_probs, dim=-1, keepdim=True)
             eta_threshold = torch.min(
-                config.eta_cutoff * torch.exp(-entropy),
-                torch.tensor(1.0, device=logits.device)
+                config.eta_cutoff * torch.exp(-entropy), torch.tensor(1.0, device=logits.device)
             )
             indices_to_remove = probs < eta_threshold
-            indices_to_remove[..., :config.min_tokens_to_keep] = False
+            indices_to_remove[..., : config.min_tokens_to_keep] = False
             filtered_logits = filtered_logits.masked_fill(indices_to_remove, float("-inf"))
 
         temperature = config.temperature if config.temperature > 0 else 1.0
