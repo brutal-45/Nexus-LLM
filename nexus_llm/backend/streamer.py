@@ -4,12 +4,14 @@ Provides TextIteratorStreamer, callback streamer, and async streamer
 for streaming generated text token by token.
 """
 
-import threading
+from __future__ import annotations
+
 import asyncio
-import time
-from typing import Optional, Callable, Any, List, Generator, AsyncGenerator
-from queue import Queue, Empty
 import logging
+import time
+from collections.abc import AsyncGenerator, Generator
+from queue import Empty, Queue
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,7 @@ class TextIteratorStreamer:
         skip_prompt: bool = True,
         skip_special_tokens: bool = True,
         clean_up_tokenization_spaces: bool = True,
-        decode_kwargs: Optional[dict] = None,
+        decode_kwargs: dict | None = None,
         timeout: float = 30.0,
     ):
         self.tokenizer = tokenizer
@@ -39,11 +41,11 @@ class TextIteratorStreamer:
 
         self._text_queue: Queue = Queue()
         self._stop_signal = None
-        self._token_cache: List[int] = []
-        self._prompt_length: Optional[int] = None
+        self._token_cache: list[int] = []
+        self._prompt_length: int | None = None
         self._generated_tokens: int = 0
-        self._start_time: Optional[float] = None
-        self._on_finalized_text: Optional[Callable] = None
+        self._start_time: float | None = None
+        self._on_finalized_text: Callable | None = None
 
     def put(self, value: Any) -> None:
         """Receive new tokens from the model and queue decoded text.
@@ -67,7 +69,7 @@ class TextIteratorStreamer:
                 return
 
             if self.skip_prompt and self._prompt_length is not None:
-                new_tokens = value[self._prompt_length:]
+                new_tokens = value[self._prompt_length :]
                 self._prompt_length = len(value)
             else:
                 new_tokens = value if isinstance(value[0], int) else value[-1:]
@@ -86,7 +88,7 @@ class TextIteratorStreamer:
 
             new_text = decoded
             if hasattr(self, "_prev_decoded"):
-                new_text = decoded[len(self._prev_decoded):]
+                new_text = decoded[len(self._prev_decoded) :]
             self._prev_decoded = decoded
 
             if new_text:
@@ -104,7 +106,7 @@ class TextIteratorStreamer:
                 **self.decode_kwargs,
             )
             if hasattr(self, "_prev_decoded"):
-                remaining = decoded[len(self._prev_decoded):]
+                remaining = decoded[len(self._prev_decoded) :]
                 if remaining:
                     self._text_queue.put(remaining)
 
@@ -157,8 +159,8 @@ class CallbackStreamer:
         skip_prompt: bool = True,
         skip_special_tokens: bool = True,
         clean_up_tokenization_spaces: bool = True,
-        on_complete: Optional[Callable[[], None]] = None,
-        on_error: Optional[Callable[[Exception], None]] = None,
+        on_complete: Callable[[], None] | None = None,
+        on_error: Callable[[Exception], None] | None = None,
     ):
         self.tokenizer = tokenizer
         self.callback = callback
@@ -168,8 +170,8 @@ class CallbackStreamer:
         self.on_complete = on_complete
         self.on_error = on_error
 
-        self._token_cache: List[int] = []
-        self._prompt_length: Optional[int] = None
+        self._token_cache: list[int] = []
+        self._prompt_length: int | None = None
         self._prev_decoded: str = ""
         self._generated_tokens: int = 0
         self._is_finished: bool = False
@@ -191,7 +193,7 @@ class CallbackStreamer:
                     return
 
                 if self.skip_prompt and self._prompt_length is not None:
-                    new_tokens = value[self._prompt_length:]
+                    new_tokens = value[self._prompt_length :]
                     self._prompt_length = len(value)
                 else:
                     new_tokens = value if isinstance(value[0], int) else value[-1:]
@@ -207,7 +209,7 @@ class CallbackStreamer:
                     clean_up_tokenization_spaces=self.clean_up_tokenization_spaces,
                 )
 
-                new_text = decoded[len(self._prev_decoded):]
+                new_text = decoded[len(self._prev_decoded) :]
                 self._prev_decoded = decoded
 
                 if new_text:
@@ -227,7 +229,7 @@ class CallbackStreamer:
                 skip_special_tokens=self.skip_special_tokens,
                 clean_up_tokenization_spaces=self.clean_up_tokenization_spaces,
             )
-            remaining = decoded[len(self._prev_decoded):]
+            remaining = decoded[len(self._prev_decoded) :]
             if remaining:
                 self.callback(remaining)
 
@@ -263,8 +265,8 @@ class AsyncStreamer:
         self.clean_up_tokenization_spaces = clean_up_tokenization_spaces
 
         self._queue: asyncio.Queue = asyncio.Queue()
-        self._token_cache: List[int] = []
-        self._prompt_length: Optional[int] = None
+        self._token_cache: list[int] = []
+        self._prompt_length: int | None = None
         self._prev_decoded: str = ""
         self._generated_tokens: int = 0
         self._stop_signal = object()
@@ -285,7 +287,7 @@ class AsyncStreamer:
                 return
 
             if self.skip_prompt and self._prompt_length is not None:
-                new_tokens = value[self._prompt_length:]
+                new_tokens = value[self._prompt_length :]
                 self._prompt_length = len(value)
             else:
                 new_tokens = value if isinstance(value[0], int) else value[-1:]
@@ -301,7 +303,7 @@ class AsyncStreamer:
                 clean_up_tokenization_spaces=self.clean_up_tokenization_spaces,
             )
 
-            new_text = decoded[len(self._prev_decoded):]
+            new_text = decoded[len(self._prev_decoded) :]
             self._prev_decoded = decoded
 
             if new_text:
@@ -322,7 +324,7 @@ class AsyncStreamer:
                 skip_special_tokens=self.skip_special_tokens,
                 clean_up_tokenization_spaces=self.clean_up_tokenization_spaces,
             )
-            remaining = decoded[len(self._prev_decoded):]
+            remaining = decoded[len(self._prev_decoded) :]
             if remaining:
                 try:
                     loop = asyncio.get_event_loop()
@@ -358,7 +360,7 @@ class AsyncStreamer:
 def create_streamer(
     streamer_type: str = "iterator",
     tokenizer: Any = None,
-    callback: Optional[Callable] = None,
+    callback: Callable | None = None,
     skip_prompt: bool = True,
     skip_special_tokens: bool = True,
     **kwargs,
