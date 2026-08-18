@@ -4,10 +4,12 @@ Supports text-generation pipeline, text2text-generation pipeline, and
 custom pipeline creation with configurable components.
 """
 
-from typing import Optional, Dict, Any, List, Callable
-from dataclasses import dataclass, field
-from enum import Enum
+from __future__ import annotations
+
 import logging
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Callable
 
 from .generation import GenerationConfig, GenerationPresets
 from .tokenizer_utils import TokenizerWrapper
@@ -17,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class PipelineType(Enum):
     """Supported pipeline types."""
+
     TEXT_GENERATION = "text-generation"
     TEXT2TEXT_GENERATION = "text2text-generation"
     CONVERSATIONAL = "conversational"
@@ -26,6 +29,7 @@ class PipelineType(Enum):
 @dataclass
 class PipelineConfig:
     """Configuration for a pipeline."""
+
     pipeline_type: PipelineType = PipelineType.TEXT_GENERATION
     model_id: str = ""
     device: str = "auto"
@@ -33,12 +37,12 @@ class PipelineConfig:
     trust_remote_code: bool = False
     revision: str = "main"
     use_safetensors: bool = True
-    quantization_config: Optional[Any] = None
-    generation_config: Optional[GenerationConfig] = None
-    custom_preprocessor: Optional[Callable] = None
-    custom_postprocessor: Optional[Callable] = None
+    quantization_config: Any | None = None
+    generation_config: GenerationConfig | None = None
+    custom_preprocessor: Callable | None = None
+    custom_postprocessor: Callable | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         result = {}
         for f_name in self.__dataclass_fields__:
             val = getattr(self, f_name)
@@ -59,7 +63,9 @@ class Pipeline:
         config: PipelineConfig,
     ):
         self._model = model
-        self._tokenizer = tokenizer if isinstance(tokenizer, TokenizerWrapper) else TokenizerWrapper(tokenizer)
+        self._tokenizer = (
+            tokenizer if isinstance(tokenizer, TokenizerWrapper) else TokenizerWrapper(tokenizer)
+        )
         self._config = config
         self._generation_config = config.generation_config or GenerationPresets.balanced()
 
@@ -83,7 +89,7 @@ class Pipeline:
     def generation_config(self, config: GenerationConfig) -> None:
         self._generation_config = config
 
-    def preprocess(self, inputs: Any, **kwargs) -> Dict[str, Any]:
+    def preprocess(self, inputs: Any, **kwargs) -> dict[str, Any]:
         """Preprocess inputs into model-ready format."""
         if self._config.custom_preprocessor:
             return self._config.custom_preprocessor(inputs, **kwargs)
@@ -106,7 +112,7 @@ class Pipeline:
             return inputs
         return {"text": inputs}
 
-    def forward(self, model_inputs: Dict[str, Any], **kwargs) -> Any:
+    def forward(self, model_inputs: dict[str, Any], **kwargs) -> Any:
         """Run the model forward pass."""
         import torch
 
@@ -151,7 +157,7 @@ class Pipeline:
 class TextGenerationPipeline(Pipeline):
     """Pipeline for causal language model text generation."""
 
-    def __call__(self, text: str, **kwargs) -> List[Dict[str, str]]:
+    def __call__(self, text: str, **kwargs) -> list[dict[str, str]]:
         """Generate text from a prompt.
 
         Returns a list of dicts with 'generated_text' key.
@@ -182,7 +188,7 @@ class TextGenerationPipeline(Pipeline):
 
         return [{"generated_text": generated_text}]
 
-    def generate_batch(self, texts: List[str], **kwargs) -> List[List[Dict[str, str]]]:
+    def generate_batch(self, texts: list[str], **kwargs) -> list[list[dict[str, str]]]:
         """Generate text for a batch of prompts."""
         results = []
         for text in texts:
@@ -193,7 +199,7 @@ class TextGenerationPipeline(Pipeline):
 class Text2TextGenerationPipeline(Pipeline):
     """Pipeline for seq2seq (encoder-decoder) text generation."""
 
-    def __call__(self, text: str, **kwargs) -> List[Dict[str, str]]:
+    def __call__(self, text: str, **kwargs) -> list[dict[str, str]]:
         """Generate text using a text2text model."""
         import torch
 
@@ -227,9 +233,9 @@ class ConversationalPipeline(Pipeline):
 
     def __call__(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         **kwargs,
-    ) -> List[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
         """Generate a response for a conversation.
 
         Args:
@@ -275,9 +281,9 @@ class CustomPipeline(Pipeline):
         model: Any,
         tokenizer: Any,
         config: PipelineConfig,
-        preprocess_fn: Optional[Callable] = None,
-        forward_fn: Optional[Callable] = None,
-        postprocess_fn: Optional[Callable] = None,
+        preprocess_fn: Callable | None = None,
+        forward_fn: Callable | None = None,
+        postprocess_fn: Callable | None = None,
     ):
         super().__init__(model, tokenizer, config)
         self._custom_preprocess = preprocess_fn
@@ -308,7 +314,7 @@ class PipelineFactory:
         model: Any,
         tokenizer: Any,
         pipeline_type: PipelineType = PipelineType.TEXT_GENERATION,
-        config: Optional[PipelineConfig] = None,
+        config: PipelineConfig | None = None,
         **kwargs,
     ) -> Pipeline:
         """Create a pipeline of the specified type."""
@@ -345,12 +351,12 @@ class PipelineFactory:
         device: str = "auto",
         torch_dtype: str = "float16",
         trust_remote_code: bool = False,
-        quantization_config: Optional[Any] = None,
-        generation_config: Optional[GenerationConfig] = None,
+        quantization_config: Any | None = None,
+        generation_config: GenerationConfig | None = None,
     ) -> Pipeline:
         """Create a pipeline by loading a model from a pretrained path."""
         import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer, AutoModelForSeq2SeqLM
+        from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer
 
         torch_dtype_val = getattr(torch, torch_dtype, torch.float16)
         load_kwargs = {
