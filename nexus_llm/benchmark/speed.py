@@ -4,9 +4,11 @@ Measures inference latency, streaming throughput, model loading time,
 and tokenization performance.
 """
 
+from __future__ import annotations
+
 import logging
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +37,7 @@ class SpeedBenchmark:
         prompt: str,
         n_runs: int = 5,
         max_tokens: int = 128,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Measure batch inference latency and throughput.
 
         Args:
@@ -50,7 +52,7 @@ class SpeedBenchmark:
             Dict with ``avg_time``, ``min_time``, ``max_time``,
             ``tokens_per_sec``, ``total_tokens``, and ``n_runs``.
         """
-        latencies: List[float] = []
+        latencies: list[float] = []
         total_tokens = 0
 
         generate_fn = getattr(model, "generate", None)
@@ -85,9 +87,7 @@ class SpeedBenchmark:
             "total_tokens": total_tokens,
             "n_runs": n_runs,
         }
-        logger.info(
-            "Inference speed: avg=%.4fs, tokens/sec=%.1f", avg_time, tokens_per_sec
-        )
+        logger.info("Inference speed: avg=%.4fs, tokens/sec=%.1f", avg_time, tokens_per_sec)
         return result
 
     # ------------------------------------------------------------------
@@ -99,7 +99,7 @@ class SpeedBenchmark:
         model: ModelLike,
         prompt: str,
         max_tokens: int = 128,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Measure streaming (token-by-token) generation throughput.
 
         Args:
@@ -114,7 +114,7 @@ class SpeedBenchmark:
         """
         stream_fn = getattr(model, "stream", None)
 
-        first_token_latency: Optional[float] = None
+        first_token_latency: float | None = None
         total_tokens = 0
         start = time.perf_counter()
 
@@ -156,8 +156,8 @@ class SpeedBenchmark:
     def benchmark_model_loading(
         self,
         model_name: str,
-        load_fn: Optional[Callable[..., ModelLike]] = None,
-    ) -> Dict[str, Any]:
+        load_fn: Callable[..., ModelLike] | None = None,
+    ) -> dict[str, Any]:
         """Measure model loading time and memory usage.
 
         Args:
@@ -180,7 +180,7 @@ class SpeedBenchmark:
         else:
             # Placeholder loading simulation
             time.sleep(0.05)
-            _ = {"placeholder": model_name}  # noqa: F841
+            _ = {"placeholder": model_name}
             memory_used = 0.0
 
         load_time = time.perf_counter() - start
@@ -205,8 +205,8 @@ class SpeedBenchmark:
     def benchmark_tokenization(
         self,
         tokenizer: TokenizerLike,
-        texts: List[str],
-    ) -> Dict[str, Any]:
+        texts: list[str],
+    ) -> dict[str, Any]:
         """Measure tokenization throughput.
 
         Args:
@@ -218,12 +218,10 @@ class SpeedBenchmark:
             Dict with ``avg_time``, ``total_time``, ``total_tokens``,
             ``texts_per_sec``, and ``tokens_per_sec``.
         """
-        encode_fn = getattr(tokenizer, "encode", None) or getattr(
-            tokenizer, "tokenize", None
-        )
+        encode_fn = getattr(tokenizer, "encode", None) or getattr(tokenizer, "tokenize", None)
 
         total_tokens = 0
-        latencies: List[float] = []
+        latencies: list[float] = []
         start = time.perf_counter()
 
         for text in texts:
