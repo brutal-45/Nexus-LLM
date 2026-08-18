@@ -4,21 +4,23 @@ Supports HuggingFace loader, safetensors loader, sharded model loading,
 and progress tracking during model download and loading.
 """
 
+from __future__ import annotations
+
+import hashlib
+import json
+import logging
 import os
 import time
-import json
-import hashlib
-import logging
-from typing import Optional, Dict, Any, List, Callable, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
 
 class LoadFormat(Enum):
     """Model weight format."""
+
     SAFETENSORS = "safetensors"
     PYTORCH = "pytorch"
     GGML = "ggml"
@@ -29,6 +31,7 @@ class LoadFormat(Enum):
 @dataclass
 class LoadProgress:
     """Progress information for model loading."""
+
     stage: str = "initializing"
     current_file: str = ""
     files_total: int = 0
@@ -75,6 +78,7 @@ class LoadProgress:
 @dataclass
 class ModelLoadConfig:
     """Configuration for model loading."""
+
     model_path: str = ""
     load_format: LoadFormat = LoadFormat.AUTO
     device: str = "auto"
@@ -83,11 +87,11 @@ class ModelLoadConfig:
     revision: str = "main"
     use_safetensors: bool = True
     low_cpu_mem_usage: bool = True
-    offload_folder: Optional[str] = None
-    max_memory: Optional[Dict[str, str]] = None
-    quantization_config: Optional[Any] = None
-    device_map: Optional[Any] = None
-    attn_implementation: Optional[str] = None
+    offload_folder: str | None = None
+    max_memory: dict[str, str] | None = None
+    quantization_config: Any | None = None
+    device_map: Any | None = None
+    attn_implementation: str | None = None
     use_flash_attention: bool = False
     parallelize: bool = False
 
@@ -95,12 +99,12 @@ class ModelLoadConfig:
 class ProgressCallback:
     """Callback for tracking model loading progress."""
 
-    def __init__(self, callback_fn: Optional[Callable[[LoadProgress], None]] = None):
+    def __init__(self, callback_fn: Callable[[LoadProgress], None] | None = None):
         self._callback_fn = callback_fn
         self.progress = LoadProgress()
-        self._history: List[Dict[str, Any]] = []
+        self._history: list[dict[str, Any]] = []
 
-    def __call__(self, progress_info: Dict[str, Any]) -> None:
+    def __call__(self, progress_info: dict[str, Any]) -> None:
         """Called with progress updates during loading."""
         if "stage" in progress_info:
             self.progress.stage = progress_info["stage"]
@@ -112,18 +116,22 @@ class ProgressCallback:
             self.progress.bytes_total = progress_info["bytes_total"]
 
         bytes_delta = progress_info.get("bytes_loaded", 0)
-        self.progress.update(bytes_loaded=bytes_delta, file_loaded=progress_info.get("file_loaded", False))
+        self.progress.update(
+            bytes_loaded=bytes_delta, file_loaded=progress_info.get("file_loaded", False)
+        )
 
         if self._callback_fn:
             self._callback_fn(self.progress)
 
-        self._history.append({
-            "timestamp": time.time(),
-            "progress_pct": self.progress.progress_pct,
-            "stage": self.progress.stage,
-        })
+        self._history.append(
+            {
+                "timestamp": time.time(),
+                "progress_pct": self.progress.progress_pct,
+                "stage": self.progress.stage,
+            }
+        )
 
-    def get_history(self) -> List[Dict[str, Any]]:
+    def get_history(self) -> list[dict[str, Any]]:
         """Get the progress history."""
         return list(self._history)
 
@@ -131,22 +139,22 @@ class ProgressCallback:
 class ModelLoader:
     """Unified model loader supporting multiple formats and progress tracking."""
 
-    def __init__(self, progress_callback: Optional[Callable[[LoadProgress], None]] = None):
+    def __init__(self, progress_callback: Callable[[LoadProgress], None] | None = None):
         self._progress_callback = ProgressCallback(progress_callback)
-        self._loaded_models: Dict[str, Any] = {}
+        self._loaded_models: dict[str, Any] = {}
 
     def load_huggingface(
         self,
         model_path: str,
-        config: Optional[ModelLoadConfig] = None,
+        config: ModelLoadConfig | None = None,
         **kwargs,
-    ) -> Tuple[Any, Any]:
+    ) -> tuple[Any, Any]:
         """Load a model from HuggingFace Hub or local path.
 
         Returns (model, tokenizer).
         """
         import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
+        from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
         if config is None:
             config = ModelLoadConfig(model_path=model_path)
@@ -195,13 +203,17 @@ class ModelLoader:
         total_params = getattr(hf_config, "num_params", None)
         if total_params is None:
             if hasattr(hf_config, "hidden_size") and hasattr(hf_config, "num_hidden_layers"):
-                total_params = hf_config.hidden_size * hf_config.hidden_size * 12 * hf_config.num_hidden_layers
+                total_params = (
+                    hf_config.hidden_size * hf_config.hidden_size * 12 * hf_config.num_hidden_layers
+                )
         if total_params:
             bytes_per_param = 2 if config.dtype in ("float16", "bfloat16") else 4
-            self._progress_callback({
-                "stage": "loading_weights",
-                "bytes_total": total_params * bytes_per_param,
-            })
+            self._progress_callback(
+                {
+                    "stage": "loading_weights",
+                    "bytes_total": total_params * bytes_per_param,
+                }
+            )
 
         self._progress_callback({"stage": "loading_model"})
         model = AutoModelForCausalLM.from_pretrained(**load_kwargs)
@@ -227,15 +239,17 @@ class ModelLoader:
             "load_time": time.time(),
         }
 
-        logger.info(f"Model loaded from '{model_path}' (dtype={config.dtype}, device={config.device})")
+        logger.info(
+            f"Model loaded from '{model_path}' (dtype={config.dtype}, device={config.device})"
+        )
         return model, tokenizer
 
     def load_safetensors(
         self,
         model_path: str,
-        config: Optional[ModelLoadConfig] = None,
+        config: ModelLoadConfig | None = None,
         **kwargs,
-    ) -> Tuple[Any, Any]:
+    ) -> tuple[Any, Any]:
         """Load a model specifically from safetensors format.
 
         Falls back to HuggingFace loader which handles safetensors natively.
@@ -249,9 +263,9 @@ class ModelLoader:
     def load_sharded(
         self,
         model_path: str,
-        config: Optional[ModelLoadConfig] = None,
+        config: ModelLoadConfig | None = None,
         **kwargs,
-    ) -> Tuple[Any, Any]:
+    ) -> tuple[Any, Any]:
         """Load a sharded model (split across multiple files).
 
         HuggingFace's from_pretrained handles sharding automatically.
@@ -262,38 +276,45 @@ class ModelLoader:
         if config is None:
             config = ModelLoadConfig(model_path=model_path)
 
-        shard_pattern = "model-"
-        index_file = os.path.join(model_path, "model.safetensors.index.json") if os.path.isdir(model_path) else None
+        index_file = (
+            os.path.join(model_path, "model.safetensors.index.json")
+            if os.path.isdir(model_path)
+            else None
+        )
 
         if index_file and os.path.exists(index_file):
-            with open(index_file, "r") as f:
+            with open(index_file) as f:
                 index_data = json.load(f)
             weight_files = index_data.get("weight_map", {})
             unique_files = set(weight_files.values())
-            self._progress_callback({
-                "stage": "loading_shards",
-                "files_total": len(unique_files),
-            })
+            self._progress_callback(
+                {
+                    "stage": "loading_shards",
+                    "files_total": len(unique_files),
+                }
+            )
         else:
             pytorch_index = os.path.join(model_path, "pytorch_model.bin.index.json")
             if os.path.exists(pytorch_index):
-                with open(pytorch_index, "r") as f:
+                with open(pytorch_index) as f:
                     index_data = json.load(f)
                 weight_files = index_data.get("weight_map", {})
                 unique_files = set(weight_files.values())
-                self._progress_callback({
-                    "stage": "loading_shards",
-                    "files_total": len(unique_files),
-                })
+                self._progress_callback(
+                    {
+                        "stage": "loading_shards",
+                        "files_total": len(unique_files),
+                    }
+                )
 
         return self.load_huggingface(model_path, config, **kwargs)
 
     def load_gguf(
         self,
         model_path: str,
-        config: Optional[ModelLoadConfig] = None,
+        config: ModelLoadConfig | None = None,
         **kwargs,
-    ) -> Tuple[Any, Any]:
+    ) -> tuple[Any, Any]:
         """Load a model in GGUF format using llama-cpp-python.
 
         Returns (llama_model, tokenizer_wrapper) where tokenizer_wrapper
@@ -322,11 +343,14 @@ class ModelLoader:
 
         class GGUFTokenizer:
             """Minimal tokenizer wrapper for GGUF models."""
+
             def __init__(self, llama_model):
                 self._model = llama_model
 
             def encode(self, text, **kw):
-                return self._model.tokenize(text.encode("utf-8"), add_bos=kw.get("add_special_tokens", True))
+                return self._model.tokenize(
+                    text.encode("utf-8"), add_bos=kw.get("add_special_tokens", True)
+                )
 
             def decode(self, tokens, **kw):
                 if isinstance(tokens, list):
@@ -351,14 +375,14 @@ class ModelLoader:
 
     def detect_format(self, model_path: str) -> LoadFormat:
         """Auto-detect the model format from the path contents."""
-        if model_path.endswith(".gguf") or model_path.endswith(".ggml"):
+        if model_path.endswith((".gguf", ".ggml")):
             return LoadFormat.GGUF if model_path.endswith(".gguf") else LoadFormat.GGML
 
         if os.path.isdir(model_path):
             files = os.listdir(model_path)
             if any(f.endswith(".safetensors") for f in files):
                 return LoadFormat.SAFETENSORS
-            if any(f.endswith(".bin") or f.endswith(".pt") for f in files):
+            if any(f.endswith((".bin", ".pt")) for f in files):
                 return LoadFormat.PYTORCH
 
         return LoadFormat.AUTO
@@ -367,7 +391,7 @@ class ModelLoader:
         """Get current loading progress."""
         return self._progress_callback.progress
 
-    def verify_checksum(self, model_path: str, expected_sha256: Optional[str] = None) -> Optional[str]:
+    def verify_checksum(self, model_path: str, expected_sha256: str | None = None) -> str | None:
         """Verify the SHA256 checksum of model files."""
         sha256 = hashlib.sha256()
         if os.path.isfile(model_path):
@@ -380,7 +404,7 @@ class ModelLoader:
             return computed
         return None
 
-    def get_model_info(self, model_path: str) -> Dict[str, Any]:
+    def get_model_info(self, model_path: str) -> dict[str, Any]:
         """Get information about a model without fully loading it."""
         from transformers import AutoConfig
 
