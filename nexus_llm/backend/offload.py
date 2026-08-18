@@ -4,21 +4,24 @@ Implements layer-wise CPU offloading, disk offloading, and automatic
 offloading based on available GPU memory.
 """
 
-import torch
-import os
-import json
-import tempfile
-from typing import Optional, Dict, Any, List, Tuple, Set
-from dataclasses import dataclass, field
-from enum import Enum
+from __future__ import annotations
+
 import logging
+import os
+import tempfile
 import threading
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any
+
+import torch
 
 logger = logging.getLogger(__name__)
 
 
 class OffloadTarget(Enum):
     """Offloading destination."""
+
     GPU = "gpu"
     CPU = "cpu"
     DISK = "disk"
@@ -26,6 +29,7 @@ class OffloadTarget(Enum):
 
 class OffloadStrategy(Enum):
     """Strategy for deciding which layers to offload."""
+
     MANUAL = "manual"
     AUTO = "auto"
     BALANCED = "balanced"
@@ -35,10 +39,11 @@ class OffloadStrategy(Enum):
 @dataclass
 class LayerPlacement:
     """Placement information for a single model layer."""
+
     layer_name: str
     target: OffloadTarget = OffloadTarget.GPU
     device: str = "cuda:0"
-    disk_path: Optional[str] = None
+    disk_path: str | None = None
     size_bytes: int = 0
     is_loaded: bool = False
 
@@ -46,12 +51,13 @@ class LayerPlacement:
 @dataclass
 class OffloadConfig:
     """Configuration for model offloading."""
+
     strategy: OffloadStrategy = OffloadStrategy.AUTO
-    gpu_memory_limit_gb: Optional[float] = None
-    cpu_memory_limit_gb: Optional[float] = None
-    disk_offload_dir: Optional[str] = None
-    offload_layers: Optional[List[str]] = None
-    keep_on_gpu: Optional[List[str]] = None
+    gpu_memory_limit_gb: float | None = None
+    cpu_memory_limit_gb: float | None = None
+    disk_offload_dir: str | None = None
+    offload_layers: list[str] | None = None
+    keep_on_gpu: list[str] | None = None
     prefetch_layers: int = 1
     pin_memory: bool = True
 
@@ -66,15 +72,15 @@ class LayerOffloader:
     - Layer prefetching for sequential access patterns
     """
 
-    def __init__(self, model: Any, config: Optional[OffloadConfig] = None):
+    def __init__(self, model: Any, config: OffloadConfig | None = None):
         self._model = model
         self._config = config or OffloadConfig()
-        self._placements: Dict[str, LayerPlacement] = {}
-        self._layer_order: List[str] = []
+        self._placements: dict[str, LayerPlacement] = {}
+        self._layer_order: list[str] = []
         self._lock = threading.RLock()
         self._disk_dir = self._config.disk_offload_dir or tempfile.mkdtemp(prefix="nexus_offload_")
 
-    def analyze_model(self) -> Dict[str, int]:
+    def analyze_model(self) -> dict[str, int]:
         """Analyze model layers and their sizes in bytes."""
         layer_sizes = {}
         for name, param in self._model.named_parameters():
@@ -89,13 +95,13 @@ class LayerOffloader:
 
         return layer_sizes
 
-    def compute_device_map(self) -> Dict[str, str]:
+    def compute_device_map(self) -> dict[str, str]:
         """Compute an optimal device map based on available memory and strategy."""
         layer_sizes = self.analyze_model()
         sorted_layers = sorted(layer_sizes.items(), key=lambda x: x[0])
 
         self._layer_order = [name for name, _ in sorted_layers]
-        device_map: Dict[str, str] = {}
+        device_map: dict[str, str] = {}
 
         if self._config.strategy == OffloadStrategy.MANUAL:
             return self._compute_manual_device_map(layer_sizes)
@@ -107,7 +113,7 @@ class LayerOffloader:
             return self._compute_greedy_device_map(layer_sizes)
         return device_map
 
-    def _compute_manual_device_map(self, layer_sizes: Dict[str, int]) -> Dict[str, str]:
+    def _compute_manual_device_map(self, layer_sizes: dict[str, int]) -> dict[str, str]:
         """Compute device map based on manually specified layers."""
         device_map = {}
         gpu_layers = set(self._config.keep_on_gpu or [])
@@ -123,7 +129,7 @@ class LayerOffloader:
 
         return device_map
 
-    def _compute_auto_device_map(self, layer_sizes: Dict[str, int]) -> Dict[str, str]:
+    def _compute_auto_device_map(self, layer_sizes: dict[str, int]) -> dict[str, str]:
         """Automatically compute device map based on available GPU memory."""
         device_map = {}
         if not torch.cuda.is_available():
@@ -150,7 +156,7 @@ class LayerOffloader:
 
         return device_map
 
-    def _compute_balanced_device_map(self, layer_sizes: Dict[str, int]) -> Dict[str, str]:
+    def _compute_balanced_device_map(self, layer_sizes: dict[str, int]) -> dict[str, str]:
         """Compute a balanced device map distributing layers across GPU and CPU."""
         device_map = {}
         sorted_layers = sorted(layer_sizes.items(), key=lambda x: x[0])
@@ -173,7 +179,7 @@ class LayerOffloader:
 
         return device_map
 
-    def _compute_greedy_device_map(self, layer_sizes: Dict[str, int]) -> Dict[str, str]:
+    def _compute_greedy_device_map(self, layer_sizes: dict[str, int]) -> dict[str, str]:
         """Greedy strategy: fill GPU until full, then CPU, then disk."""
         device_map = {}
         sorted_layers = sorted(layer_sizes.items(), key=lambda x: x[0])
@@ -212,7 +218,7 @@ class LayerOffloader:
 
         return device_map
 
-    def apply_device_map(self, device_map: Dict[str, str]) -> None:
+    def apply_device_map(self, device_map: dict[str, str]) -> None:
         """Apply a device map to the model, moving layers to their target devices."""
         with self._lock:
             for name, param in self._model.named_parameters():
@@ -230,7 +236,11 @@ class LayerOffloader:
 
                 self._placements[layer_prefix] = LayerPlacement(
                     layer_name=layer_prefix,
-                    target=OffloadTarget(target) if target in ("gpu", "cpu", "disk") else OffloadTarget.GPU,
+                    target=(
+                        OffloadTarget(target)
+                        if target in ("gpu", "cpu", "disk")
+                        else OffloadTarget.GPU
+                    ),
                     device=target,
                     size_bytes=param.numel() * param.element_size(),
                     is_loaded=(target != "disk"),
@@ -309,14 +319,18 @@ class LayerOffloader:
                 if placement and not placement.is_loaded:
                     self._load_layer_from_disk(next_layer, "cpu")
 
-    def get_offload_summary(self) -> Dict[str, Any]:
+    def get_offload_summary(self) -> dict[str, Any]:
         """Get a summary of current offloading state."""
         gpu_count = sum(1 for p in self._placements.values() if p.device.startswith("cuda"))
         cpu_count = sum(1 for p in self._placements.values() if p.device == "cpu")
         disk_count = sum(1 for p in self._placements.values() if p.target == OffloadTarget.DISK)
-        gpu_bytes = sum(p.size_bytes for p in self._placements.values() if p.device.startswith("cuda"))
+        gpu_bytes = sum(
+            p.size_bytes for p in self._placements.values() if p.device.startswith("cuda")
+        )
         cpu_bytes = sum(p.size_bytes for p in self._placements.values() if p.device == "cpu")
-        disk_bytes = sum(p.size_bytes for p in self._placements.values() if p.target == OffloadTarget.DISK)
+        disk_bytes = sum(
+            p.size_bytes for p in self._placements.values() if p.target == OffloadTarget.DISK
+        )
 
         return {
             "total_layers": len(self._placements),
@@ -334,7 +348,7 @@ class LayerOffloader:
         if not torch.cuda.is_available():
             return
         self._model = self._model.cpu()
-        for name, placement in self._placements.items():
+        for placement in self._placements.values():
             placement.device = "cpu"
             placement.target = OffloadTarget.CPU
         torch.cuda.empty_cache()
