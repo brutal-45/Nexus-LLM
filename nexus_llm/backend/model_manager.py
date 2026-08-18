@@ -4,21 +4,24 @@ Handles loading, unloading, and lifecycle management of HuggingFace models
 with support for multiple precision modes and automatic device detection.
 """
 
+from __future__ import annotations
+
 import logging
 import time
 from enum import Enum
-from typing import Dict, Optional, Any
+from typing import Any
 
 import torch
 
 from nexus_llm.core.exceptions import ModelLoadError, ModelNotFoundError
-from nexus_llm.core.model_catalog import MODEL_CATALOG, get_model_info, ModelInfo
+from nexus_llm.core.model_catalog import ModelInfo, get_model_info
 
 logger = logging.getLogger(__name__)
 
 
 class ModelState(str, Enum):
     """States a managed model can be in."""
+
     UNLOADED = "unloaded"
     LOADING = "loading"
     LOADED = "loaded"
@@ -27,6 +30,7 @@ class ModelState(str, Enum):
 
 class Precision(str, Enum):
     """Supported precision modes."""
+
     FP32 = "fp32"
     FP16 = "fp16"
     BF16 = "bf16"
@@ -37,6 +41,7 @@ class Precision(str, Enum):
 # ------------------------------------------------------------------
 # Device detection
 # ------------------------------------------------------------------
+
 
 def detect_device() -> str:
     """Auto-detect the best available compute device.
@@ -62,7 +67,8 @@ def _resolve_device(device: str) -> str:
 # Precision helpers
 # ------------------------------------------------------------------
 
-def _get_torch_dtype(precision: str) -> Optional[torch.dtype]:
+
+def _get_torch_dtype(precision: str) -> torch.dtype | None:
     """Map a precision string to a torch dtype.
 
     Returns None for quantised modes (8bit / 4bit) because BitsAndBytes
@@ -79,10 +85,10 @@ def _get_torch_dtype(precision: str) -> Optional[torch.dtype]:
 def _build_model_kwargs(
     precision: str,
     device: str,
-    cache_dir: Optional[str] = None,
-) -> Dict[str, Any]:
+    cache_dir: str | None = None,
+) -> dict[str, Any]:
     """Build the keyword arguments dict for ``from_pretrained``."""
-    kwargs: Dict[str, Any] = {
+    kwargs: dict[str, Any] = {
         "trust_remote_code": True,
     }
 
@@ -93,6 +99,7 @@ def _build_model_kwargs(
         kwargs["device_map"] = "auto" if device != "cpu" else {"": "cpu"}
     elif precision == Precision.FOURBIT:
         from transformers import BitsAndBytesConfig
+
         kwargs["quantization_config"] = BitsAndBytesConfig(load_in_4bit=True)
         kwargs["device_map"] = "auto" if device != "cpu" else {"": "cpu"}
     else:
@@ -111,6 +118,7 @@ def _build_model_kwargs(
 # ModelManager
 # ------------------------------------------------------------------
 
+
 class ModelManager:
     """Manages the lifecycle of a single HuggingFace model.
 
@@ -123,25 +131,25 @@ class ModelManager:
     """
 
     def __init__(self) -> None:
-        self._model: Optional[Any] = None
-        self._model_info: Optional[ModelInfo] = None
+        self._model: Any | None = None
+        self._model_info: ModelInfo | None = None
         self._state: ModelState = ModelState.UNLOADED
-        self._device: Optional[str] = None
-        self._precision: Optional[str] = None
-        self._load_time: Optional[float] = None
-        self._error_message: Optional[str] = None
+        self._device: str | None = None
+        self._precision: str | None = None
+        self._load_time: float | None = None
+        self._error_message: str | None = None
 
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
 
     @property
-    def model(self) -> Optional[Any]:
+    def model(self) -> Any | None:
         """The loaded HuggingFace model, or None."""
         return self._model
 
     @property
-    def model_info(self) -> Optional[ModelInfo]:
+    def model_info(self) -> ModelInfo | None:
         """Catalogue info for the currently loaded model."""
         return self._model_info
 
@@ -156,17 +164,17 @@ class ModelManager:
         return self._state == ModelState.LOADED and self._model is not None
 
     @property
-    def device(self) -> Optional[str]:
+    def device(self) -> str | None:
         """The compute device the model is on (cuda / mps / cpu)."""
         return self._device
 
     @property
-    def precision(self) -> Optional[str]:
+    def precision(self) -> str | None:
         """The precision mode the model was loaded with."""
         return self._precision
 
     @property
-    def model_id(self) -> Optional[str]:
+    def model_id(self) -> str | None:
         """Short model ID (e.g. "gpt2-medium") of the loaded model."""
         return self._model_info.id if self._model_info else None
 
@@ -179,7 +187,7 @@ class ModelManager:
         model_id: str,
         device: str = "auto",
         precision: str = "fp32",
-        cache_dir: Optional[str] = None,
+        cache_dir: str | None = None,
     ) -> None:
         """Load a model from the catalogue.
 
@@ -210,7 +218,10 @@ class ModelManager:
         self._model_info = info
         logger.info(
             "Loading model %s (%s) — device=%s precision=%s",
-            model_id, info.hf_id, device, precision,
+            model_id,
+            info.hf_id,
+            device,
+            precision,
         )
 
         resolved_device = _resolve_device(device)
@@ -222,15 +233,19 @@ class ModelManager:
 
             if info.model_type == "seq2seq":
                 from transformers import AutoModelForSeq2SeqLM
+
                 self._model = AutoModelForSeq2SeqLM.from_pretrained(hf_id, **kwargs)
             else:
                 from transformers import AutoModelForCausalLM
+
                 self._model = AutoModelForCausalLM.from_pretrained(hf_id, **kwargs)
 
             # Move to device if not already handled by device_map / quantisation
-            if (
-                "device_map" not in kwargs or kwargs["device_map"] is None
-            ) and resolved_device in ("cuda", "mps", "cpu"):
+            if ("device_map" not in kwargs or kwargs["device_map"] is None) and resolved_device in (
+                "cuda",
+                "mps",
+                "cpu",
+            ):
                 self._model = self._model.to(resolved_device)
 
             self._model.eval()
@@ -242,7 +257,10 @@ class ModelManager:
 
             logger.info(
                 "Model %s loaded in %.2f s on %s (%s)",
-                model_id, self._load_time, resolved_device, precision,
+                model_id,
+                self._load_time,
+                resolved_device,
+                precision,
             )
 
         except Exception as exc:
@@ -250,9 +268,7 @@ class ModelManager:
             self._error_message = str(exc)
             self._model = None
             logger.exception("Failed to load model %s", model_id)
-            raise ModelLoadError(
-                f"Failed to load model '{model_id}': {exc}"
-            ) from exc
+            raise ModelLoadError(f"Failed to load model '{model_id}': {exc}") from exc
 
     def unload(self) -> None:
         """Unload the current model and free GPU/CPU memory."""
@@ -262,6 +278,7 @@ class ModelManager:
 
         # Force garbage collection and clear CUDA cache
         import gc
+
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -279,9 +296,9 @@ class ModelManager:
 
     def reload(
         self,
-        device: Optional[str] = None,
-        precision: Optional[str] = None,
-        cache_dir: Optional[str] = None,
+        device: str | None = None,
+        precision: str | None = None,
+        cache_dir: str | None = None,
     ) -> None:
         """Reload the current model (optionally with new settings).
 
@@ -307,7 +324,7 @@ class ModelManager:
     # Memory usage
     # ------------------------------------------------------------------
 
-    def get_memory_usage(self) -> Dict[str, Any]:
+    def get_memory_usage(self) -> dict[str, Any]:
         """Return memory usage information.
 
         Uses ``psutil`` for CPU/RAM stats and ``torch.cuda`` for GPU stats.
@@ -317,11 +334,12 @@ class ModelManager:
             Dict with keys ``cpu``, ``ram``, ``gpu`` (if CUDA available),
             and ``model_device``.
         """
-        result: Dict[str, Any] = {"model_device": self._device}
+        result: dict[str, Any] = {"model_device": self._device}
 
         # CPU/RAM via psutil (graceful fallback)
         try:
             import psutil
+
             proc = psutil.Process()
             mem_info = proc.memory_info()
             result["cpu"] = {
@@ -329,8 +347,8 @@ class ModelManager:
                 "vms_mb": round(mem_info.vms / (1024 * 1024), 2),
             }
             result["ram"] = {
-                "total_gb": round(psutil.virtual_memory().total / (1024 ** 3), 2),
-                "available_gb": round(psutil.virtual_memory().available / (1024 ** 3), 2),
+                "total_gb": round(psutil.virtual_memory().total / (1024**3), 2),
+                "available_gb": round(psutil.virtual_memory().available / (1024**3), 2),
                 "used_percent": psutil.virtual_memory().percent,
             }
         except ImportError:
@@ -345,7 +363,9 @@ class ModelManager:
             try:
                 result["gpu"] = {
                     "device_name": torch.cuda.get_device_name(0),
-                    "total_mb": round(torch.cuda.get_device_properties(0).total_mem / (1024 * 1024), 2),
+                    "total_mb": round(
+                        torch.cuda.get_device_properties(0).total_mem / (1024 * 1024), 2
+                    ),
                     "allocated_mb": round(torch.cuda.memory_allocated(0) / (1024 * 1024), 2),
                     "reserved_mb": round(torch.cuda.memory_reserved(0) / (1024 * 1024), 2),
                 }
@@ -358,9 +378,9 @@ class ModelManager:
     # Info / summary
     # ------------------------------------------------------------------
 
-    def get_info(self) -> Dict[str, Any]:
+    def get_info(self) -> dict[str, Any]:
         """Return a comprehensive summary dict of the manager state."""
-        info: Dict[str, Any] = {
+        info: dict[str, Any] = {
             "state": self._state.value,
             "model_id": self.model_id,
             "device": self._device,
