@@ -4,18 +4,22 @@ Supports LoRA adapter loading/merging, adapter switching, and multi-adapter
 support for serving multiple LoRA adapters simultaneously.
 """
 
-import torch
-from typing import Optional, Dict, Any, List, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
+from __future__ import annotations
+
 import logging
 import os
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any
+
+import torch
 
 logger = logging.getLogger(__name__)
 
 
 class AdapterType(Enum):
     """Supported adapter types."""
+
     LORA = "lora"
     QLORA = "qlora"
     ADALORA = "adalora"
@@ -26,6 +30,7 @@ class AdapterType(Enum):
 
 class AdapterStatus(Enum):
     """Status of an adapter."""
+
     NOT_LOADED = "not_loaded"
     LOADING = "loading"
     LOADED = "loaded"
@@ -36,13 +41,14 @@ class AdapterStatus(Enum):
 @dataclass
 class AdapterInfo:
     """Information about a loaded adapter."""
+
     adapter_id: str
     adapter_path: str
     adapter_type: AdapterType = AdapterType.LORA
     status: AdapterStatus = AdapterStatus.NOT_LOADED
     rank: int = 8
     alpha: int = 16
-    target_modules: List[str] = field(default_factory=lambda: ["q_proj", "v_proj"])
+    target_modules: list[str] = field(default_factory=lambda: ["q_proj", "v_proj"])
     scaling: float = 1.0
     memory_mb: float = 0.0
     is_merged: bool = False
@@ -55,21 +61,21 @@ class AdapterManager:
     adapters simultaneously.
     """
 
-    def __init__(self, model: Any, tokenizer: Optional[Any] = None):
+    def __init__(self, model: Any, tokenizer: Any | None = None):
         self._model = model
         self._tokenizer = tokenizer
-        self._adapters: Dict[str, AdapterInfo] = {}
-        self._active_adapter: Optional[str] = None
-        self._merged_adapters: Dict[str, bool] = {}
+        self._adapters: dict[str, AdapterInfo] = {}
+        self._active_adapter: str | None = None
+        self._merged_adapters: dict[str, bool] = {}
 
     def load_adapter(
         self,
         adapter_path: str,
-        adapter_id: Optional[str] = None,
+        adapter_id: str | None = None,
         adapter_type: AdapterType = AdapterType.LORA,
         rank: int = 8,
         alpha: int = 16,
-        target_modules: Optional[List[str]] = None,
+        target_modules: list[str] | None = None,
     ) -> str:
         """Load a LoRA adapter from a path.
 
@@ -121,7 +127,7 @@ class AdapterManager:
     def _load_lora_adapter(self, adapter_path: str, adapter_id: str, info: AdapterInfo) -> None:
         """Load a LoRA adapter using PEFT library."""
         try:
-            from peft import PeftModel, PeftConfig, LoraConfig, get_peft_model
+            from peft import LoraConfig, PeftConfig, PeftModel, get_peft_model
 
             if hasattr(self._model, "peft_config"):
                 self._model.load_adapter(adapter_path, adapter_name=adapter_id)
@@ -154,7 +160,9 @@ class AdapterManager:
             logger.warning("PEFT library not available, loading adapter weights directly")
             self._load_adapter_weights_directly(adapter_path, adapter_id, info)
 
-    def _load_adapter_weights_directly(self, adapter_path: str, adapter_id: str, info: AdapterInfo) -> None:
+    def _load_adapter_weights_directly(
+        self, adapter_path: str, adapter_id: str, info: AdapterInfo
+    ) -> None:
         """Load adapter weights without PEFT (direct state dict loading)."""
         import json
 
@@ -163,7 +171,7 @@ class AdapterManager:
         safetensors_path = os.path.join(adapter_path, "adapter_model.safetensors")
 
         if os.path.exists(config_path):
-            with open(config_path, "r") as f:
+            with open(config_path) as f:
                 config = json.load(f)
             info.rank = config.get("r", info.rank)
             info.alpha = config.get("lora_alpha", info.alpha)
@@ -174,6 +182,7 @@ class AdapterManager:
         if os.path.exists(safetensors_path):
             try:
                 from safetensors.torch import load_file
+
                 adapter_state_dict = load_file(safetensors_path)
             except ImportError:
                 logger.warning("safetensors library not available")
@@ -194,7 +203,9 @@ class AdapterManager:
     def set_active_adapter(self, adapter_id: str) -> None:
         """Switch to a specific adapter for inference."""
         if adapter_id not in self._adapters:
-            raise ValueError(f"Adapter '{adapter_id}' is not loaded. Available: {list(self._adapters.keys())}")
+            raise ValueError(
+                f"Adapter '{adapter_id}' is not loaded. Available: {list(self._adapters.keys())}"
+            )
 
         if hasattr(self._model, "set_adapter"):
             self._model.set_adapter(adapter_id)
@@ -202,7 +213,7 @@ class AdapterManager:
         self._active_adapter = adapter_id
         logger.info(f"Switched to adapter '{adapter_id}'")
 
-    def get_active_adapter(self) -> Optional[str]:
+    def get_active_adapter(self) -> str | None:
         """Get the ID of the currently active adapter."""
         return self._active_adapter
 
@@ -262,7 +273,9 @@ class AdapterManager:
 
         info = self._adapters[adapter_id]
         if info.is_merged:
-            raise ValueError(f"Cannot unload merged adapter '{adapter_id}'. Merged adapters cannot be separated.")
+            raise ValueError(
+                f"Cannot unload merged adapter '{adapter_id}'. Merged adapters cannot be separated."
+            )
 
         if hasattr(self._model, "unload"):
             self._model.unload()
@@ -277,7 +290,7 @@ class AdapterManager:
 
         logger.info(f"Adapter '{adapter_id}' unloaded")
 
-    def list_adapters(self) -> Dict[str, Dict[str, Any]]:
+    def list_adapters(self) -> dict[str, dict[str, Any]]:
         """List all loaded adapters with their info."""
         result = {}
         for aid, info in self._adapters.items():
@@ -294,7 +307,7 @@ class AdapterManager:
             }
         return result
 
-    def get_adapter_info(self, adapter_id: str) -> Optional[AdapterInfo]:
+    def get_adapter_info(self, adapter_id: str) -> AdapterInfo | None:
         """Get info about a specific adapter."""
         return self._adapters.get(adapter_id)
 
