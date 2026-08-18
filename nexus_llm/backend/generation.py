@@ -4,9 +4,11 @@ Provides GenerationConfig dataclass and preset configurations for common
 generation scenarios (creative, precise, balanced, code generation).
 """
 
-from dataclasses import dataclass, field, asdict
-from typing import Optional, List, Dict, Any
+from __future__ import annotations
+
 import json
+from dataclasses import asdict, dataclass
+from typing import Any
 
 
 @dataclass
@@ -51,7 +53,7 @@ class GenerationConfig:
     """
 
     max_new_tokens: int = 512
-    max_length: Optional[int] = None
+    max_length: int | None = None
     temperature: float = 1.0
     top_p: float = 1.0
     top_k: int = 50
@@ -67,25 +69,25 @@ class GenerationConfig:
     min_new_tokens: int = 0
     min_length: int = 0
     encoder_no_repeat_ngram_size: int = 0
-    bad_words_ids: Optional[List[List[int]]] = None
-    force_words_ids: Optional[List[List[int]]] = None
+    bad_words_ids: list[list[int]] | None = None
+    force_words_ids: list[list[int]] | None = None
     renormalize_logits: bool = False
     remove_invalid_values: bool = False
     output_scores: bool = False
     output_logits: bool = False
     return_dict_in_generate: bool = False
-    pad_token_id: Optional[int] = None
-    bos_token_id: Optional[int] = None
-    eos_token_id: Optional[Any] = None
+    pad_token_id: int | None = None
+    bos_token_id: int | None = None
+    eos_token_id: Any | None = None
     use_cache: bool = True
     typical_p: float = 1.0
     epsilon_cutoff: float = 0.0
     eta_cutoff: float = 0.0
-    guidance_scale: Optional[float] = None
-    prefix_allowed_tokens_fn: Optional[Any] = None
-    seed: Optional[int] = None
+    guidance_scale: float | None = None
+    prefix_allowed_tokens_fn: Any | None = None
+    seed: int | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert config to dictionary, excluding None values."""
         return {k: v for k, v in asdict(self).items() if v is not None}
 
@@ -94,18 +96,18 @@ class GenerationConfig:
         return json.dumps(self.to_dict(), indent=2)
 
     @classmethod
-    def from_dict(cls, config_dict: Dict[str, Any]) -> "GenerationConfig":
+    def from_dict(cls, config_dict: dict[str, Any]) -> GenerationConfig:
         """Create a GenerationConfig from a dictionary."""
         valid_fields = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in config_dict.items() if k in valid_fields}
         return cls(**filtered)
 
     @classmethod
-    def from_json(cls, json_str: str) -> "GenerationConfig":
+    def from_json(cls, json_str: str) -> GenerationConfig:
         """Create a GenerationConfig from a JSON string."""
         return cls.from_dict(json.loads(json_str))
 
-    def merge(self, other: "GenerationConfig") -> "GenerationConfig":
+    def merge(self, other: GenerationConfig) -> GenerationConfig:
         """Merge another config into this one. Non-default values from other take precedence."""
         merged = asdict(self)
         defaults = GenerationConfig()
@@ -115,7 +117,7 @@ class GenerationConfig:
                 merged[k] = v
         return GenerationConfig(**merged)
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate the configuration and return a list of warnings."""
         warnings = []
         if self.temperature <= 0:
@@ -285,9 +287,16 @@ class GenerationPresets:
         return factory()
 
     @staticmethod
-    def list_presets() -> List[str]:
+    def list_presets() -> list[str]:
         """List all available preset names."""
         return [
-            "creative", "precise", "balanced", "code", "greedy",
-            "beam_search", "diverse", "chat", "summarize",
+            "creative",
+            "precise",
+            "balanced",
+            "code",
+            "greedy",
+            "beam_search",
+            "diverse",
+            "chat",
+            "summarize",
         ]
