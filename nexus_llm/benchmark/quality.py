@@ -4,11 +4,8 @@ Evaluates model outputs on coherence, diversity, accuracy, and
 fluency using heuristic and reference-based metrics.
 """
 
-import hashlib
 import logging
-import math
-from collections import Counter
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +29,9 @@ class QualityBenchmark:
     def benchmark_coherence(
         self,
         model: ModelLike,
-        prompts: List[str],
+        prompts: list[str],
         max_tokens: int = 256,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Evaluate output coherence using heuristic scoring.
 
         Coherence is approximated by measuring:
@@ -51,7 +48,7 @@ class QualityBenchmark:
         Returns:
             Dict with ``avg_score``, ``scores``, and ``n_prompts``.
         """
-        scores: List[float] = []
+        scores: list[float] = []
 
         for prompt in prompts:
             output = self._generate(model, prompt, max_tokens)
@@ -75,10 +72,10 @@ class QualityBenchmark:
     def benchmark_diversity(
         self,
         model: ModelLike,
-        prompts: List[str],
+        prompts: list[str],
         max_tokens: int = 128,
         n_samples_per_prompt: int = 3,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Measure output diversity using distinct n-gram ratios.
 
         Computes Distinct-1 (unigram) and Distinct-2 (bigram) across
@@ -94,8 +91,8 @@ class QualityBenchmark:
         Returns:
             Dict with ``distinct_1``, ``distinct_2``, and ``n_prompts``.
         """
-        all_unigrams: List[str] = []
-        all_bigrams: List[str] = []
+        all_unigrams: list[str] = []
+        all_bigrams: list[str] = []
 
         for prompt in prompts:
             for _ in range(n_samples_per_prompt):
@@ -105,12 +102,8 @@ class QualityBenchmark:
                 for i in range(len(tokens) - 1):
                     all_bigrams.append(f"{tokens[i]} {tokens[i + 1]}")
 
-        distinct_1 = (
-            len(set(all_unigrams)) / len(all_unigrams) if all_unigrams else 0.0
-        )
-        distinct_2 = (
-            len(set(all_bigrams)) / len(all_bigrams) if all_bigrams else 0.0
-        )
+        distinct_1 = len(set(all_unigrams)) / len(all_unigrams) if all_unigrams else 0.0
+        distinct_2 = len(set(all_bigrams)) / len(all_bigrams) if all_bigrams else 0.0
 
         result = {
             "distinct_1": round(distinct_1, 4),
@@ -131,9 +124,9 @@ class QualityBenchmark:
     def benchmark_accuracy(
         self,
         model: ModelLike,
-        qa_pairs: List[Dict[str, str]],
+        qa_pairs: list[dict[str, str]],
         max_tokens: int = 128,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Evaluate question-answering accuracy.
 
         Uses token-level overlap (F1) between the model output and
@@ -148,7 +141,7 @@ class QualityBenchmark:
         Returns:
             Dict with ``avg_f1``, ``exact_match``, ``n_questions``.
         """
-        f1_scores: List[float] = []
+        f1_scores: list[float] = []
         exact_matches = 0
 
         for pair in qa_pairs:
@@ -204,9 +197,9 @@ class QualityBenchmark:
     def benchmark_fluency(
         self,
         model: ModelLike,
-        prompts: List[str],
+        prompts: list[str],
         max_tokens: int = 256,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Evaluate output fluency using heuristic metrics.
 
         Fluency is approximated by:
@@ -224,11 +217,11 @@ class QualityBenchmark:
             Dict with ``avg_fluency_score``, ``avg_sentence_length``,
             ``well_formed_ratio``, ``type_token_ratio``.
         """
-        fluency_scores: List[float] = []
-        all_sentence_lengths: List[float] = []
+        fluency_scores: list[float] = []
+        all_sentence_lengths: list[float] = []
         well_formed = 0
         total_sentences = 0
-        all_tokens: List[str] = []
+        all_tokens: list[str] = []
 
         for prompt in prompts:
             output = self._generate(model, prompt, max_tokens)
@@ -250,9 +243,7 @@ class QualityBenchmark:
 
         avg_fluency = sum(fluency_scores) / len(fluency_scores) if fluency_scores else 0.0
         avg_sent_len = (
-            sum(all_sentence_lengths) / len(all_sentence_lengths)
-            if all_sentence_lengths
-            else 0.0
+            sum(all_sentence_lengths) / len(all_sentence_lengths) if all_sentence_lengths else 0.0
         )
         well_formed_ratio = well_formed / total_sentences if total_sentences else 0.0
         ttr = len(set(all_tokens)) / len(all_tokens) if all_tokens else 0.0
@@ -297,7 +288,7 @@ class QualityBenchmark:
             return 0.5
 
         # Bigram overlap between consecutive sentences
-        overlaps: List[float] = []
+        overlaps: list[float] = []
         for i in range(len(sentences) - 1):
             words_a = set(sentences[i].lower().split())
             words_b = set(sentences[i + 1].lower().split())
@@ -325,7 +316,7 @@ class QualityBenchmark:
             return 0.0
 
         # Type-token ratio (vocabulary richness)
-        ttr = len(set(w.lower() for w in words)) / len(words)
+        ttr = len({w.lower() for w in words}) / len(words)
 
         # Sentence length normalcy (prefer ~8-25 words)
         sentences = [s.strip() for s in text.split(".") if s.strip()]
@@ -335,4 +326,4 @@ class QualityBenchmark:
         else:
             length_score = 0.0
 
-        return (ttr * 0.5 + length_score * 0.5)
+        return ttr * 0.5 + length_score * 0.5
