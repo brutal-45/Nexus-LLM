@@ -7,7 +7,7 @@ or all registered benchmarks.
 
 import logging
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 from nexus_llm.benchmark.report import BenchmarkReport
 
@@ -29,7 +29,7 @@ class BenchmarkSuite:
 
     def __init__(self, title: str = "Benchmark Suite") -> None:
         self._title = title
-        self._benchmarks: Dict[str, Callable[[], Dict[str, Any]]] = {}
+        self._benchmarks: dict[str, Callable[[], dict[str, Any]]] = {}
 
     # ------------------------------------------------------------------
     # Benchmark management
@@ -38,7 +38,7 @@ class BenchmarkSuite:
     def add_benchmark(
         self,
         name: str,
-        benchmark_fn: Callable[[], Dict[str, Any]],
+        benchmark_fn: Callable[[], dict[str, Any]],
     ) -> None:
         """Register a named benchmark function.
 
@@ -60,7 +60,7 @@ class BenchmarkSuite:
         self._benchmarks[name] = benchmark_fn
         logger.info("Registered benchmark %r", name)
 
-    def list_benchmarks(self) -> List[str]:
+    def list_benchmarks(self) -> list[str]:
         """Return the names of all registered benchmarks, sorted alphabetically."""
         return sorted(self._benchmarks.keys())
 
@@ -68,7 +68,7 @@ class BenchmarkSuite:
     # Execution
     # ------------------------------------------------------------------
 
-    def run(self, name: str) -> Dict[str, Any]:
+    def run(self, name: str) -> dict[str, Any]:
         """Run a single benchmark by name.
 
         Args:
@@ -81,10 +81,7 @@ class BenchmarkSuite:
             ValueError: If *name* is not a registered benchmark.
         """
         if name not in self._benchmarks:
-            raise ValueError(
-                f"Unknown benchmark {name!r}. "
-                f"Available: {self.list_benchmarks()}"
-            )
+            raise ValueError(f"Unknown benchmark {name!r}. " f"Available: {self.list_benchmarks()}")
 
         fn = self._benchmarks[name]
         logger.info("Running benchmark %r …", name)
