@@ -4,20 +4,23 @@ Implements priority queues, batching, fair scheduling, and continuous batching
 for efficient inference request management.
 """
 
-import time
-import threading
-from typing import Optional, Dict, List, Any, Callable
-from dataclasses import dataclass, field
-from enum import Enum
-from collections import defaultdict
+from __future__ import annotations
+
 import heapq
 import logging
+import threading
+import time
+from collections import defaultdict
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
 
 class RequestPriority(Enum):
     """Priority levels for inference requests."""
+
     LOW = 0
     NORMAL = 1
     HIGH = 2
@@ -26,6 +29,7 @@ class RequestPriority(Enum):
 
 class RequestStatus(Enum):
     """Status of a request in the scheduler."""
+
     QUEUED = "queued"
     PREFILLING = "prefilling"
     DECODING = "decoding"
@@ -37,19 +41,20 @@ class RequestStatus(Enum):
 @dataclass
 class InferenceRequest:
     """A single inference request."""
+
     request_id: str
     prompt: str
     priority: RequestPriority = RequestPriority.NORMAL
     status: RequestStatus = RequestStatus.QUEUED
     created_at: float = field(default_factory=time.time)
-    started_at: Optional[float] = None
-    completed_at: Optional[float] = None
+    started_at: float | None = None
+    completed_at: float | None = None
     max_tokens: int = 512
-    params: Dict[str, Any] = field(default_factory=dict)
-    callback: Optional[Callable] = None
-    result: Optional[Any] = None
-    error: Optional[str] = None
-    user_id: Optional[str] = None
+    params: dict[str, Any] = field(default_factory=dict)
+    callback: Callable | None = None
+    result: Any | None = None
+    error: str | None = None
+    user_id: str | None = None
     token_count: int = 0
 
     @property
@@ -70,7 +75,7 @@ class InferenceRequest:
         """Numeric priority for sorting (higher = more urgent)."""
         return self.priority.value
 
-    def __lt__(self, other: "InferenceRequest") -> bool:
+    def __lt__(self, other: InferenceRequest) -> bool:
         """Compare for priority queue ordering."""
         if self.priority_value != other.priority_value:
             return self.priority_value > other.priority_value
@@ -80,8 +85,9 @@ class InferenceRequest:
 @dataclass
 class Batch:
     """A batch of requests being processed together."""
+
     batch_id: str
-    requests: List[InferenceRequest]
+    requests: list[InferenceRequest]
     created_at: float = field(default_factory=time.time)
     max_batch_size: int = 8
 
@@ -119,10 +125,10 @@ class RequestScheduler:
         self.max_requests_per_user = max_requests_per_user
         self.scheduling_policy = scheduling_policy
 
-        self._queue: List[InferenceRequest] = []
-        self._active_batch: Optional[Batch] = None
-        self._completed: Dict[str, InferenceRequest] = {}
-        self._user_counts: Dict[str, int] = defaultdict(int)
+        self._queue: list[InferenceRequest] = []
+        self._active_batch: Batch | None = None
+        self._completed: dict[str, InferenceRequest] = {}
+        self._user_counts: dict[str, int] = defaultdict(int)
         self._request_counter: int = 0
         self._lock = threading.RLock()
         self._batch_counter: int = 0
@@ -153,7 +159,9 @@ class RequestScheduler:
             heapq.heappush(self._queue, request)
             request.status = RequestStatus.QUEUED
 
-            logger.debug(f"Request '{request.request_id}' queued (priority={request.priority.name})")
+            logger.debug(
+                f"Request '{request.request_id}' queued (priority={request.priority.name})"
+            )
             return request.request_id
 
     def submit_prompt(
@@ -161,9 +169,9 @@ class RequestScheduler:
         prompt: str,
         priority: RequestPriority = RequestPriority.NORMAL,
         max_tokens: int = 512,
-        params: Optional[Dict[str, Any]] = None,
-        callback: Optional[Callable] = None,
-        user_id: Optional[str] = None,
+        params: dict[str, Any] | None = None,
+        callback: Callable | None = None,
+        user_id: str | None = None,
     ) -> str:
         """Convenience method to submit a prompt directly.
 
@@ -180,7 +188,7 @@ class RequestScheduler:
         )
         return self.submit(request)
 
-    def form_batch(self) -> Optional[Batch]:
+    def form_batch(self) -> Batch | None:
         """Form a batch from queued requests using the configured scheduling policy.
 
         Returns None if no requests are available.
@@ -220,7 +228,7 @@ class RequestScheduler:
             logger.info(f"Formed batch '{batch.batch_id}' with {batch.size} requests")
             return batch
 
-    def _form_priority_batch(self) -> List[InferenceRequest]:
+    def _form_priority_batch(self) -> list[InferenceRequest]:
         """Form a batch using strict priority ordering."""
         batch = []
         temp = []
@@ -230,12 +238,12 @@ class RequestScheduler:
             temp.append(req)
         return batch
 
-    def _form_fair_batch(self) -> List[InferenceRequest]:
+    def _form_fair_batch(self) -> list[InferenceRequest]:
         """Form a batch with fair scheduling across users.
 
         Round-robin across users to ensure no single user dominates.
         """
-        user_queues: Dict[str, List[InferenceRequest]] = defaultdict(list)
+        user_queues: dict[str, list[InferenceRequest]] = defaultdict(list)
 
         temp = []
         while self._queue:
@@ -262,7 +270,7 @@ class RequestScheduler:
 
         return batch
 
-    def _form_fifo_batch(self) -> List[InferenceRequest]:
+    def _form_fifo_batch(self) -> list[InferenceRequest]:
         """Form a batch using first-in-first-out ordering."""
         batch = []
         sorted_queue = sorted(self._queue, key=lambda r: r.created_at)
@@ -276,7 +284,7 @@ class RequestScheduler:
 
         return batch
 
-    def _form_continuous_batch(self) -> List[InferenceRequest]:
+    def _form_continuous_batch(self) -> list[InferenceRequest]:
         """Form a batch for continuous batching (prefill new requests alongside decoding).
 
         Includes ongoing decoding requests and new prefill requests up to batch limit.
@@ -362,14 +370,14 @@ class RequestScheduler:
 
             return False
 
-    def _decrement_user_count(self, user_id: Optional[str]) -> None:
+    def _decrement_user_count(self, user_id: str | None) -> None:
         """Decrement the request count for a user."""
         if user_id and user_id in self._user_counts:
             self._user_counts[user_id] = max(0, self._user_counts[user_id] - 1)
             if self._user_counts[user_id] == 0:
                 del self._user_counts[user_id]
 
-    def get_request(self, request_id: str) -> Optional[InferenceRequest]:
+    def get_request(self, request_id: str) -> InferenceRequest | None:
         """Get a request by its ID."""
         for req in self._queue:
             if req.request_id == request_id:
@@ -392,7 +400,7 @@ class RequestScheduler:
             return 0
         return self._active_batch.size
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get scheduler statistics."""
         priority_counts = defaultdict(int)
         for req in self._queue:
@@ -416,7 +424,8 @@ class RequestScheduler:
         with self._lock:
             cutoff = time.time() - max_age_seconds
             to_remove = [
-                rid for rid, req in self._completed.items()
+                rid
+                for rid, req in self._completed.items()
                 if req.completed_at and req.completed_at < cutoff
             ]
             for rid in to_remove:
