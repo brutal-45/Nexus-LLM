@@ -4,17 +4,18 @@ Provides single-shot and streaming generation for both raw text completions
 and conversational (chat) interactions.  Thread-safe via ``threading.Lock``.
 """
 
+from __future__ import annotations
+
 import logging
 import threading
 import time
-from dataclasses import dataclass, field
-from typing import Dict, Generator, List, Optional, Any
-
-import torch
+from collections.abc import Generator
+from dataclasses import dataclass
+from typing import Any
 
 from nexus_llm.backend.model_manager import ModelManager
 from nexus_llm.backend.tokenizer_utils import TokenizerManager
-from nexus_llm.core.exceptions import InferenceError, ModelLoadError
+from nexus_llm.core.exceptions import InferenceError
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +24,11 @@ logger = logging.getLogger(__name__)
 # Generation stats
 # ------------------------------------------------------------------
 
+
 @dataclass
 class GenerationStats:
     """Accumulated generation statistics."""
+
     generation_count: int = 0
     total_tokens: int = 0
     total_time: float = 0.0
@@ -36,7 +39,7 @@ class GenerationStats:
             return 0.0
         return self.total_tokens / self.total_time
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "generation_count": self.generation_count,
             "total_tokens": self.total_tokens,
@@ -48,6 +51,7 @@ class GenerationStats:
 # ------------------------------------------------------------------
 # InferenceEngine
 # ------------------------------------------------------------------
+
 
 class InferenceEngine:
     """High-level inference engine that orchestrates model and tokenizer.
@@ -64,15 +68,15 @@ class InferenceEngine:
 
     def __init__(
         self,
-        model_manager: Optional[ModelManager] = None,
-        tokenizer_manager: Optional[TokenizerManager] = None,
+        model_manager: ModelManager | None = None,
+        tokenizer_manager: TokenizerManager | None = None,
     ) -> None:
         self._model_manager = model_manager or ModelManager()
         self._tokenizer_manager = tokenizer_manager or TokenizerManager()
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
         self._stats = GenerationStats()
-        self._generation_thread: Optional[threading.Thread] = None
+        self._generation_thread: threading.Thread | None = None
 
     # ------------------------------------------------------------------
     # Properties
@@ -103,7 +107,7 @@ class InferenceEngine:
         model_id: str,
         device: str = "auto",
         precision: str = "fp32",
-        cache_dir: Optional[str] = None,
+        cache_dir: str | None = None,
     ) -> None:
         """Load both the model and its tokenizer atomically.
 
@@ -115,7 +119,9 @@ class InferenceEngine:
             ModelLoadError: If the model or tokenizer fails to load.
         """
         with self._lock:
-            self._model_manager.load(model_id, device=device, precision=precision, cache_dir=cache_dir)
+            self._model_manager.load(
+                model_id, device=device, precision=precision, cache_dir=cache_dir
+            )
             try:
                 self._tokenizer_manager.load(model_id, cache_dir=cache_dir)
             except Exception:
@@ -155,7 +161,7 @@ class InferenceEngine:
         num_beams: int = 1,
         do_sample: bool = True,
         **extra_kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate a single-shot completion.
 
         Args:
@@ -193,7 +199,7 @@ class InferenceEngine:
                 device = next(model.parameters()).device  # type: ignore[union-attr]
                 inputs = {k: v.to(device) for k, v in inputs.items()}
 
-                gen_kwargs: Dict[str, Any] = {
+                gen_kwargs: dict[str, Any] = {
                     "max_new_tokens": max_new_tokens,
                     "temperature": temperature,
                     "top_p": top_p,
@@ -257,7 +263,7 @@ class InferenceEngine:
         model = self._model_manager.model
 
         inputs = tokenizer(prompt, return_tensors="pt")  # type: ignore[union-attr]
-        input_length = inputs["input_ids"].shape[1]
+        inputs["input_ids"].shape[1]
 
         device = next(model.parameters()).device  # type: ignore[union-attr]
         inputs = {k: v.to(device) for k, v in inputs.items()}
@@ -268,7 +274,7 @@ class InferenceEngine:
             skip_special_tokens=True,
         )
 
-        gen_kwargs: Dict[str, Any] = {
+        gen_kwargs: dict[str, Any] = {
             **inputs,
             "streamer": streamer,
             "max_new_tokens": max_new_tokens,
@@ -310,14 +316,14 @@ class InferenceEngine:
 
     def chat(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         max_new_tokens: int = 512,
         temperature: float = 0.7,
         top_p: float = 0.9,
         top_k: int = 50,
         repetition_penalty: float = 1.1,
         **extra_kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate a conversational (chat) response.
 
         Args:
@@ -356,7 +362,7 @@ class InferenceEngine:
 
     def chat_stream(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         max_new_tokens: int = 512,
         temperature: float = 0.7,
         top_p: float = 0.9,
@@ -404,7 +410,7 @@ class InferenceEngine:
     # Public stats accessor
     # ------------------------------------------------------------------
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Return accumulated generation statistics as a dict."""
         return self._stats.to_dict()
 
