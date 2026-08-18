@@ -6,7 +6,6 @@ import math
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Tuple
 
 
 @dataclass
@@ -83,16 +82,16 @@ class RateLimiter:
             raise TooManyRequestsError(reset)
     """
 
-    def __init__(self, config: Optional[RateLimitConfig] = None) -> None:
+    def __init__(self, config: RateLimitConfig | None = None) -> None:
         self._config = config or RateLimitConfig()
-        self._buckets: Dict[str, Dict[str, _TokenBucket]] = {}
+        self._buckets: dict[str, dict[str, _TokenBucket]] = {}
         self._lock = threading.RLock()
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
-    def check_rate(self, key: str) -> Tuple[bool, int, float]:
+    def check_rate(self, key: str) -> tuple[bool, int, float]:
         """Check whether a request from *key* is allowed.
 
         Consumes one token from each bucket (minute, hour, day).
@@ -113,7 +112,7 @@ class RateLimiter:
             buckets = self._get_or_create_buckets(key)
 
             # Check all windows first without consuming
-            for window_name, bucket in buckets.items():
+            for bucket in buckets.values():
                 if not bucket.consume(0):  # type: ignore[arg-type]
                     # Refill-only check — consume(0) is a no-op but
                     # we need to test real consumption
@@ -124,23 +123,21 @@ class RateLimiter:
             min_remaining = float("inf")
             reset_time = 0.0
 
-            for window_name, bucket in buckets.items():
+            for bucket in buckets.values():
                 if not bucket.consume():
                     allowed = False
                     wait = bucket.time_until_available()
-                    if wait > reset_time:
-                        reset_time = wait
+                    reset_time = max(reset_time, wait)
                 else:
                     remaining = int(bucket.tokens)
-                    if remaining < min_remaining:
-                        min_remaining = remaining
+                    min_remaining = min(min_remaining, remaining)
 
             if allowed:
                 return (True, int(min_remaining), 0.0)
             else:
                 return (False, 0, math.ceil(reset_time))
 
-    def get_remaining(self, key: str) -> Dict[str, int]:
+    def get_remaining(self, key: str) -> dict[str, int]:
         """Return remaining requests per window for *key*.
 
         Returns:
@@ -148,7 +145,7 @@ class RateLimiter:
         """
         with self._lock:
             buckets = self._get_or_create_buckets(key)
-            result: Dict[str, int] = {}
+            result: dict[str, int] = {}
             for window_name, bucket in buckets.items():
                 bucket.refill()
                 result[window_name] = int(bucket.tokens)
@@ -163,7 +160,7 @@ class RateLimiter:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _get_or_create_buckets(self, key: str) -> Dict[str, _TokenBucket]:
+    def _get_or_create_buckets(self, key: str) -> dict[str, _TokenBucket]:
         """Return (or create) the token buckets for *key*."""
         if key not in self._buckets:
             cfg = self._config

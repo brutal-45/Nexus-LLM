@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass, field
-from typing import Dict, FrozenSet, Optional, Set
 
 
 class Permission(enum.Enum):
@@ -23,7 +22,7 @@ class Permission(enum.Enum):
     manage_models = "manage_models"
     manage_users = "manage_users"
 
-    def __str__(self) -> str:  # noqa: D105
+    def __str__(self) -> str:
         return self.value
 
     @classmethod
@@ -43,9 +42,7 @@ class Permission(enum.Enum):
             return cls(name.lower())
         except ValueError:
             valid = ", ".join(p.value for p in cls)
-            raise ValueError(
-                f"Unknown permission '{name}'. Valid: {valid}"
-            ) from None
+            raise ValueError(f"Unknown permission '{name}'. Valid: {valid}") from None
 
 
 @dataclass(frozen=True)
@@ -58,14 +55,12 @@ class Role:
     """
 
     name: str
-    permissions: FrozenSet[Permission] = field(default_factory=frozenset)
+    permissions: frozenset[Permission] = field(default_factory=frozenset)
 
     def __post_init__(self) -> None:
         # Normalize to frozenset so the dataclass is hashable
         if isinstance(self.permissions, (set, list)):
-            object.__setattr__(
-                self, "permissions", frozenset(self.permissions)
-            )
+            object.__setattr__(self, "permissions", frozenset(self.permissions))
 
     def has_permission(self, permission: Permission) -> bool:
         """Check whether this role includes *permission*.
@@ -110,7 +105,7 @@ class Role:
     def __contains__(self, permission: Permission) -> bool:  # type: ignore[override]
         return self.has_permission(permission)
 
-    def __str__(self) -> str:  # noqa: D105
+    def __str__(self) -> str:
         perms = ", ".join(sorted(str(p) for p in self.permissions))
         return f"Role({self.name!r}, [{perms}])"
 
@@ -119,47 +114,53 @@ class Role:
 # Built-in roles
 # ------------------------------------------------------------------
 
-BUILTIN_ROLES: Dict[str, Role] = {
+BUILTIN_ROLES: dict[str, Role] = {
     "viewer": Role(
         name="viewer",
         permissions=frozenset({Permission.read}),
     ),
     "user": Role(
         name="user",
-        permissions=frozenset({
-            Permission.read,
-            Permission.write,
-            Permission.chat,
-            Permission.generate,
-        }),
+        permissions=frozenset(
+            {
+                Permission.read,
+                Permission.write,
+                Permission.chat,
+                Permission.generate,
+            }
+        ),
     ),
     "power_user": Role(
         name="power_user",
-        permissions=frozenset({
-            Permission.read,
-            Permission.write,
-            Permission.chat,
-            Permission.generate,
-            Permission.train,
-        }),
+        permissions=frozenset(
+            {
+                Permission.read,
+                Permission.write,
+                Permission.chat,
+                Permission.generate,
+                Permission.train,
+            }
+        ),
     ),
     "admin": Role(
         name="admin",
-        permissions=frozenset({
-            Permission.read,
-            Permission.write,
-            Permission.admin,
-            Permission.generate,
-            Permission.chat,
-            Permission.train,
-            Permission.manage_models,
-            Permission.manage_users,
-        }),
+        permissions=frozenset(
+            {
+                Permission.read,
+                Permission.write,
+                Permission.admin,
+                Permission.generate,
+                Permission.chat,
+                Permission.train,
+                Permission.manage_models,
+                Permission.manage_users,
+            }
+        ),
     ),
 }
 
 
-def get_role(name: str) -> Optional[Role]:
+def get_role(name: str) -> Role | None:
     """Look up a built-in role by name.
 
     Args:

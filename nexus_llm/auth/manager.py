@@ -5,10 +5,9 @@ from __future__ import annotations
 import threading
 import uuid
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
 
 from nexus_llm.auth.api_keys import APIKeyManager
-from nexus_llm.auth.permissions import Permission, Role, BUILTIN_ROLES
+from nexus_llm.auth.permissions import BUILTIN_ROLES, Permission, Role
 
 
 @dataclass
@@ -26,7 +25,7 @@ class User:
     username: str
     role: Role
     user_id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
-    api_key: Optional[str] = None
+    api_key: str | None = None
     active: bool = True
 
     def has_permission(self, permission: Permission) -> bool:
@@ -49,7 +48,7 @@ class AuthManager:
     """
 
     def __init__(self) -> None:
-        self._users: Dict[str, User] = {}
+        self._users: dict[str, User] = {}
         self._key_manager = APIKeyManager()
         self._lock = threading.RLock()
 
@@ -89,9 +88,7 @@ class AuthManager:
         with self._lock:
             user = self._users.get(username)
             if user is None or not user.active:
-                raise PermissionError(
-                    f"User '{username}' does not exist or is deactivated."
-                )
+                raise PermissionError(f"User '{username}' does not exist or is deactivated.")
             return user
 
     # ------------------------------------------------------------------
@@ -117,8 +114,8 @@ class AuthManager:
     def create_user(
         self,
         username: str,
-        role: Optional[Role] = None,
-        permissions: Optional[Set[Permission]] = None,
+        role: Role | None = None,
+        permissions: set[Permission] | None = None,
     ) -> User:
         """Create a new user and generate an API key.
 
@@ -183,12 +180,12 @@ class AuthManager:
             if user.api_key:
                 self._key_manager.revoke_key(user.api_key)
 
-    def get_user(self, username: str) -> Optional[User]:
+    def get_user(self, username: str) -> User | None:
         """Retrieve a user by username, or ``None``."""
         with self._lock:
             return self._users.get(username)
 
-    def list_users(self) -> List[User]:
+    def list_users(self) -> list[User]:
         """Return a list of all registered users."""
         with self._lock:
             return list(self._users.values())

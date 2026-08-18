@@ -15,12 +15,12 @@ import json
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set
-
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Exceptions
 # ---------------------------------------------------------------------------
+
 
 class TokenError(Exception):
     """Base exception for token errors."""
@@ -29,9 +29,9 @@ class TokenError(Exception):
 class TokenExpiredError(TokenError):
     """Raised when a token has expired."""
 
-    def __init__(self, token_id: Optional[str] = None) -> None:
+    def __init__(self, token_id: str | None = None) -> None:
         self.token_id = token_id
-        super().__init__(f"Token expired" + (f" (id={token_id})" if token_id else ""))
+        super().__init__("Token expired" + (f" (id={token_id})" if token_id else ""))
 
 
 class TokenInvalidError(TokenError):
@@ -45,14 +45,15 @@ class TokenInvalidError(TokenError):
 class TokenRevokedError(TokenError):
     """Raised when a token has been revoked."""
 
-    def __init__(self, token_id: Optional[str] = None) -> None:
+    def __init__(self, token_id: str | None = None) -> None:
         self.token_id = token_id
-        super().__init__(f"Token revoked" + (f" (id={token_id})" if token_id else ""))
+        super().__init__("Token revoked" + (f" (id={token_id})" if token_id else ""))
 
 
 # ---------------------------------------------------------------------------
 # Token data
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class TokenInfo:
@@ -64,12 +65,13 @@ class TokenInfo:
     created_at: float
     expires_at: float
     is_revoked: bool = False
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
 # Token Manager
 # ---------------------------------------------------------------------------
+
 
 class TokenManager:
     """Manages JWT-like tokens for Nexus-LLM authentication.
@@ -90,14 +92,14 @@ class TokenManager:
     """
 
     # Token defaults
-    DEFAULT_ACCESS_EXPIRY = 3600       # 1 hour
-    DEFAULT_REFRESH_EXPIRY = 604800    # 7 days
+    DEFAULT_ACCESS_EXPIRY = 3600  # 1 hour
+    DEFAULT_REFRESH_EXPIRY = 604800  # 7 days
     ALGORITHM = "HS256"
     TOKEN_PREFIX = "nxt_"  # Nexus token prefix
 
     def __init__(
         self,
-        secret_key: Optional[str] = None,
+        secret_key: str | None = None,
         access_expiry: int = DEFAULT_ACCESS_EXPIRY,
         refresh_expiry: int = DEFAULT_REFRESH_EXPIRY,
         issuer: str = "nexus-llm",
@@ -114,8 +116,8 @@ class TokenManager:
         self._access_expiry = access_expiry
         self._refresh_expiry = refresh_expiry
         self._issuer = issuer
-        self._revoked_ids: Set[str] = set()
-        self._token_store: Dict[str, TokenInfo] = {}
+        self._revoked_ids: set[str] = set()
+        self._token_store: dict[str, TokenInfo] = {}
 
     # ------------------------------------------------------------------
     # Token creation
@@ -123,11 +125,11 @@ class TokenManager:
 
     def create_token(
         self,
-        claims: Dict[str, Any],
+        claims: dict[str, Any],
         *,
         token_type: str = "access",
-        expiry: Optional[int] = None,
-        token_id: Optional[str] = None,
+        expiry: int | None = None,
+        token_id: str | None = None,
     ) -> str:
         """Create a signed token.
 
@@ -144,11 +146,7 @@ class TokenManager:
         tid = token_id or str(uuid.uuid4())
 
         if expiry is None:
-            expiry = (
-                self._refresh_expiry
-                if token_type == "refresh"
-                else self._access_expiry
-            )
+            expiry = self._refresh_expiry if token_type == "refresh" else self._access_expiry
 
         payload = {
             **claims,
@@ -179,7 +177,7 @@ class TokenManager:
 
         return token
 
-    def create_refresh_token(self, access_claims: Dict[str, Any]) -> str:
+    def create_refresh_token(self, access_claims: dict[str, Any]) -> str:
         """Create a refresh token based on access token claims.
 
         Args:
@@ -198,7 +196,7 @@ class TokenManager:
     # Token validation
     # ------------------------------------------------------------------
 
-    def validate_token(self, token: str) -> Dict[str, Any]:
+    def validate_token(self, token: str) -> dict[str, Any]:
         """Validate a token and return its claims.
 
         Args:
@@ -213,8 +211,7 @@ class TokenManager:
             TokenRevokedError: If the token has been revoked.
         """
         # Strip prefix
-        if token.startswith(self.TOKEN_PREFIX):
-            token = token[len(self.TOKEN_PREFIX):]
+        token = token.removeprefix(self.TOKEN_PREFIX)
 
         parts = token.split(".")
         if len(parts) != 3:
@@ -261,7 +258,7 @@ class TokenManager:
         except TokenError:
             return False
 
-    def get_token_info(self, token_id: str) -> Optional[TokenInfo]:
+    def get_token_info(self, token_id: str) -> TokenInfo | None:
         """Retrieve token metadata by ID.
 
         Args:
@@ -357,11 +354,7 @@ class TokenManager:
             Number of expired tokens removed.
         """
         now = time.time()
-        expired = [
-            tid
-            for tid, info in self._token_store.items()
-            if info.expires_at < now
-        ]
+        expired = [tid for tid, info in self._token_store.items() if info.expires_at < now]
         for tid in expired:
             del self._token_store[tid]
             self._revoked_ids.discard(tid)
@@ -408,4 +401,5 @@ class TokenManager:
     def _generate_secret() -> str:
         """Generate a random secret key."""
         import secrets as _secrets
+
         return _secrets.token_hex(32)

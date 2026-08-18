@@ -7,10 +7,9 @@ import secrets
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 from nexus_llm.auth.permissions import Permission
-
 
 # Key format: nxl-xxxxxxxx-xxxx-xxxx-xxxx
 _KEY_PREFIX = "nxl"
@@ -48,7 +47,7 @@ class APIKeyInfo:
 
     name: str
     key_hash: str
-    permissions: Set[Permission] = field(default_factory=set)
+    permissions: set[Permission] = field(default_factory=set)
     created_at: float = field(default_factory=time.time)
     revoked: bool = False
 
@@ -70,11 +69,11 @@ class APIKeyManager:
 
     def __init__(self) -> None:
         # key_hash → APIKeyInfo
-        self._keys: Dict[str, APIKeyInfo] = {}
+        self._keys: dict[str, APIKeyInfo] = {}
         # raw_key → key_hash  (transient, for lookup before revocation)
-        self._raw_to_hash: Dict[str, str] = {}
+        self._raw_to_hash: dict[str, str] = {}
         # Shared mutable metadata dict (also used by AuthManager)
-        self._key_metadata: Dict[str, Dict[str, Any]] = {}
+        self._key_metadata: dict[str, dict[str, Any]] = {}
         self._lock = threading.RLock()
 
     # ------------------------------------------------------------------
@@ -84,7 +83,7 @@ class APIKeyManager:
     def generate_key(
         self,
         name: str,
-        permissions: Optional[Set[Permission]] = None,
+        permissions: set[Permission] | None = None,
     ) -> str:
         """Generate a new API key.
 
@@ -121,7 +120,7 @@ class APIKeyManager:
     # Validation
     # ------------------------------------------------------------------
 
-    def validate_key(self, key: str) -> Tuple[bool, Dict[str, Any]]:
+    def validate_key(self, key: str) -> tuple[bool, dict[str, Any]]:
         """Validate an API key and return associated metadata.
 
         Args:
@@ -143,7 +142,7 @@ class APIKeyManager:
             if info.revoked:
                 return (False, {"name": info.name, "revoked": True})
 
-            user_info: Dict[str, Any] = {
+            user_info: dict[str, Any] = {
                 "name": info.name,
                 "permissions": info.permissions,
                 "created_at": info.created_at,
@@ -172,7 +171,7 @@ class APIKeyManager:
             key_hash = self._raw_to_hash.get(key) or _hash_key(key)
             info = self._keys.get(key_hash)
             if info is None:
-                raise KeyError(f"API key not found.")
+                raise KeyError("API key not found.")
             info.revoked = True
             self._raw_to_hash.pop(key, None)
 
@@ -180,7 +179,7 @@ class APIKeyManager:
     # Listing
     # ------------------------------------------------------------------
 
-    def list_keys(self) -> List[Dict[str, Any]]:
+    def list_keys(self) -> list[dict[str, Any]]:
         """Return metadata for all non-revoked keys.
 
         Returns:
