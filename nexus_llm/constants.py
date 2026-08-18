@@ -22,7 +22,9 @@ APP_LICENSE: str = "MIT"
 DEFAULT_MODEL: str = os.environ.get("NEXUS_LLM_DEFAULT_MODEL", "gpt2-medium")
 DEFAULT_TOKENIZER: str = DEFAULT_MODEL
 DEFAULT_MODEL_SOURCE: str = "huggingface"
-MODEL_CACHE_DIR: str = os.environ.get("NEXUS_LLM_MODEL_CACHE_DIR", str(Path.home() / ".cache" / "nexus_llm" / "models"))
+MODEL_CACHE_DIR: str = os.environ.get(
+    "NEXUS_LLM_MODEL_CACHE_DIR", str(Path.home() / ".cache" / "nexus_llm" / "models")
+)
 
 # ============================================================
 # Generation Defaults
@@ -86,7 +88,9 @@ DEFAULT_PRECISION: str = os.environ.get("NEXUS_LLM_PRECISION", "fp16")
 # Logging
 # ============================================================
 LOG_LEVEL: str = os.environ.get("NEXUS_LLM_LOG_LEVEL", "INFO")
-LOG_FORMAT: str = os.environ.get("NEXUS_LLM_LOG_FORMAT", "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+LOG_FORMAT: str = os.environ.get(
+    "NEXUS_LLM_LOG_FORMAT", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 LOG_DIR: str = os.environ.get("NEXUS_LLM_LOGS_DIR", "./logs")
 LOG_MAX_BYTES: int = 10 * 1024 * 1024  # 10 MB
 LOG_BACKUP_COUNT: int = 5

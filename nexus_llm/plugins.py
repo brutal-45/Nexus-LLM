@@ -5,16 +5,16 @@ functionality through dynamically loaded plugins. Supports plugin
 discovery, lifecycle management, and dependency resolution.
 """
 
+from __future__ import annotations
+
 import importlib
 import inspect
 import logging
-import os
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Type
+from typing import Any
 
-from nexus_llm.enums import TrainingStage
 from nexus_llm.events import Event, EventBus, get_event_bus
 from nexus_llm.exceptions import PluginError
 from nexus_llm.registry import Registry
@@ -42,14 +42,14 @@ class PluginInterface(ABC):
     version: str = "0.0.1"
     description: str = ""
     author: str = ""
-    dependencies: Set[str] = set()
+    dependencies: set[str] = set()
 
     def __init__(self) -> None:
         """Initialize the plugin."""
         self._enabled: bool = False
         self._initialized: bool = False
-        self._config: Dict[str, Any] = {}
-        self._event_bus: Optional[EventBus] = None
+        self._config: dict[str, Any] = {}
+        self._event_bus: EventBus | None = None
 
     @abstractmethod
     def on_load(self) -> None:
@@ -75,7 +75,6 @@ class PluginInterface(ABC):
         Called after on_load when the plugin is explicitly enabled.
         Default implementation does nothing.
         """
-        pass
 
     def on_disable(self) -> None:
         """Called when the plugin is disabled.
@@ -83,9 +82,8 @@ class PluginInterface(ABC):
         Called before on_unload when the plugin is explicitly disabled.
         Default implementation does nothing.
         """
-        pass
 
-    def on_config_update(self, config: Dict[str, Any]) -> None:
+    def on_config_update(self, config: dict[str, Any]) -> None:
         """Called when plugin configuration is updated.
 
         Args:
@@ -102,7 +100,6 @@ class PluginInterface(ABC):
         Args:
             event: The event to handle.
         """
-        pass
 
     @property
     def is_enabled(self) -> bool:
@@ -115,7 +112,7 @@ class PluginInterface(ABC):
         return self._initialized
 
     @property
-    def config(self) -> Dict[str, Any]:
+    def config(self) -> dict[str, Any]:
         """Get the plugin configuration."""
         return self._config
 
@@ -128,7 +125,7 @@ class PluginInterface(ABC):
         self._event_bus = bus
         bus.subscribe(handler=self.on_event)
 
-    def emit_event(self, event_type: str, data: Optional[Dict[str, Any]] = None) -> None:
+    def emit_event(self, event_type: str, data: dict[str, Any] | None = None) -> None:
         """Emit an event through the event bus.
 
         Args:
@@ -143,7 +140,7 @@ class PluginInterface(ABC):
             )
             self._event_bus.publish(event)
 
-    def get_info(self) -> Dict[str, Any]:
+    def get_info(self) -> dict[str, Any]:
         """Get information about this plugin.
 
         Returns:
@@ -178,8 +175,8 @@ class PluginManager:
 
     def __init__(
         self,
-        plugin_dirs: Optional[List[str]] = None,
-        event_bus: Optional[EventBus] = None,
+        plugin_dirs: list[str] | None = None,
+        event_bus: EventBus | None = None,
     ) -> None:
         """Initialize the plugin manager.
 
@@ -187,12 +184,12 @@ class PluginManager:
             plugin_dirs: Directories to search for plugins.
             event_bus: Event bus for inter-plugin communication.
         """
-        self._plugins: Dict[str, PluginInterface] = {}
-        self._plugin_classes: Dict[str, Type[PluginInterface]] = {}
-        self._plugin_dirs: List[str] = plugin_dirs or []
+        self._plugins: dict[str, PluginInterface] = {}
+        self._plugin_classes: dict[str, type[PluginInterface]] = {}
+        self._plugin_dirs: list[str] = plugin_dirs or []
         self._event_bus = event_bus or get_event_bus()
         self._registry = Registry[PluginInterface](name="plugins")
-        self._load_order: List[str] = []
+        self._load_order: list[str] = []
 
     def add_plugin_dir(self, directory: str) -> None:
         """Add a directory to search for plugins.
@@ -203,7 +200,7 @@ class PluginManager:
         if directory not in self._plugin_dirs:
             self._plugin_dirs.append(directory)
 
-    def discover_plugins(self) -> List[str]:
+    def discover_plugins(self) -> list[str]:
         """Discover plugins in all registered plugin directories.
 
         Scans the plugin directories for Python modules containing
@@ -212,7 +209,7 @@ class PluginManager:
         Returns:
             List of discovered plugin names.
         """
-        discovered: List[str] = []
+        discovered: list[str] = []
 
         for plugin_dir in self._plugin_dirs:
             plugin_path = Path(plugin_dir)
@@ -269,7 +266,7 @@ class PluginManager:
                 self._plugin_classes[plugin_name] = attr
                 logger.debug("Found plugin class: %s (%s)", plugin_name, attr.__name__)
 
-    def register_plugin(self, plugin_class: Type[PluginInterface]) -> str:
+    def register_plugin(self, plugin_class: type[PluginInterface]) -> str:
         """Register a plugin class directly.
 
         Args:
@@ -326,11 +323,13 @@ class PluginManager:
             self._registry.register(name, plugin)
             self._load_order.append(name)
 
-            self._event_bus.publish(Event(
-                event_type="plugin.loaded",
-                data={"plugin_name": name, "version": plugin.version},
-                source="PluginManager",
-            ))
+            self._event_bus.publish(
+                Event(
+                    event_type="plugin.loaded",
+                    data={"plugin_name": name, "version": plugin.version},
+                    source="PluginManager",
+                )
+            )
 
             logger.info("Loaded plugin: %s v%s", name, plugin.version)
             return plugin
@@ -370,11 +369,13 @@ class PluginManager:
             if name in self._load_order:
                 self._load_order.remove(name)
 
-            self._event_bus.publish(Event(
-                event_type="plugin.unloaded",
-                data={"plugin_name": name},
-                source="PluginManager",
-            ))
+            self._event_bus.publish(
+                Event(
+                    event_type="plugin.unloaded",
+                    data={"plugin_name": name},
+                    source="PluginManager",
+                )
+            )
 
             logger.info("Unloaded plugin: %s", name)
 
@@ -410,11 +411,13 @@ class PluginManager:
             plugin.on_enable()
             plugin._enabled = True
 
-            self._event_bus.publish(Event(
-                event_type="plugin.enabled",
-                data={"plugin_name": name},
-                source="PluginManager",
-            ))
+            self._event_bus.publish(
+                Event(
+                    event_type="plugin.enabled",
+                    data={"plugin_name": name},
+                    source="PluginManager",
+                )
+            )
 
             logger.info("Enabled plugin: %s", name)
 
@@ -443,8 +446,7 @@ class PluginManager:
 
         # Check if any enabled plugins depend on this one
         dependents = [
-            p_name for p_name, p in self._plugins.items()
-            if p.is_enabled and name in p.dependencies
+            p_name for p_name, p in self._plugins.items() if p.is_enabled and name in p.dependencies
         ]
         if dependents:
             raise PluginError(
@@ -456,11 +458,13 @@ class PluginManager:
             plugin.on_disable()
             plugin._enabled = False
 
-            self._event_bus.publish(Event(
-                event_type="plugin.disabled",
-                data={"plugin_name": name},
-                source="PluginManager",
-            ))
+            self._event_bus.publish(
+                Event(
+                    event_type="plugin.disabled",
+                    data={"plugin_name": name},
+                    source="PluginManager",
+                )
+            )
 
             logger.info("Disabled plugin: %s", name)
 
@@ -470,7 +474,7 @@ class PluginManager:
                 message=f"Failed to disable: {exc}",
             ) from exc
 
-    def get_plugin(self, name: str) -> Optional[PluginInterface]:
+    def get_plugin(self, name: str) -> PluginInterface | None:
         """Get a loaded plugin by name.
 
         Args:
@@ -481,7 +485,7 @@ class PluginManager:
         """
         return self._plugins.get(name)
 
-    def list_plugins(self) -> List[Dict[str, Any]]:
+    def list_plugins(self) -> list[dict[str, Any]]:
         """List all known plugins with their status.
 
         Returns:
@@ -495,17 +499,19 @@ class PluginManager:
             else:
                 plugin_class = self._plugin_classes.get(name)
                 if plugin_class:
-                    result.append({
-                        "name": name,
-                        "version": getattr(plugin_class, "version", "unknown"),
-                        "description": getattr(plugin_class, "description", ""),
-                        "enabled": False,
-                        "initialized": False,
-                        "loaded": False,
-                    })
+                    result.append(
+                        {
+                            "name": name,
+                            "version": getattr(plugin_class, "version", "unknown"),
+                            "description": getattr(plugin_class, "description", ""),
+                            "enabled": False,
+                            "initialized": False,
+                            "loaded": False,
+                        }
+                    )
         return result
 
-    def load_all(self) -> List[str]:
+    def load_all(self) -> list[str]:
         """Load all discovered plugins.
 
         Respects dependency order.
@@ -513,7 +519,7 @@ class PluginManager:
         Returns:
             List of loaded plugin names.
         """
-        loaded: List[str] = []
+        loaded: list[str] = []
         for name in self._resolve_load_order():
             try:
                 self.load_plugin(name)
@@ -530,13 +536,13 @@ class PluginManager:
             except PluginError as exc:
                 logger.error("Failed to unload plugin %s: %s", name, exc)
 
-    def enable_all(self) -> List[str]:
+    def enable_all(self) -> list[str]:
         """Enable all loaded plugins.
 
         Returns:
             List of enabled plugin names.
         """
-        enabled: List[str] = []
+        enabled: list[str] = []
         for name in self._load_order:
             try:
                 self.enable_plugin(name)
@@ -554,7 +560,7 @@ class PluginManager:
             except PluginError as exc:
                 logger.error("Failed to disable plugin %s: %s", name, exc)
 
-    def _resolve_load_order(self) -> List[str]:
+    def _resolve_load_order(self) -> list[str]:
         """Resolve plugin load order based on dependencies.
 
         Returns:
@@ -563,9 +569,9 @@ class PluginManager:
         Raises:
             PluginError: If circular dependencies are detected.
         """
-        order: List[str] = []
-        visited: Set[str] = set()
-        visiting: Set[str] = set()
+        order: list[str] = []
+        visited: set[str] = set()
+        visiting: set[str] = set()
 
         def visit(name: str) -> None:
             if name in visited:

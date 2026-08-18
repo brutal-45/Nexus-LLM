@@ -5,14 +5,16 @@ support for nested scopes, observers, and persistence. State changes
 are tracked and can trigger callbacks through the observer pattern.
 """
 
+from __future__ import annotations
+
+import builtins
 import copy
 import json
 import logging
-import os
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,7 @@ class StateObserver:
         self,
         name: str,
         callback: Callable[[str, Any, Any], None],
-        keys: Optional[Set[str]] = None,
+        keys: set[str] | None = None,
     ) -> None:
         """Initialize the observer.
 
@@ -72,15 +74,15 @@ class StateManager:
         >>> manager.set("model.name", "mistral-7b")  # triggers observer
     """
 
-    def __init__(self, persist_path: Optional[str] = None) -> None:
+    def __init__(self, persist_path: str | None = None) -> None:
         """Initialize the state manager.
 
         Args:
             persist_path: Optional file path for persisting state.
         """
-        self._state: Dict[str, Any] = {}
-        self._observers: List[StateObserver] = []
-        self._history: List[Dict[str, Any]] = []
+        self._state: dict[str, Any] = {}
+        self._observers: list[StateObserver] = []
+        self._history: list[dict[str, Any]] = []
         self._persist_path = persist_path
         self._lock = threading.RLock()
         self._max_history = 1000
@@ -160,14 +162,16 @@ class StateManager:
             current[keys[-1]] = value
 
             # Record history
-            self._history.append({
-                "timestamp": datetime.now().isoformat(),
-                "key": key,
-                "old_value": old_value,
-                "new_value": value,
-            })
+            self._history.append(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "key": key,
+                    "old_value": old_value,
+                    "new_value": value,
+                }
+            )
             if len(self._history) > self._max_history:
-                self._history = self._history[-self._max_history:]
+                self._history = self._history[-self._max_history :]
 
             # Notify observers
             self._notify_observers(key, old_value, value)
@@ -213,7 +217,7 @@ class StateManager:
         """
         return self.get(key) is not None
 
-    def get_all(self) -> Dict[str, Any]:
+    def get_all(self) -> dict[str, Any]:
         """Get a copy of the entire state.
 
         Returns:
@@ -222,7 +226,7 @@ class StateManager:
         with self._lock:
             return copy.deepcopy(self._state)
 
-    def update(self, updates: Dict[str, Any]) -> None:
+    def update(self, updates: dict[str, Any]) -> None:
         """Update multiple state values at once.
 
         Args:
@@ -235,7 +239,7 @@ class StateManager:
         self,
         name: str,
         callback: Callable[[str, Any, Any], None],
-        keys: Optional[Set[str]] = None,
+        keys: builtins.set[str] | None = None,
     ) -> StateObserver:
         """Register an observer for state changes.
 
@@ -296,7 +300,7 @@ class StateManager:
                         exc,
                     )
 
-    def get_history(self, key: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
+    def get_history(self, key: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
         """Get state change history.
 
         Args:
@@ -312,7 +316,7 @@ class StateManager:
             history = [h for h in history if h["key"] == key]
         return history[-limit:]
 
-    def save(self, path: Optional[str] = None) -> None:
+    def save(self, path: str | None = None) -> None:
         """Save current state to a file.
 
         Args:
@@ -332,7 +336,7 @@ class StateManager:
         except Exception as exc:
             logger.error("Failed to save state to %s: %s", save_path, exc)
 
-    def load(self, path: Optional[str] = None) -> None:
+    def load(self, path: str | None = None) -> None:
         """Load state from a file.
 
         Args:
@@ -349,7 +353,7 @@ class StateManager:
                 logger.warning("State file not found: %s", load_path)
                 return
 
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 loaded_state = json.load(f)
 
             with self._lock:

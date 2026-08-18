@@ -8,28 +8,24 @@ Run as:
     nexus-llm                    (after pip install)
 """
 
-import os
 import platform
 import sys
-from pathlib import Path
-from typing import Optional
 
 import click
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from rich import box
 
 from nexus_llm import __version__
-from nexus_llm.core.config import Settings, get_settings, DEFAULT_CONFIG_PATH
+from nexus_llm.core.config import DEFAULT_CONFIG_PATH, Settings, get_settings
 from nexus_llm.core.exceptions import NexusLLMError
 from nexus_llm.core.model_catalog import (
-    MODEL_CATALOG,
     get_model_info,
-    list_models,
-    list_categories,
     get_recommended_models,
+    list_categories,
+    list_models,
 )
 from nexus_llm.utils.logger import setup_logger
 
@@ -43,6 +39,7 @@ console = Console()
 # ---------------------------------------------------------------------------
 # Banner
 # ---------------------------------------------------------------------------
+
 
 def _print_banner() -> None:
     """Display the Nexus-LLM startup banner using Rich."""
@@ -66,8 +63,10 @@ def _print_banner() -> None:
 # Error handling decorator
 # ---------------------------------------------------------------------------
 
+
 def _handle_errors(func):
     """Decorator that wraps a Click command with graceful error handling."""
+
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
@@ -78,7 +77,7 @@ def _handle_errors(func):
             missing = str(exc).replace("No module named '", "").replace("'", "")
             console.print(f"\n[bold red]Missing dependency:[/bold red] {missing}")
             console.print(f"  Run: [cyan]pip install {missing}[/cyan]")
-            console.print(f"  Or:  [cyan]pip install -e .[/cyan]\n")
+            console.print("  Or:  [cyan]pip install -e .[/cyan]\n")
             sys.exit(1)
         except KeyboardInterrupt:
             console.print("\n\n[bold]Interrupted.[/bold] Goodbye from Nexus-LLM!\n")
@@ -86,10 +85,12 @@ def _handle_errors(func):
         except Exception as exc:
             console.print(f"\n[bold red]Unexpected error:[/bold red] {exc}\n")
             raise
+
     # Preserve Click metadata so --help etc. still work
     wrapper.__doc__ = func.__doc__
-    wrapper = click.pass_context(wrapper) if hasattr(func, '__click_params__') else wrapper
+    wrapper = click.pass_context(wrapper) if hasattr(func, "__click_params__") else wrapper
     import functools
+
     return functools.wraps(func)(wrapper)
 
 
@@ -97,9 +98,11 @@ def _handle_errors(func):
 # Root group — ``nexus-llm`` (defaults to chat)
 # ===================================================================
 
+
 @click.group(invoke_without_command=True)
 @click.option(
-    "--version", "-V",
+    "--version",
+    "-V",
     is_flag=True,
     help="Show the Nexus-LLM version and exit.",
 )
@@ -109,7 +112,8 @@ def _handle_errors(func):
     help="Enable debug mode with full tracebacks.",
 )
 @click.option(
-    "--config", "-c",
+    "--config",
+    "-c",
     "config_path",
     envvar="NEXUS_CONFIG",
     default=None,
@@ -166,20 +170,24 @@ def cli(ctx, version, debug, config_path):
 # chat — Interactive chat
 # ===================================================================
 
+
 @cli.command()
 @click.option(
-    "--model", "-m",
+    "--model",
+    "-m",
     default=None,
     help="Model ID to load on startup (e.g. gpt2-medium, phi-2).",
 )
 @click.option(
-    "--device", "-d",
+    "--device",
+    "-d",
     default=None,
     type=click.Choice(["auto", "cpu", "cuda", "mps"], case_sensitive=False),
     help="Compute device for inference.",
 )
 @click.option(
-    "--precision", "-p",
+    "--precision",
+    "-p",
     default=None,
     type=click.Choice(["fp32", "fp16", "bf16", "8bit", "4bit"], case_sensitive=False),
     help="Model precision / quantisation mode.",
@@ -243,31 +251,37 @@ def chat(ctx, model, device, precision, theme, no_stream, system_prompt):
 # serve — API server
 # ===================================================================
 
+
 @cli.command()
 @click.option(
-    "--host", "-h",
+    "--host",
+    "-h",
     default=None,
     help="Bind address (default: 127.0.0.1).",
 )
 @click.option(
-    "--port", "-p",
+    "--port",
+    "-p",
     default=None,
     type=int,
     help="Bind port (default: 8000).",
 )
 @click.option(
-    "--workers", "-w",
+    "--workers",
+    "-w",
     default=None,
     type=int,
     help="Number of uvicorn workers (default: 1).",
 )
 @click.option(
-    "--model", "-m",
+    "--model",
+    "-m",
     default=None,
     help="Model ID to pre-load on server startup.",
 )
 @click.option(
-    "--device", "-d",
+    "--device",
+    "-d",
     default=None,
     type=click.Choice(["auto", "cpu", "cuda", "mps"], case_sensitive=False),
     help="Compute device for the pre-loaded model.",
@@ -347,14 +361,17 @@ def serve(ctx, host, port, workers, model, device, precision, uvicorn_reload):
 # train — Fine-tuning
 # ===================================================================
 
+
 @cli.command()
 @click.option(
-    "--model", "-m",
+    "--model",
+    "-m",
     required=True,
     help="Model ID from the catalog to fine-tune.",
 )
 @click.option(
-    "--data", "-d",
+    "--data",
+    "-d",
     "data_path",
     required=True,
     type=click.Path(exists=True),
@@ -367,26 +384,30 @@ def serve(ctx, host, port, workers, model, device, precision, uvicorn_reload):
     help="Format of the training data.",
 )
 @click.option(
-    "--output-dir", "-o",
+    "--output-dir",
+    "-o",
     default=None,
     type=click.Path(),
     help="Directory to save checkpoints and the final model.",
 )
 @click.option(
-    "--epochs", "-e",
+    "--epochs",
+    "-e",
     "num_epochs",
     default=None,
     type=int,
     help="Number of training epochs (default: 3).",
 )
 @click.option(
-    "--batch-size", "-b",
+    "--batch-size",
+    "-b",
     default=None,
     type=int,
     help="Per-device batch size (default: 4).",
 )
 @click.option(
-    "--learning-rate", "-l",
+    "--learning-rate",
+    "-l",
     "lr",
     default=None,
     type=float,
@@ -411,8 +432,19 @@ def serve(ctx, host, port, workers, model, device, precision, uvicorn_reload):
 )
 @click.pass_context
 @_handle_errors  # type: ignore[arg-type]
-def train(ctx, model, data_path, data_format, output_dir, num_epochs,
-          batch_size, lr, no_lora, lora_r, resume_from):
+def train(
+    ctx,
+    model,
+    data_path,
+    data_format,
+    output_dir,
+    num_epochs,
+    batch_size,
+    lr,
+    no_lora,
+    lora_r,
+    resume_from,
+):
     """Fine-tune a model with LoRA or full training.
 
     Wraps HuggingFace Trainer with Nexus-LLM model management and
@@ -487,9 +519,11 @@ def train(ctx, model, data_path, data_format, output_dir, num_epochs,
 # models — List available models
 # ===================================================================
 
+
 @cli.command(name="models")
 @click.option(
-    "--category", "-c",
+    "--category",
+    "-c",
     default=None,
     help="Filter models by category (e.g. gpt2, phi, llama, qwen).",
 )
@@ -499,7 +533,8 @@ def train(ctx, model, data_path, data_format, output_dir, num_epochs,
     help="Show only recommended models.",
 )
 @click.option(
-    "--json", "as_json",
+    "--json",
+    "as_json",
     is_flag=True,
     help="Output as JSON (useful for scripting).",
 )
@@ -529,20 +564,23 @@ def models(ctx, category, recommended, as_json):
     # JSON output
     if as_json:
         import json as _json
+
         data = []
         for m in model_list:
-            data.append({
-                "id": m.id,
-                "name": m.name,
-                "hf_id": m.hf_id,
-                "category": m.category,
-                "size": m.size,
-                "params": m.params,
-                "model_type": m.model_type,
-                "recommended": m.recommended,
-                "min_ram_gb": m.min_ram_gb,
-                "description": m.description,
-            })
+            data.append(
+                {
+                    "id": m.id,
+                    "name": m.name,
+                    "hf_id": m.hf_id,
+                    "category": m.category,
+                    "size": m.size,
+                    "params": m.params,
+                    "model_type": m.model_type,
+                    "recommended": m.recommended,
+                    "min_ram_gb": m.min_ram_gb,
+                    "description": m.description,
+                }
+            )
         console.print_json(_json.dumps(data, indent=2))
         return
 
@@ -583,6 +621,7 @@ def models(ctx, category, recommended, as_json):
 # ===================================================================
 # download — Download a model
 # ===================================================================
+
 
 @cli.command()
 @click.argument("model_id")
@@ -642,6 +681,7 @@ def download(ctx, model_id, cache_dir, precision):
 # config — Show / edit configuration
 # ===================================================================
 
+
 @cli.command()
 @click.option(
     "--show",
@@ -657,7 +697,8 @@ def download(ctx, model_id, cache_dir, precision):
     help="Path to the configuration file to show or edit.",
 )
 @click.option(
-    "--set", "set_values",
+    "--set",
+    "set_values",
     multiple=True,
     nargs=2,
     help="Set a config value: --set model.device cuda",
@@ -689,10 +730,11 @@ def config(ctx, action_show, config_path, set_values, reset):
     if reset:
         # Reset to defaults and save
         from nexus_llm.core.config import reset_settings
+
         reset_settings()
         fresh = Settings()
         fresh.to_yaml(target_path)
-        console.print(f"[green]Configuration reset to defaults.[/green]")
+        console.print("[green]Configuration reset to defaults.[/green]")
         console.print(f"  Saved to: {target_path}")
         return
 
@@ -701,7 +743,7 @@ def config(ctx, action_show, config_path, set_values, reset):
         for key, value in set_values:
             _apply_config_override(settings, key, value)
         settings.to_yaml(target_path)
-        console.print(f"[green]Configuration updated.[/green]")
+        console.print("[green]Configuration updated.[/green]")
         console.print(f"  Saved to: {target_path}")
         for key, value in set_values:
             console.print(f"  {key} = {value}")
@@ -713,13 +755,10 @@ def config(ctx, action_show, config_path, set_values, reset):
 
 def _apply_config_override(settings: Settings, key: str, value: str) -> None:
     """Apply a dotted-key config override (e.g. 'model.device' → 'cuda')."""
-    import dataclasses
 
     parts = key.split(".")
     if len(parts) != 2:
-        raise click.BadParameter(
-            f"Config key must be in 'section.key' format, got: {key}"
-        )
+        raise click.BadParameter(f"Config key must be in 'section.key' format, got: {key}")
 
     section_name, attr = parts
     section_map = {
@@ -732,14 +771,11 @@ def _apply_config_override(settings: Settings, key: str, value: str) -> None:
     section = section_map.get(section_name)
     if section is None:
         raise click.BadParameter(
-            f"Unknown section '{section_name}'. "
-            f"Valid sections: {', '.join(section_map)}"
+            f"Unknown section '{section_name}'. " f"Valid sections: {', '.join(section_map)}"
         )
 
     if not hasattr(section, attr):
-        raise click.BadParameter(
-            f"Unknown key '{attr}' in section '{section_name}'."
-        )
+        raise click.BadParameter(f"Unknown key '{attr}' in section '{section_name}'.")
 
     # Coerce the value to the correct type
     current = getattr(section, attr)
@@ -810,6 +846,7 @@ def _show_config(settings: Settings, config_path: str) -> None:
 # info — System information
 # ===================================================================
 
+
 @cli.command()
 @click.pass_context
 @_handle_errors  # type: ignore[arg-type]
@@ -859,6 +896,7 @@ def info(ctx):
     # CPU
     try:
         import multiprocessing
+
         cpu_count = multiprocessing.cpu_count()
         hw_table.add_row("CPU Cores", str(cpu_count))
     except Exception:
@@ -867,6 +905,7 @@ def info(ctx):
     # RAM
     try:
         import psutil
+
         ram = psutil.virtual_memory()
         hw_table.add_row("RAM Total", f"{ram.total / (1024**3):.1f} GB")
         hw_table.add_row("RAM Available", f"{ram.available / (1024**3):.1f} GB")
@@ -877,6 +916,7 @@ def info(ctx):
     # GPU
     try:
         import torch
+
         if torch.cuda.is_available():
             for i in range(torch.cuda.device_count()):
                 name = torch.cuda.get_device_name(i)
@@ -891,6 +931,7 @@ def info(ctx):
     # MPS (Apple Silicon)
     try:
         import torch
+
         if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
             hw_table.add_row("MPS", "Available (Apple Silicon)")
     except Exception:
@@ -909,9 +950,20 @@ def info(ctx):
     lib_table.add_column("Package", style="bold white", width=20)
     lib_table.add_column("Version", style="green")
 
-    for pkg in ("torch", "transformers", "accelerate", "bitsandbytes",
-                "peft", "datasets", "click", "rich", "fastapi", "uvicorn",
-                "prompt_toolkit", "yaml"):
+    for pkg in (
+        "torch",
+        "transformers",
+        "accelerate",
+        "bitsandbytes",
+        "peft",
+        "datasets",
+        "click",
+        "rich",
+        "fastapi",
+        "uvicorn",
+        "prompt_toolkit",
+        "yaml",
+    ):
         try:
             mod = __import__(pkg.replace("-", "_"))
             ver = getattr(mod, "__version__", "installed")
@@ -930,6 +982,7 @@ def info(ctx):
 # ===================================================================
 # Entry point — for ``from nexus_llm.cli import cli; cli()``
 # ===================================================================
+
 
 def main():
     """Run the Nexus-LLM CLI."""

@@ -5,12 +5,16 @@ resources of the Nexus-LLM application. Handles initialization,
 cleanup, and provides access to shared components.
 """
 
+from __future__ import annotations
+
 import logging
-import os
 import threading
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Generator, Optional
+from typing import Any
+
+from typing_extensions import Self
 
 from nexus_llm.constants import CACHE_DIR, CONFIG_DIR, LOG_DIR, MODELS_DIR
 from nexus_llm.events import EventBus, get_event_bus
@@ -34,12 +38,12 @@ class ApplicationContext:
         >>>     ctx.plugin_manager.load_plugin("my_plugin")
     """
 
-    _instance: Optional["ApplicationContext"] = None
+    _instance: ApplicationContext | None = None
     _lock = threading.Lock()
 
     def __init__(
         self,
-        config_path: Optional[str] = None,
+        config_path: str | None = None,
         verbose: bool = False,
         log_level: str = "INFO",
     ) -> None:
@@ -57,19 +61,19 @@ class ApplicationContext:
         self._shutting_down = False
 
         # Core components (lazy initialization)
-        self._event_bus: Optional[EventBus] = None
-        self._registry: Optional[GlobalRegistry] = None
-        self._plugin_manager: Optional[PluginManager] = None
-        self._state_manager: Optional[StateManager] = None
-        self._signal_handler: Optional[SignalHandler] = None
+        self._event_bus: EventBus | None = None
+        self._registry: GlobalRegistry | None = None
+        self._plugin_manager: PluginManager | None = None
+        self._state_manager: StateManager | None = None
+        self._signal_handler: SignalHandler | None = None
 
         # Shared resources
-        self._models: Dict[str, Any] = {}
-        self._tokenizers: Dict[str, Any] = {}
-        self._config: Dict[str, Any] = {}
+        self._models: dict[str, Any] = {}
+        self._tokenizers: dict[str, Any] = {}
+        self._config: dict[str, Any] = {}
 
     @classmethod
-    def get_instance(cls) -> "ApplicationContext":
+    def get_instance(cls) -> ApplicationContext:
         """Get or create the singleton application context.
 
         Returns:
@@ -176,6 +180,7 @@ class ApplicationContext:
         """
         try:
             from nexus_llm.config_loader import ConfigLoader
+
             loader = ConfigLoader()
             self._config = loader.load(config_path)
             logger.info("Loaded configuration from: %s", config_path)
@@ -218,7 +223,7 @@ class ApplicationContext:
         return self._signal_handler
 
     @property
-    def config(self) -> Dict[str, Any]:
+    def config(self) -> dict[str, Any]:
         """Get the current configuration."""
         return self._config.copy()
 
@@ -284,7 +289,7 @@ class ApplicationContext:
         """
         return list(self._models.keys())
 
-    def __enter__(self) -> "ApplicationContext":
+    def __enter__(self) -> Self:
         self.initialize()
         return self
 
@@ -301,7 +306,7 @@ class ApplicationContext:
 
 @contextmanager
 def app_context(
-    config_path: Optional[str] = None,
+    config_path: str | None = None,
     verbose: bool = False,
     log_level: str = "INFO",
 ) -> Generator[ApplicationContext, None, None]:

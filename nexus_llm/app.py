@@ -5,47 +5,39 @@ Nexus-LLM framework, including model management, chat, serving,
 training, evaluation, and benchmarking.
 """
 
+from __future__ import annotations
+
 import logging
 import os
-import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from rich.console import Console
-from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 
 from nexus_llm.__version__ import __version__
 from nexus_llm.constants import (
-    APP_NAME,
     DEFAULT_HOST,
     DEFAULT_MODEL,
     DEFAULT_PORT,
     LOG_LEVEL,
 )
 from nexus_llm.enums import ChatRole, DeviceType
-from nexus_llm.events import EventBus, get_event_bus
+from nexus_llm.events import get_event_bus
 from nexus_llm.exceptions import (
     ChatError,
-    ConfigError,
-    NexusLLMError,
     ServerError,
     TrainingError,
 )
 from nexus_llm.plugins import PluginManager
 from nexus_llm.registry import GlobalRegistry
-from nexus_llm.signals import GracefulContextManager, SignalHandler
+from nexus_llm.signals import SignalHandler
 from nexus_llm.state import StateManager
 from nexus_llm.types import (
     BenchmarkConfig,
     ChatConfig,
     Conversation,
-    DownloadConfig,
     EvalConfig,
-    GenerationConfig,
-    Message,
-    ModelInfo,
     ServerConfig,
     TrainingConfig,
 )
@@ -68,8 +60,8 @@ class NexusLLMApp:
 
     def __init__(
         self,
-        config_path: Optional[str] = None,
-        log_level: Optional[str] = None,
+        config_path: str | None = None,
+        log_level: str | None = None,
         verbose: bool = False,
     ) -> None:
         """Initialize the Nexus-LLM application.
@@ -94,7 +86,7 @@ class NexusLLMApp:
         self._setup_logging()
 
         # Load configuration
-        self._config: Dict[str, Any] = {}
+        self._config: dict[str, Any] = {}
         if config_path:
             self._load_config(config_path)
 
@@ -118,13 +110,14 @@ class NexusLLMApp:
         """
         try:
             from nexus_llm.config_loader import ConfigLoader
+
             loader = ConfigLoader()
             self._config = loader.load(config_path)
             logger.info("Loaded configuration from: %s", config_path)
         except Exception as exc:
             logger.warning("Failed to load config from %s: %s", config_path, exc)
 
-    def _get_device(self, device: Optional[str] = None) -> str:
+    def _get_device(self, device: str | None = None) -> str:
         """Resolve the device to use.
 
         Args:
@@ -137,7 +130,7 @@ class NexusLLMApp:
             return device
         return DeviceType.detect().value
 
-    def _load_model(self, model_name: str, device: Optional[str] = None) -> tuple:
+    def _load_model(self, model_name: str, device: str | None = None) -> tuple:
         """Load a model and tokenizer.
 
         Args:
@@ -147,7 +140,6 @@ class NexusLLMApp:
         Returns:
             Tuple of (model, tokenizer).
         """
-        import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         resolved_device = self._get_device(device)
@@ -162,15 +154,19 @@ class NexusLLMApp:
 
         model.eval()
 
-        self._event_bus.publish(Event(
-            event_type="model.loaded",
-            data={"model_name": model_name, "device": resolved_device},
-            source="NexusLLMApp",
-        ) if False else None)
+        self._event_bus.publish(
+            Event(
+                event_type="model.loaded",
+                data={"model_name": model_name, "device": resolved_device},
+                source="NexusLLMApp",
+            )
+            if False
+            else None
+        )
 
         return model, tokenizer
 
-    def run_chat(self, config: Dict[str, Any]) -> None:
+    def run_chat(self, config: dict[str, Any]) -> None:
         """Run an interactive chat session.
 
         Args:
@@ -203,7 +199,7 @@ class NexusLLMApp:
                 model = model.to(resolved_device)
             model.eval()
 
-            console.print(f"[bold green]Model loaded successfully![/bold green]")
+            console.print("[bold green]Model loaded successfully![/bold green]")
             console.print(f"[dim]Device: {resolved_device}[/dim]\n")
 
             conversation = Conversation(model=model_name, system_prompt=chat_config.system_prompt)
@@ -279,7 +275,7 @@ class NexusLLMApp:
         model: Any,
         tokenizer: Any,
         prompt: str,
-        conversation: Optional[Conversation],
+        conversation: Conversation | None,
         config: ChatConfig,
         device: str,
     ) -> str:
@@ -327,7 +323,7 @@ class NexusLLMApp:
                 pad_token_id=tokenizer.eos_token_id,
             )
 
-        generated_ids = outputs[0][inputs["input_ids"].shape[1]:]
+        generated_ids = outputs[0][inputs["input_ids"].shape[1] :]
         response = tokenizer.decode(generated_ids, skip_special_tokens=True)
         return response.strip()
 
@@ -341,7 +337,7 @@ class NexusLLMApp:
         help_table.add_row("exit, quit, :q", "End the chat session")
         console.print(help_table)
 
-    def run_serve(self, config: Dict[str, Any]) -> None:
+    def run_serve(self, config: dict[str, Any]) -> None:
         """Start the inference server.
 
         Args:
@@ -382,18 +378,21 @@ class NexusLLMApp:
                 )
 
             @app.get("/health")
-            async def health_check() -> Dict[str, str]:
+            async def health_check() -> dict[str, str]:
                 return {"status": "healthy", "version": __version__}
 
             @app.post("/generate")
-            async def generate(request: Dict[str, Any]) -> Dict[str, Any]:
-                return {"generated_text": "Response from " + server_config.model, "model": server_config.model}
+            async def generate(request: dict[str, Any]) -> dict[str, Any]:
+                return {
+                    "generated_text": "Response from " + server_config.model,
+                    "model": server_config.model,
+                }
 
             @app.get("/models")
-            async def list_models() -> Dict[str, Any]:
+            async def list_models() -> dict[str, Any]:
                 return {"models": [server_config.model]}
 
-            console.print(f"[bold cyan]Starting Nexus-LLM Server[/bold cyan]")
+            console.print("[bold cyan]Starting Nexus-LLM Server[/bold cyan]")
             console.print(f"  Host: {server_config.host}:{server_config.port}")
             console.print(f"  Model: {server_config.model}")
             console.print(f"  Workers: {server_config.workers}")
@@ -412,7 +411,7 @@ class NexusLLMApp:
         except Exception as exc:
             raise ServerError(message=str(exc)) from exc
 
-    def run_train(self, config: Dict[str, Any]) -> None:
+    def run_train(self, config: dict[str, Any]) -> None:
         """Run model training.
 
         Args:
@@ -428,7 +427,9 @@ class NexusLLMApp:
             lora_rank=config.get("lora_rank", config.get("lora_rank", 8)),
             lora_alpha=config.get("lora_alpha", config.get("lora_alpha", 16)),
             lora_dropout=config.get("lora_dropout", config.get("lora_dropout", 0.05)),
-            gradient_accumulation_steps=config.get("gradient_accumulation_steps", config.get("gradient_accumulation", 1)),
+            gradient_accumulation_steps=config.get(
+                "gradient_accumulation_steps", config.get("gradient_accumulation", 1)
+            ),
             max_seq_length=config.get("max_seq_length", config.get("max_seq_length", 2048)),
             fp16=config.get("fp16", False),
             bf16=config.get("bf16", False),
@@ -446,11 +447,11 @@ class NexusLLMApp:
             from transformers import (
                 AutoModelForCausalLM,
                 AutoTokenizer,
-                TrainingArguments,
                 Trainer,
+                TrainingArguments,
             )
 
-            console.print(f"[bold cyan]Starting Training[/bold cyan]")
+            console.print("[bold cyan]Starting Training[/bold cyan]")
             console.print(f"  Model: {train_config.model}")
             console.print(f"  Dataset: {train_config.dataset}")
             console.print(f"  Epochs: {train_config.epochs}")
@@ -459,7 +460,7 @@ class NexusLLMApp:
             console.print(f"  LoRA Rank: {train_config.lora_rank}")
             console.print(f"  Output: {train_config.output_dir}")
 
-            resolved_device = self._get_device(train_config.device)
+            self._get_device(train_config.device)
 
             # Load tokenizer and model
             console.print("\n[bold]Loading model and tokenizer...[/bold]")
@@ -505,7 +506,7 @@ class NexusLLMApp:
                 gradient_accumulation_steps=train_config.gradient_accumulation_steps,
                 seed=train_config.seed,
                 save_total_limit=3,
-                load_best_model_at_end=True if "validation" in dataset else False,
+                load_best_model_at_end="validation" in dataset,
             )
 
             # Tokenization function
@@ -535,14 +536,16 @@ class NexusLLMApp:
             trainer.save_model()
             tokenizer.save_pretrained(train_config.output_dir)
 
-            console.print(f"[bold green]Training complete! Model saved to: {train_config.output_dir}[/bold green]")
+            console.print(
+                f"[bold green]Training complete! Model saved to: {train_config.output_dir}[/bold green]"
+            )
 
         except ImportError as exc:
             raise TrainingError(message=f"Missing dependency: {exc}")
         except Exception as exc:
             raise TrainingError(message=str(exc)) from exc
 
-    def run_train_data(self, config: Dict[str, Any]) -> None:
+    def run_train_data(self, config: dict[str, Any]) -> None:
         """Run data preparation for training.
 
         Args:
@@ -558,7 +561,7 @@ class NexusLLMApp:
         shuffle = config.get("shuffle", False)
         seed = config.get("seed", 42)
 
-        console.print(f"[bold cyan]Preparing Training Data[/bold cyan]")
+        console.print("[bold cyan]Preparing Training Data[/bold cyan]")
         console.print(f"  Input: {input_path}")
         console.print(f"  Output: {output_path}")
         console.print(f"  Format: {data_format}")
@@ -571,19 +574,20 @@ class NexusLLMApp:
         # Load data
         data = []
         if input_file.suffix == ".jsonl":
-            with open(input_file, "r", encoding="utf-8") as f:
+            with open(input_file, encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
                     if line:
                         data.append(json.loads(line))
         elif input_file.suffix == ".json":
-            with open(input_file, "r", encoding="utf-8") as f:
+            with open(input_file, encoding="utf-8") as f:
                 data = json.load(f)
                 if not isinstance(data, list):
                     data = [data]
         elif input_file.suffix == ".csv":
             import csv
-            with open(input_file, "r", encoding="utf-8") as f:
+
+            with open(input_file, encoding="utf-8") as f:
                 reader = csv.DictReader(f)
                 data = [row for row in reader]
         else:
@@ -613,15 +617,14 @@ class NexusLLMApp:
             split_file = output_dir / f"{split_name}.{data_format}"
             with open(split_file, "w", encoding="utf-8") as f:
                 if data_format == "jsonl":
-                    for item in split_data:
-                        f.write(json.dumps(item, ensure_ascii=False) + "\n")
+                    f.writelines(json.dumps(item, ensure_ascii=False) + "\n" for item in split_data)
                 elif data_format == "json":
                     json.dump(split_data, f, ensure_ascii=False, indent=2)
             console.print(f"  {split_name}: {len(split_data)} examples -> {split_file}")
 
-        console.print(f"[bold green]Data preparation complete![/bold green]")
+        console.print("[bold green]Data preparation complete![/bold green]")
 
-    def run_models(self, config: Dict[str, Any]) -> None:
+    def run_models(self, config: dict[str, Any]) -> None:
         """List and manage models.
 
         Args:
@@ -663,7 +666,7 @@ class NexusLLMApp:
                 console.print("[yellow]No local models directory found.[/yellow]")
                 console.print("Use 'nexus-llm models --list-available' to see downloadable models.")
 
-    def run_download(self, config: Dict[str, Any]) -> None:
+    def run_download(self, config: dict[str, Any]) -> None:
         """Download a model.
 
         Args:
@@ -691,7 +694,7 @@ class NexusLLMApp:
             verify=config.get("verify", True),
         )
 
-    def run_eval(self, config: Dict[str, Any]) -> None:
+    def run_eval(self, config: dict[str, Any]) -> None:
         """Run model evaluation.
 
         Args:
@@ -711,7 +714,7 @@ class NexusLLMApp:
             save_predictions=config.get("save_predictions", False),
         )
 
-        console.print(f"[bold cyan]Starting Evaluation[/bold cyan]")
+        console.print("[bold cyan]Starting Evaluation[/bold cyan]")
         console.print(f"  Model: {eval_config.model}")
         console.print(f"  Benchmark: {eval_config.benchmark or 'default'}")
         console.print(f"  Tasks: {eval_config.tasks or 'all'}")
@@ -749,6 +752,7 @@ class NexusLLMApp:
             output_dir = Path(eval_config.output_dir)
             output_dir.mkdir(parents=True, exist_ok=True)
             import json
+
             results_file = output_dir / f"eval_{eval_config.model.replace('/', '__')}.json"
             with open(results_file, "w", encoding="utf-8") as f:
                 json.dump(results, f, indent=2, default=str)
@@ -765,7 +769,7 @@ class NexusLLMApp:
         tokenizer: Any,
         device: str,
         config: EvalConfig,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run a simple evaluation.
 
         Args:
@@ -809,7 +813,7 @@ class NexusLLMApp:
             "device": device,
         }
 
-    def run_benchmark(self, config: Dict[str, Any]) -> None:
+    def run_benchmark(self, config: dict[str, Any]) -> None:
         """Run inference benchmarks.
 
         Args:
@@ -825,7 +829,7 @@ class NexusLLMApp:
             output_file=config.get("output_file"),
         )
 
-        console.print(f"[bold cyan]Starting Benchmark[/bold cyan]")
+        console.print("[bold cyan]Starting Benchmark[/bold cyan]")
         console.print(f"  Model: {benchmark_config.model}")
         console.print(f"  Device: {benchmark_config.device}")
         console.print(f"  Batch sizes: {benchmark_config.batch_sizes}")
@@ -833,6 +837,7 @@ class NexusLLMApp:
 
         try:
             import time
+
             import torch
             from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -885,7 +890,9 @@ class NexusLLMApp:
                         "throughput_samples_per_sec": throughput,
                     }
                     results.append(result)
-                    console.print(f"    Avg latency: {avg_latency * 1000:.2f}ms | Throughput: {throughput:.2f} samples/s")
+                    console.print(
+                        f"    Avg latency: {avg_latency * 1000:.2f}ms | Throughput: {throughput:.2f} samples/s"
+                    )
 
             # Display summary
             table = Table(title="Benchmark Results")
@@ -907,6 +914,7 @@ class NexusLLMApp:
             # Save results
             if benchmark_config.output_file:
                 import json
+
                 output_path = Path(benchmark_config.output_file)
                 output_path.parent.mkdir(parents=True, exist_ok=True)
                 with open(output_path, "w", encoding="utf-8") as f:
@@ -918,7 +926,7 @@ class NexusLLMApp:
         except Exception as exc:
             console.print(f"[bold red]Benchmark error:[/bold red] {exc}")
 
-    def run_config(self, config: Dict[str, Any]) -> None:
+    def run_config(self, config: dict[str, Any]) -> None:
         """Manage configuration.
 
         Args:
@@ -964,4 +972,6 @@ class NexusLLMApp:
             else:
                 console.print(f"[yellow]Key not found:[/yellow] {key}")
         else:
-            console.print("Use --list to see all configuration values, or provide a key/value pair.")
+            console.print(
+                "Use --list to see all configuration values, or provide a key/value pair."
+            )

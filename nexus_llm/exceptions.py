@@ -5,7 +5,9 @@ Nexus-LLM framework, enabling structured and specific error handling
 across all components.
 """
 
-from typing import Any, Dict, Optional
+from __future__ import annotations
+
+from typing import Any
 
 
 class NexusLLMError(Exception):
@@ -23,8 +25,8 @@ class NexusLLMError(Exception):
     def __init__(
         self,
         message: str = "An error occurred in Nexus-LLM",
-        error_code: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        error_code: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         self.message = message
         self.error_code = error_code
@@ -40,9 +42,11 @@ class NexusLLMError(Exception):
         return " | ".join(parts)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(message={self.message!r}, error_code={self.error_code!r})"
+        return (
+            f"{self.__class__.__name__}(message={self.message!r}, error_code={self.error_code!r})"
+        )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert the exception to a dictionary representation.
 
         Returns:
@@ -69,9 +73,9 @@ class ModelNotFoundError(NexusLLMError):
     def __init__(
         self,
         model_name: str,
-        message: Optional[str] = None,
-        error_code: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        message: str | None = None,
+        error_code: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         self.model_name = model_name
         msg = message or f"Model not found: {model_name}"
@@ -94,10 +98,10 @@ class ModelLoadError(NexusLLMError):
     def __init__(
         self,
         model_name: str,
-        original_error: Optional[Exception] = None,
-        message: Optional[str] = None,
-        error_code: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        original_error: Exception | None = None,
+        message: str | None = None,
+        error_code: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         self.model_name = model_name
         self.original_error = original_error
@@ -126,9 +130,9 @@ class InferenceError(NexusLLMError):
         self,
         model_name: str = "",
         prompt: str = "",
-        message: Optional[str] = None,
-        error_code: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        message: str | None = None,
+        error_code: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         self.model_name = model_name
         self.prompt = prompt[:200] if prompt else ""
@@ -155,9 +159,9 @@ class TokenizerError(NexusLLMError):
     def __init__(
         self,
         tokenizer_name: str = "",
-        message: Optional[str] = None,
-        error_code: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        message: str | None = None,
+        error_code: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         self.tokenizer_name = tokenizer_name
         msg = message or "Tokenizer error occurred"
@@ -181,11 +185,11 @@ class ConfigError(NexusLLMError):
 
     def __init__(
         self,
-        message: Optional[str] = None,
-        config_key: Optional[str] = None,
-        config_source: Optional[str] = None,
-        error_code: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        message: str | None = None,
+        config_key: str | None = None,
+        config_source: str | None = None,
+        error_code: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         self.config_key = config_key
         self.config_source = config_source
@@ -211,11 +215,11 @@ class TrainingError(NexusLLMError):
 
     def __init__(
         self,
-        message: Optional[str] = None,
-        step: Optional[int] = None,
-        epoch: Optional[int] = None,
-        error_code: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        message: str | None = None,
+        step: int | None = None,
+        epoch: int | None = None,
+        error_code: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         self.step = step
         self.epoch = epoch
@@ -241,11 +245,11 @@ class ServerError(NexusLLMError):
 
     def __init__(
         self,
-        message: Optional[str] = None,
-        endpoint: Optional[str] = None,
-        status_code: Optional[int] = None,
-        error_code: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        message: str | None = None,
+        endpoint: str | None = None,
+        status_code: int | None = None,
+        error_code: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         self.endpoint = endpoint
         self.status_code = status_code
@@ -270,10 +274,10 @@ class ChatError(NexusLLMError):
 
     def __init__(
         self,
-        message: Optional[str] = None,
-        session_id: Optional[str] = None,
-        error_code: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        message: str | None = None,
+        session_id: str | None = None,
+        error_code: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         self.session_id = session_id
         msg = message or "Chat error occurred"
@@ -296,9 +300,9 @@ class PluginError(NexusLLMError):
     def __init__(
         self,
         plugin_name: str = "",
-        message: Optional[str] = None,
-        error_code: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        message: str | None = None,
+        error_code: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         self.plugin_name = plugin_name
         msg = message or "Plugin error occurred"

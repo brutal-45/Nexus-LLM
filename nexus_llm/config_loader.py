@@ -10,11 +10,13 @@ Supports deep merging of configuration from different sources,
 variable interpolation, and configuration validation.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 from nexus_llm.constants import CONFIG_DIR, CONFIG_FILENAME, ENV_PREFIX
 from nexus_llm.exceptions import ConfigError
@@ -22,7 +24,7 @@ from nexus_llm.exceptions import ConfigError
 logger = logging.getLogger(__name__)
 
 # Default configuration values
-_DEFAULTS: Dict[str, Any] = {
+_DEFAULTS: dict[str, Any] = {
     "app_name": "Nexus-LLM",
     "version": "0.1.0",
     "debug": False,
@@ -60,13 +62,15 @@ class ConfigSource:
         values: The configuration values from this source.
     """
 
-    def __init__(self, name: str, priority: int, values: Dict[str, Any]) -> None:
+    def __init__(self, name: str, priority: int, values: dict[str, Any]) -> None:
         self.name = name
         self.priority = priority
         self.values = values
 
     def __repr__(self) -> str:
-        return f"ConfigSource(name={self.name!r}, priority={self.priority}, keys={len(self.values)})"
+        return (
+            f"ConfigSource(name={self.name!r}, priority={self.priority}, keys={len(self.values)})"
+        )
 
 
 class ConfigLoader:
@@ -85,7 +89,7 @@ class ConfigLoader:
     def __init__(
         self,
         env_prefix: str = ENV_PREFIX,
-        defaults: Optional[Dict[str, Any]] = None,
+        defaults: dict[str, Any] | None = None,
     ) -> None:
         """Initialize the configuration loader.
 
@@ -95,17 +99,17 @@ class ConfigLoader:
         """
         self._env_prefix = env_prefix
         self._defaults = defaults or _DEFAULTS.copy()
-        self._sources: List[ConfigSource] = []
-        self._merged: Dict[str, Any] = {}
-        self._overrides: Dict[str, Any] = {}
-        self._file_path: Optional[str] = None
+        self._sources: list[ConfigSource] = []
+        self._merged: dict[str, Any] = {}
+        self._overrides: dict[str, Any] = {}
+        self._file_path: str | None = None
 
         # Add defaults as lowest priority source
         self._sources.append(
             ConfigSource(name="defaults", priority=0, values=self._defaults.copy())
         )
 
-    def load(self, config_path: Optional[str] = None) -> Dict[str, Any]:
+    def load(self, config_path: str | None = None) -> dict[str, Any]:
         """Load configuration from all sources.
 
         Args:
@@ -130,23 +134,23 @@ class ConfigLoader:
             if default_config_path.exists():
                 file_config = self._load_file(str(default_config_path))
                 self._sources.append(
-                    ConfigSource(name=f"file:{default_config_path}", priority=10, values=file_config)
+                    ConfigSource(
+                        name=f"file:{default_config_path}", priority=10, values=file_config
+                    )
                 )
                 self._file_path = str(default_config_path)
 
         # Load from environment variables
         env_config = self._load_env()
         if env_config:
-            self._sources.append(
-                ConfigSource(name="environment", priority=20, values=env_config)
-            )
+            self._sources.append(ConfigSource(name="environment", priority=20, values=env_config))
 
         # Merge all sources
         self._merge()
 
         return self._merged
 
-    def _load_file(self, path: str) -> Dict[str, Any]:
+    def _load_file(self, path: str) -> dict[str, Any]:
         """Load configuration from a file.
 
         Args:
@@ -166,17 +170,18 @@ class ConfigLoader:
             )
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
 
             if file_path.suffix in (".yaml", ".yml"):
                 try:
                     import yaml
+
                     config = yaml.safe_load(content) or {}
                 except ImportError:
                     raise ConfigError(
                         message="PyYAML is required to load YAML configuration files. "
-                                "Install with: pip install pyyaml",
+                        "Install with: pip install pyyaml",
                         config_source=path,
                     )
             elif file_path.suffix == ".json":
@@ -184,7 +189,7 @@ class ConfigLoader:
             else:
                 raise ConfigError(
                     message=f"Unsupported configuration file format: {file_path.suffix}. "
-                            f"Use .yaml, .yml, or .json.",
+                    f"Use .yaml, .yml, or .json.",
                     config_source=path,
                 )
 
@@ -210,7 +215,7 @@ class ConfigLoader:
                 config_source=path,
             ) from exc
 
-    def _load_env(self) -> Dict[str, Any]:
+    def _load_env(self) -> dict[str, Any]:
         """Load configuration from environment variables.
 
         Looks for variables with the configured prefix (e.g., NEXUS_LLM_).
@@ -218,12 +223,12 @@ class ConfigLoader:
         Returns:
             Configuration dictionary from environment variables.
         """
-        env_config: Dict[str, Any] = {}
+        env_config: dict[str, Any] = {}
         prefix = self._env_prefix
 
         for key, value in os.environ.items():
             if key.startswith(prefix):
-                config_key = key[len(prefix):].lower()
+                config_key = key[len(prefix) :].lower()
                 # Convert double underscores to dots for nested keys
                 config_key = config_key.replace("__", ".")
                 # Remove leading underscore if present
@@ -267,7 +272,7 @@ class ConfigLoader:
 
         return value
 
-    def _flatten(self, d: Dict[str, Any], parent_key: str = "", sep: str = ".") -> Dict[str, Any]:
+    def _flatten(self, d: dict[str, Any], parent_key: str = "", sep: str = ".") -> dict[str, Any]:
         """Flatten a nested dictionary into dot-separated keys.
 
         Args:
@@ -278,7 +283,7 @@ class ConfigLoader:
         Returns:
             Flattened dictionary.
         """
-        items: Dict[str, Any] = {}
+        items: dict[str, Any] = {}
         for k, v in d.items():
             new_key = f"{parent_key}{sep}{k}" if parent_key else k
             if isinstance(v, dict):
@@ -287,7 +292,7 @@ class ConfigLoader:
                 items[new_key] = v
         return items
 
-    def _unflatten(self, d: Dict[str, Any], sep: str = ".") -> Dict[str, Any]:
+    def _unflatten(self, d: dict[str, Any], sep: str = ".") -> dict[str, Any]:
         """Unflatten a dictionary with dot-separated keys into nested structure.
 
         Args:
@@ -297,7 +302,7 @@ class ConfigLoader:
         Returns:
             Nested dictionary.
         """
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
         for key, value in d.items():
             parts = key.split(sep)
             current = result
@@ -313,7 +318,7 @@ class ConfigLoader:
         # Sort sources by priority (lowest first, so higher priority overwrites)
         sorted_sources = sorted(self._sources, key=lambda s: s.priority)
 
-        merged: Dict[str, Any] = {}
+        merged: dict[str, Any] = {}
         for source in sorted_sources:
             merged.update(source.values)
 
@@ -364,7 +369,7 @@ class ConfigLoader:
             return True
         return False
 
-    def get_all(self) -> Dict[str, Dict[str, Any]]:
+    def get_all(self) -> dict[str, dict[str, Any]]:
         """Get all configuration values with source information.
 
         Returns:
@@ -373,7 +378,7 @@ class ConfigLoader:
         if not self._merged:
             self.load()
 
-        result: Dict[str, Dict[str, Any]] = {}
+        result: dict[str, dict[str, Any]] = {}
         sorted_sources = sorted(self._sources, key=lambda s: -s.priority)
 
         all_keys = set()
@@ -403,7 +408,7 @@ class ConfigLoader:
 
         return result
 
-    def get_nested(self) -> Dict[str, Any]:
+    def get_nested(self) -> dict[str, Any]:
         """Get the configuration as a nested dictionary.
 
         Returns:
@@ -413,7 +418,7 @@ class ConfigLoader:
             self.load()
         return self._unflatten(self._merged)
 
-    def save(self, path: Optional[str] = None) -> None:
+    def save(self, path: str | None = None) -> None:
         """Save current configuration to a file.
 
         Args:
@@ -433,15 +438,14 @@ class ConfigLoader:
                 if file_path.suffix in (".yaml", ".yml"):
                     try:
                         import yaml
+
                         yaml.dump(nested_config, f, default_flow_style=False, sort_keys=True)
                     except ImportError:
                         raise ConfigError(message="PyYAML required for YAML export.")
                 elif file_path.suffix == ".json":
                     json.dump(nested_config, f, indent=2, ensure_ascii=False)
                 else:
-                    raise ConfigError(
-                        message=f"Unsupported format for saving: {file_path.suffix}"
-                    )
+                    raise ConfigError(message=f"Unsupported format for saving: {file_path.suffix}")
 
             logger.info("Configuration saved to: %s", save_path)
 
@@ -461,7 +465,7 @@ class ConfigLoader:
         self._file_path = None
         logger.info("Configuration reset to defaults.")
 
-    def validate(self, schema: Optional[Dict[str, Any]] = None) -> List[str]:
+    def validate(self, schema: dict[str, Any] | None = None) -> list[str]:
         """Validate the current configuration.
 
         Args:
@@ -474,7 +478,7 @@ class ConfigLoader:
         if not self._merged:
             self.load()
 
-        errors: List[str] = []
+        errors: list[str] = []
 
         if schema:
             for key, rules in schema.items():

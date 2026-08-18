@@ -5,12 +5,13 @@ Manages OS signals (SIGINT, SIGTERM, SIGUSR1) and ensures proper
 cleanup of resources when the application is interrupted.
 """
 
+from __future__ import annotations
+
 import logging
-import os
 import signal
 import sys
 import threading
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable
 
 from nexus_llm.events import Event, EventBus, get_event_bus
 
@@ -33,7 +34,7 @@ class SignalHandler:
 
     def __init__(
         self,
-        event_bus: Optional[EventBus] = None,
+        event_bus: EventBus | None = None,
         graceful_timeout: float = 30.0,
         force_exit_code: int = 137,
     ) -> None:
@@ -47,12 +48,12 @@ class SignalHandler:
         self._event_bus = event_bus or get_event_bus()
         self._graceful_timeout = graceful_timeout
         self._force_exit_code = force_exit_code
-        self._shutdown_callbacks: List[Callable[[], Any]] = []
-        self._pre_shutdown_callbacks: List[Callable[[], Any]] = []
+        self._shutdown_callbacks: list[Callable[[], Any]] = []
+        self._pre_shutdown_callbacks: list[Callable[[], Any]] = []
         self._installed = False
         self._shutting_down = False
         self._shutdown_event = threading.Event()
-        self._original_handlers: Dict[int, Any] = {}
+        self._original_handlers: dict[int, Any] = {}
         self._lock = threading.Lock()
 
     def register_shutdown_callback(self, callback: Callable[[], Any], priority: int = 0) -> None:
@@ -123,7 +124,11 @@ class SignalHandler:
             signum: The signal number received.
             frame: The current stack frame.
         """
-        sig_name = signal.Signals(signum).name if signum in signal.Signals.__members__.values() else str(signum)
+        sig_name = (
+            signal.Signals(signum).name
+            if signum in signal.Signals.__members__.values()
+            else str(signum)
+        )
 
         if self._shutting_down:
             # Second signal - force exit
@@ -138,11 +143,13 @@ class SignalHandler:
         logger.info("Received %s - initiating graceful shutdown...", sig_name)
 
         # Publish shutdown event
-        self._event_bus.publish(Event(
-            event_type="system.shutdown",
-            data={"signal": sig_name, "signal_number": signum},
-            source="SignalHandler",
-        ))
+        self._event_bus.publish(
+            Event(
+                event_type="system.shutdown",
+                data={"signal": sig_name, "signal_number": signum},
+                source="SignalHandler",
+            )
+        )
 
         # Run pre-shutdown callbacks
         self._run_pre_shutdown_callbacks()
@@ -172,7 +179,9 @@ class SignalHandler:
         """Run shutdown callbacks in priority order."""
         for priority, callback in self._shutdown_callbacks:
             try:
-                logger.info("Running shutdown callback: %s (priority=%d)", callback.__name__, priority)
+                logger.info(
+                    "Running shutdown callback: %s (priority=%d)", callback.__name__, priority
+                )
                 callback()
             except Exception as exc:
                 logger.error("Error in shutdown callback %s: %s", callback.__name__, exc)
@@ -182,7 +191,7 @@ class SignalHandler:
         """Check if the application is shutting down."""
         return self._shutting_down
 
-    def wait_for_shutdown(self, timeout: Optional[float] = None) -> bool:
+    def wait_for_shutdown(self, timeout: float | None = None) -> bool:
         """Wait for the shutdown signal to be received.
 
         Args:
@@ -209,11 +218,13 @@ class SignalHandler:
 
         logger.info("Manual shutdown triggered: %s", reason)
 
-        self._event_bus.publish(Event(
-            event_type="system.shutdown",
-            data={"reason": reason},
-            source="SignalHandler",
-        ))
+        self._event_bus.publish(
+            Event(
+                event_type="system.shutdown",
+                data={"reason": reason},
+                source="SignalHandler",
+            )
+        )
 
         self._run_pre_shutdown_callbacks()
         self._run_shutdown_callbacks()

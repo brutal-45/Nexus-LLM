@@ -5,18 +5,19 @@ communication. Supports synchronous and asynchronous event handlers,
 event filtering, and event history.
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import threading
-import time
 import uuid
-from collections import defaultdict
+from collections.abc import Coroutine
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Set, Union
+from typing import Any, Callable, Union
 
-from nexus_llm.constants import EVENT_HANDLER_TIMEOUT, EVENT_MAX_HISTORY
+from nexus_llm.constants import EVENT_MAX_HISTORY
 
 logger = logging.getLogger(__name__)
 
@@ -54,12 +55,12 @@ class Event:
     """
 
     event_type: str
-    data: Dict[str, Any] = field(default_factory=dict)
+    data: dict[str, Any] = field(default_factory=dict)
     source: str = ""
     timestamp: datetime = field(default_factory=datetime.now)
     event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     priority: EventPriority = EventPriority.NORMAL
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     cancelled: bool = False
 
     def cancel(self) -> None:
@@ -70,7 +71,7 @@ class Event:
         """Check if the event has been cancelled."""
         return self.cancelled
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert the event to a dictionary.
 
         Returns:
@@ -129,12 +130,14 @@ class InferenceEvent(Event):
     def __post_init__(self) -> None:
         if not self.event_type:
             self.event_type = "inference"
-        self.data.update({
-            "model_name": self.model_name,
-            "prompt_length": self.prompt_length,
-            "output_length": self.output_length,
-            "latency_ms": self.latency_ms,
-        })
+        self.data.update(
+            {
+                "model_name": self.model_name,
+                "prompt_length": self.prompt_length,
+                "output_length": self.output_length,
+                "latency_ms": self.latency_ms,
+            }
+        )
 
 
 @dataclass
@@ -164,11 +167,13 @@ class TrainingEvent(Event):
     def __post_init__(self) -> None:
         if not self.event_type:
             self.event_type = "training"
-        self.data.update({
-            "step": self.step,
-            "epoch": self.epoch,
-            "loss": self.loss,
-        })
+        self.data.update(
+            {
+                "step": self.step,
+                "epoch": self.epoch,
+                "loss": self.loss,
+            }
+        )
 
 
 @dataclass
@@ -205,11 +210,13 @@ class ErrorEvent(Event):
 
     def __post_init__(self) -> None:
         self.event_type = "error"
-        self.data.update({
-            "error_type": self.error_type,
-            "error_message": self.error_message,
-            "traceback": self.traceback_str,
-        })
+        self.data.update(
+            {
+                "error_type": self.error_type,
+                "error_message": self.error_message,
+                "traceback": self.traceback_str,
+            }
+        )
 
 
 EventHandler = Union[Callable[[Event], None], Callable[[Event], Coroutine[Any, Any, None]]]
@@ -229,9 +236,9 @@ class EventHandlerRegistration:
     def __init__(
         self,
         handler: EventHandler,
-        event_type: Optional[str] = None,
+        event_type: str | None = None,
         priority: EventPriority = EventPriority.NORMAL,
-        filter_fn: Optional[Callable[[Event], bool]] = None,
+        filter_fn: Callable[[Event], bool] | None = None,
         once: bool = False,
     ) -> None:
         self.handler = handler
@@ -253,11 +260,9 @@ class EventHandlerRegistration:
         """
         if self.event_type is not None and event.event_type != self.event_type:
             return False
-        if self.filter_fn is not None and not self.filter_fn(event):
-            return False
-        return True
+        return not (self.filter_fn is not None and not self.filter_fn(event))
 
-    def __lt__(self, other: "EventHandlerRegistration") -> bool:
+    def __lt__(self, other: EventHandlerRegistration) -> bool:
         return self.priority.value > other.priority.value
 
     def __repr__(self) -> str:
@@ -286,18 +291,18 @@ class EventBus:
         Args:
             max_history: Maximum number of events to keep in history.
         """
-        self._handlers: List[EventHandlerRegistration] = []
-        self._history: List[Event] = []
+        self._handlers: list[EventHandlerRegistration] = []
+        self._history: list[Event] = []
         self._max_history = max_history
         self._lock = threading.RLock()
         self._handler_count = 0
 
     def subscribe(
         self,
-        event_type: Optional[str] = None,
-        handler: Optional[EventHandler] = None,
+        event_type: str | None = None,
+        handler: EventHandler | None = None,
         priority: EventPriority = EventPriority.NORMAL,
-        filter_fn: Optional[Callable[[Event], bool]] = None,
+        filter_fn: Callable[[Event], bool] | None = None,
         once: bool = False,
     ) -> EventHandlerRegistration:
         """Subscribe to events.
@@ -361,7 +366,7 @@ class EventBus:
                 self._handlers.remove(registration)
                 self._handler_count -= 1
 
-    def unsubscribe_all(self, event_type: Optional[str] = None) -> int:
+    def unsubscribe_all(self, event_type: str | None = None) -> int:
         """Remove all handlers, optionally filtered by event type.
 
         Args:
@@ -390,7 +395,7 @@ class EventBus:
         with self._lock:
             self._history.append(event)
             if len(self._history) > self._max_history:
-                self._history = self._history[-self._max_history:]
+                self._history = self._history[-self._max_history :]
 
             handlers_to_call = [h for h in self._handlers if h.matches(event)]
 
@@ -431,11 +436,12 @@ class EventBus:
         Returns:
             An asyncio Task that completes when all handlers are done.
         """
+
         async def _publish() -> None:
             with self._lock:
                 self._history.append(event)
                 if len(self._history) > self._max_history:
-                    self._history = self._history[-self._max_history:]
+                    self._history = self._history[-self._max_history :]
 
                 handlers_to_call = [h for h in self._handlers if h.matches(event)]
 
@@ -459,11 +465,10 @@ class EventBus:
                 for i, result in enumerate(results):
                     if isinstance(result, Exception):
                         logger.error("Async handler error: %s", result)
-                    else:
-                        if i < len(handlers_to_call):
-                            handlers_to_call[i].call_count += 1
-                            if handlers_to_call[i].once:
-                                self.unsubscribe(handlers_to_call[i])
+                    elif i < len(handlers_to_call):
+                        handlers_to_call[i].call_count += 1
+                        if handlers_to_call[i].once:
+                            self.unsubscribe(handlers_to_call[i])
 
         try:
             loop = asyncio.get_running_loop()
@@ -473,10 +478,10 @@ class EventBus:
 
     def get_history(
         self,
-        event_type: Optional[str] = None,
+        event_type: str | None = None,
         limit: int = 100,
-        source: Optional[str] = None,
-    ) -> List[Event]:
+        source: str | None = None,
+    ) -> list[Event]:
         """Get event history.
 
         Args:
@@ -510,7 +515,7 @@ class EventBus:
 
 
 # Global event bus instance
-_global_bus: Optional[EventBus] = None
+_global_bus: EventBus | None = None
 
 
 def get_event_bus() -> EventBus:

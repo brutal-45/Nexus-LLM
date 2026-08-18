@@ -5,10 +5,14 @@ and other components. Supports registration, lookup, and iteration
 over registered components with type safety and conflict detection.
 """
 
-import threading
-from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, Set, TypeVar, Union
+from __future__ import annotations
 
-from nexus_llm.exceptions import PluginError
+import builtins
+import threading
+from collections.abc import Iterator
+from typing import Any, Generic, TypeVar
+
+from typing_extensions import Self
 
 T = TypeVar("T")
 
@@ -27,8 +31,8 @@ class RegistryEntry(Generic[T]):
         self,
         name: str,
         component: T,
-        metadata: Optional[Dict[str, Any]] = None,
-        tags: Optional[Set[str]] = None,
+        metadata: dict[str, Any] | None = None,
+        tags: set[str] | None = None,
     ) -> None:
         self.name = name
         self.component = component
@@ -62,15 +66,15 @@ class Registry(Generic[T]):
         """
         self.name = name
         self.allow_overwrite = allow_overwrite
-        self._entries: Dict[str, RegistryEntry[T]] = {}
+        self._entries: dict[str, RegistryEntry[T]] = {}
         self._lock = threading.RLock()
 
     def register(
         self,
         name: str,
         component: T,
-        metadata: Optional[Dict[str, Any]] = None,
-        tags: Optional[Set[str]] = None,
+        metadata: dict[str, Any] | None = None,
+        tags: set[str] | None = None,
     ) -> None:
         """Register a component.
 
@@ -160,7 +164,7 @@ class Registry(Generic[T]):
         with self._lock:
             return name in self._entries
 
-    def list(self) -> List[str]:
+    def list(self) -> builtins.list[str]:
         """List all registered component names.
 
         Returns:
@@ -169,7 +173,7 @@ class Registry(Generic[T]):
         with self._lock:
             return list(self._entries.keys())
 
-    def list_entries(self) -> List[RegistryEntry[T]]:
+    def list_entries(self) -> builtins.list[RegistryEntry[T]]:
         """List all registry entries.
 
         Returns:
@@ -178,7 +182,7 @@ class Registry(Generic[T]):
         with self._lock:
             return list(self._entries.values())
 
-    def list_by_tag(self, tag: str) -> List[T]:
+    def list_by_tag(self, tag: str) -> builtins.list[T]:
         """List all components with a specific tag.
 
         Args:
@@ -188,13 +192,9 @@ class Registry(Generic[T]):
             List of components with the given tag.
         """
         with self._lock:
-            return [
-                entry.component
-                for entry in self._entries.values()
-                if tag in entry.tags
-            ]
+            return [entry.component for entry in self._entries.values() if tag in entry.tags]
 
-    def search(self, pattern: str) -> List[T]:
+    def search(self, pattern: str) -> builtins.list[T]:
         """Search for components by name pattern.
 
         Args:
@@ -255,21 +255,21 @@ class GlobalRegistry:
     application, including models, plugins, commands, and custom registries.
     """
 
-    _instance: Optional["GlobalRegistry"] = None
+    _instance: GlobalRegistry | None = None
     _lock = threading.Lock()
 
-    def __new__(cls) -> "GlobalRegistry":
+    def __new__(cls) -> Self:
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
-                    cls._instance._registries: Dict[str, Registry] = {}
+                    cls._instance._registries: dict[str, Registry] = {}
                     cls._instance._init_default_registries()
         return cls._instance
 
     def _init_default_registries(self) -> None:
         """Initialize the default registries."""
-        self._registries["models"] = Registry[Dict[str, Any]](name="models")
+        self._registries["models"] = Registry[dict[str, Any]](name="models")
         self._registries["plugins"] = Registry[Any](name="plugins")
         self._registries["commands"] = Registry[Any](name="commands")
         self._registries["downloaders"] = Registry[Any](name="downloaders")
@@ -290,7 +290,9 @@ class GlobalRegistry:
             KeyError: If the registry doesn't exist.
         """
         if name not in self._registries:
-            raise KeyError(f"Registry '{name}' not found. Available: {list(self._registries.keys())}")
+            raise KeyError(
+                f"Registry '{name}' not found. Available: {list(self._registries.keys())}"
+            )
         return self._registries[name]
 
     def create_registry(self, name: str, allow_overwrite: bool = False) -> Registry:
@@ -312,7 +314,7 @@ class GlobalRegistry:
         self._registries[name] = registry
         return registry
 
-    def list_registries(self) -> List[str]:
+    def list_registries(self) -> list[str]:
         """List all registry names.
 
         Returns:

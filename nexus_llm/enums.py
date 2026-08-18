@@ -78,6 +78,7 @@ class DeviceType(str, Enum):
         """
         try:
             import torch
+
             if torch.cuda.is_available():
                 return cls.CUDA
             if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():

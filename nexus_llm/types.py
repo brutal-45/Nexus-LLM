@@ -6,11 +6,19 @@ for messages, conversations, configurations, and model information are
 defined here.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any
 
-from nexus_llm.enums import ChatRole, DeviceType, MessageType, ModelType, PrecisionType, TaskType, TrainingStage
+from nexus_llm.enums import (
+    ChatRole,
+    DeviceType,
+    MessageType,
+    ModelType,
+    PrecisionType,
+)
 
 
 @dataclass
@@ -28,12 +36,12 @@ class Message:
 
     role: ChatRole
     content: str
-    name: Optional[str] = None
+    name: str | None = None
     message_type: MessageType = MessageType.TEXT
     timestamp: datetime = field(default_factory=datetime.now)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert the message to a dictionary.
 
         Returns:
@@ -49,7 +57,7 @@ class Message:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Message":
+    def from_dict(cls, data: dict[str, Any]) -> Message:
         """Create a Message from a dictionary.
 
         Args:
@@ -63,7 +71,9 @@ class Message:
             content=data["content"],
             name=data.get("name"),
             message_type=MessageType(data.get("message_type", "text")),
-            timestamp=datetime.fromisoformat(data["timestamp"]) if "timestamp" in data else datetime.now(),
+            timestamp=(
+                datetime.fromisoformat(data["timestamp"]) if "timestamp" in data else datetime.now()
+            ),
             metadata=data.get("metadata", {}),
         )
 
@@ -83,17 +93,18 @@ class Conversation:
     """
 
     id: str = ""
-    messages: List[Message] = field(default_factory=list)
+    messages: list[Message] = field(default_factory=list)
     model: str = ""
-    system_prompt: Optional[str] = None
+    system_prompt: str | None = None
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Generate a unique ID if none is provided."""
         if not self.id:
             import uuid
+
             self.id = str(uuid.uuid4())
 
     def add_message(self, role: ChatRole, content: str, **kwargs: Any) -> Message:
@@ -112,7 +123,7 @@ class Conversation:
         self.updated_at = datetime.now()
         return message
 
-    def get_history(self, limit: Optional[int] = None) -> List[Message]:
+    def get_history(self, limit: int | None = None) -> list[Message]:
         """Get conversation history.
 
         Args:
@@ -130,7 +141,7 @@ class Conversation:
         self.messages.clear()
         self.updated_at = datetime.now()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert the conversation to a dictionary.
 
         Returns:
@@ -147,7 +158,7 @@ class Conversation:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Conversation":
+    def from_dict(cls, data: dict[str, Any]) -> Conversation:
         """Create a Conversation from a dictionary.
 
         Args:
@@ -161,8 +172,16 @@ class Conversation:
             messages=[Message.from_dict(m) for m in data.get("messages", [])],
             model=data.get("model", ""),
             system_prompt=data.get("system_prompt"),
-            created_at=datetime.fromisoformat(data["created_at"]) if "created_at" in data else datetime.now(),
-            updated_at=datetime.fromisoformat(data["updated_at"]) if "updated_at" in data else datetime.now(),
+            created_at=(
+                datetime.fromisoformat(data["created_at"])
+                if "created_at" in data
+                else datetime.now()
+            ),
+            updated_at=(
+                datetime.fromisoformat(data["updated_at"])
+                if "updated_at" in data
+                else datetime.now()
+            ),
             metadata=data.get("metadata", {}),
         )
 
@@ -194,10 +213,10 @@ class GenerationConfig:
     no_repeat_ngram_size: int = 0
     num_beams: int = 1
     do_sample: bool = True
-    seed: Optional[int] = None
-    stop_sequences: List[str] = field(default_factory=list)
+    seed: int | None = None
+    stop_sequences: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary.
 
         Returns:
@@ -242,17 +261,17 @@ class ModelInfo:
     model_type: ModelType = ModelType.CAUSAL_LM
     full_name: str = ""
     size: str = ""
-    parameter_count: Optional[int] = None
+    parameter_count: int | None = None
     context_length: int = 2048
     device: DeviceType = DeviceType.AUTO
     precision: PrecisionType = PrecisionType.FP16
     description: str = ""
     license: str = ""
-    local_path: Optional[str] = None
+    local_path: str | None = None
     is_loaded: bool = False
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary.
 
         Returns:
@@ -325,9 +344,9 @@ class TrainingConfig:
     logging_steps: int = 10
     validation_split: float = 0.1
     seed: int = 42
-    resume_from: Optional[str] = None
+    resume_from: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary.
 
         Returns:
@@ -378,18 +397,18 @@ class EvalConfig:
     """
 
     model: str = ""
-    benchmark: Optional[str] = None
-    tasks: Optional[List[str]] = None
+    benchmark: str | None = None
+    tasks: list[str] | None = None
     output_dir: str = "./eval_results"
     device: str = "auto"
     batch_size: int = 8
     num_fewshot: int = 0
-    limit: Optional[int] = None
+    limit: int | None = None
     fp16: bool = False
     bf16: bool = False
     save_predictions: bool = False
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary.
 
         Returns:
@@ -426,13 +445,13 @@ class BenchmarkConfig:
 
     model: str = ""
     device: str = "auto"
-    batch_sizes: List[int] = field(default_factory=lambda: [1, 2, 4, 8])
-    seq_lengths: List[int] = field(default_factory=lambda: [128, 256, 512, 1024])
+    batch_sizes: list[int] = field(default_factory=lambda: [1, 2, 4, 8])
+    seq_lengths: list[int] = field(default_factory=lambda: [128, 256, 512, 1024])
     warmup: int = 3
     iterations: int = 10
-    output_file: Optional[str] = None
+    output_file: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary.
 
         Returns:
@@ -472,14 +491,14 @@ class ServerConfig:
     model: str = ""
     workers: int = 1
     device: str = "auto"
-    api_key: Optional[str] = None
+    api_key: str | None = None
     cors: bool = False
     reload: bool = False
-    ssl_certfile: Optional[str] = None
-    ssl_keyfile: Optional[str] = None
+    ssl_certfile: str | None = None
+    ssl_keyfile: str | None = None
     log_level: str = "info"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary.
 
         Returns:
@@ -516,13 +535,13 @@ class DownloadConfig:
 
     model_name: str = ""
     source: str = "huggingface"
-    output_dir: Optional[str] = None
-    revision: Optional[str] = None
-    quantize: Optional[str] = None
-    token: Optional[str] = None
+    output_dir: str | None = None
+    revision: str | None = None
+    quantize: str | None = None
+    token: str | None = None
     verify: bool = True
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary.
 
         Returns:
@@ -556,16 +575,16 @@ class ChatConfig:
     """
 
     model: str = ""
-    system_prompt: Optional[str] = None
+    system_prompt: str | None = None
     temperature: float = 0.7
     top_p: float = 0.9
     top_k: int = 50
     max_tokens: int = 2048
-    device: Optional[str] = None
+    device: str | None = None
     use_history: bool = True
-    single_prompt: Optional[str] = None
+    single_prompt: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary.
 
         Returns:
@@ -610,9 +629,9 @@ class BenchmarkResult:
     max_latency_ms: float = 0.0
     throughput_samples_per_sec: float = 0.0
     throughput_tokens_per_sec: float = 0.0
-    memory_used_mb: Optional[float] = None
+    memory_used_mb: float | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary.
 
         Returns:
@@ -650,9 +669,9 @@ class EvalResult:
     metric_name: str = ""
     metric_value: float = 0.0
     num_examples: int = 0
-    config: Dict[str, Any] = field(default_factory=dict)
+    config: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary.
 
         Returns:
