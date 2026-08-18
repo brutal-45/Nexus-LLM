@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 from nexus_llm.agents.base import Agent, AgentAction, AgentConfig, AgentObservation
 from nexus_llm.agents.executor import ActionExecutor
-from nexus_llm.agents.memory import AgentMemory, ShortTermMemory
+from nexus_llm.agents.memory import AgentMemory
 from nexus_llm.agents.tools import CodeRunTool, FileReadTool, FileWriteTool, Tool
 
 logger = logging.getLogger(__name__)
@@ -28,11 +28,11 @@ class CodeAgent(Agent):
 
     def __init__(
         self,
-        config: Optional[AgentConfig] = None,
-        tools: Optional[Dict[str, Tool]] = None,
-        memory: Optional[AgentMemory] = None,
-        llm_fn: Optional[Callable] = None,
-        executor: Optional[ActionExecutor] = None,
+        config: AgentConfig | None = None,
+        tools: dict[str, Tool] | None = None,
+        memory: AgentMemory | None = None,
+        llm_fn: Callable | None = None,
+        executor: ActionExecutor | None = None,
         max_debug_iterations: int = 3,
     ):
         config = config or AgentConfig(
@@ -53,7 +53,7 @@ class CodeAgent(Agent):
         self.executor = executor or ActionExecutor(tools=self.tools)
         self.max_debug_iterations = max_debug_iterations
         self._debug_count = 0
-        self._current_code: Optional[str] = None
+        self._current_code: str | None = None
 
     def generate_code(self, specification: str, language: str = "python") -> str:
         """Generate code from a specification.
@@ -147,7 +147,7 @@ class CodeAgent(Agent):
         # Rule-based debugging fallback
         return self._rule_debug(code, error)
 
-    def review_code(self, code: str) -> Dict[str, Any]:
+    def review_code(self, code: str) -> dict[str, Any]:
         """Review code for quality, security, and best practices.
 
         Args:
@@ -156,8 +156,8 @@ class CodeAgent(Agent):
         Returns:
             Review results dictionary.
         """
-        issues: List[Dict[str, str]] = []
-        suggestions: List[str] = []
+        issues: list[dict[str, str]] = []
+        suggestions: list[str] = []
         score = 100  # Start at 100, deduct for issues
 
         # Security checks
@@ -197,29 +197,37 @@ class CodeAgent(Agent):
             start = function_starts[idx]
             end = function_starts[idx + 1] if idx + 1 < len(function_starts) else len(lines)
             if end - start > 50:
-                issues.append({
-                    "type": "quality",
-                    "message": f"Function at line {start + 1} is too long ({end - start} lines). Consider breaking it up.",
-                    "severity": "medium",
-                })
+                issues.append(
+                    {
+                        "type": "quality",
+                        "message": f"Function at line {start + 1} is too long ({end - start} lines). Consider breaking it up.",
+                        "severity": "medium",
+                    }
+                )
                 score -= 10
 
         # Check for bare except clauses
         if re.search(r"except\s*:", code):
-            issues.append({
-                "type": "quality",
-                "message": "Bare 'except:' clause catches all exceptions. Use specific exception types.",
-                "severity": "medium",
-            })
+            issues.append(
+                {
+                    "type": "quality",
+                    "message": "Bare 'except:' clause catches all exceptions. Use specific exception types.",
+                    "severity": "medium",
+                }
+            )
             score -= 10
 
         # Check for hardcoded secrets
-        if re.search(r"(?:password|secret|api_key|token)\s*=\s*['\"][^'\"]+['\"]", code, re.IGNORECASE):
-            issues.append({
-                "type": "security",
-                "message": "Hardcoded secret detected. Use environment variables instead.",
-                "severity": "high",
-            })
+        if re.search(
+            r"(?:password|secret|api_key|token)\s*=\s*['\"][^'\"]+['\"]", code, re.IGNORECASE
+        ):
+            issues.append(
+                {
+                    "type": "security",
+                    "message": "Hardcoded secret detected. Use environment variables instead.",
+                    "severity": "high",
+                }
+            )
             score -= 20
 
         # Check for type hints (Python 3+)
@@ -240,12 +248,16 @@ class CodeAgent(Agent):
             "summary": self._generate_review_summary(score, issues, suggestions),
         }
 
-    def think(self, task: str, context: Optional[Dict[str, Any]] = None) -> Optional[AgentAction]:
+    def think(self, task: str, context: dict[str, Any] | None = None) -> AgentAction | None:
         """Decide action based on current state."""
         # Check if last execution had errors
         if self.observation_history:
             last_obs = self.observation_history[-1]
-            if not last_obs.success and self._current_code and self._debug_count < self.max_debug_iterations:
+            if (
+                not last_obs.success
+                and self._current_code
+                and self._debug_count < self.max_debug_iterations
+            ):
                 # Debug the code
                 error_msg = last_obs.observation_text
                 fixed_code = self.debug(self._current_code, error_msg)
@@ -334,7 +346,19 @@ class CodeAgent(Agent):
             fixed = "\n".join(new_lines)
 
         # Fix missing colons after control statements
-        for keyword in ["if", "elif", "else", "for", "while", "def", "class", "try", "except", "finally", "with"]:
+        for keyword in [
+            "if",
+            "elif",
+            "else",
+            "for",
+            "while",
+            "def",
+            "class",
+            "try",
+            "except",
+            "finally",
+            "with",
+        ]:
             pattern = rf"^(\s*{keyword}\s+.+[^:])$"
             fixed = re.sub(pattern, r"\1:", fixed, flags=re.MULTILINE)
 
@@ -362,14 +386,14 @@ class CodeAgent(Agent):
     def _template_generate(self, specification: str, language: str) -> str:
         """Template-based code generation fallback."""
         return (
-            f'# Generated {language} code for: {specification}\n'
-            f'def solution():\n'
+            f"# Generated {language} code for: {specification}\n"
+            f"def solution():\n"
             f'    """Solution for: {specification}"""\n'
-            f'    # TODO: Implement the solution\n'
-            f'    pass\n\n'
+            f"    # TODO: Implement the solution\n"
+            f"    pass\n\n"
             f'if __name__ == "__main__":\n'
-            f'    result = solution()\n'
-            f'    print(result)\n'
+            f"    result = solution()\n"
+            f"    print(result)\n"
         )
 
     def _format_success_response(self) -> str:

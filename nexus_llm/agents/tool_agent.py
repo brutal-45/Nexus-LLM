@@ -9,12 +9,12 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 from nexus_llm.agents.base import Agent, AgentAction, AgentConfig, AgentObservation
 from nexus_llm.agents.executor import ActionExecutor
-from nexus_llm.agents.memory import AgentMemory, ShortTermMemory
-from nexus_llm.agents.tools import Tool, ToolResult
+from nexus_llm.agents.memory import AgentMemory
+from nexus_llm.agents.tools import Tool
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +29,11 @@ class ToolAgent(Agent):
 
     def __init__(
         self,
-        config: Optional[AgentConfig] = None,
-        tools: Optional[Dict[str, Tool]] = None,
-        memory: Optional[AgentMemory] = None,
-        llm_fn: Optional[Callable] = None,
-        executor: Optional[ActionExecutor] = None,
+        config: AgentConfig | None = None,
+        tools: dict[str, Tool] | None = None,
+        memory: AgentMemory | None = None,
+        llm_fn: Callable | None = None,
+        executor: ActionExecutor | None = None,
     ):
         config = config or AgentConfig(
             name="ToolAgent",
@@ -49,7 +49,7 @@ class ToolAgent(Agent):
         super().add_tool(tool)
         self.executor.register_tool(tool)
 
-    def think(self, task: str, context: Optional[Dict[str, Any]] = None) -> Optional[AgentAction]:
+    def think(self, task: str, context: dict[str, Any] | None = None) -> AgentAction | None:
         """Decide which tool to use based on the task."""
         # If we already have observations, check if we can respond
         if self.observation_history:
@@ -81,12 +81,14 @@ class ToolAgent(Agent):
             )
         return super().act(action)
 
-    def _llm_select_tool(self, task: str) -> Optional[AgentAction]:
+    def _llm_select_tool(self, task: str) -> AgentAction | None:
         """Use LLM to select and configure a tool call."""
         tool_descriptions = []
         for name, tool in self.tools.items():
             params_desc = json.dumps(tool.parameters, indent=2) if tool.parameters else "{}"
-            tool_descriptions.append(f"Tool: {name}\nDescription: {tool.description}\nParameters: {params_desc}")
+            tool_descriptions.append(
+                f"Tool: {name}\nDescription: {tool.description}\nParameters: {params_desc}"
+            )
 
         tools_text = "\n\n".join(tool_descriptions)
 
@@ -96,7 +98,7 @@ class ToolAgent(Agent):
             obs_parts = []
             for i, obs in enumerate(self.observation_history[-3:]):
                 obs_parts.append(f"Step {i + 1}: {obs.observation_text[:200]}")
-            obs_text = f"\nPrevious results:\n" + "\n".join(obs_parts)
+            obs_text = "\nPrevious results:\n" + "\n".join(obs_parts)
 
         prompt = (
             f"You are a tool-using agent. Select the best tool to complete the task.\n\n"
@@ -104,7 +106,7 @@ class ToolAgent(Agent):
             f"Available tools:\n{tools_text}\n\n"
             f"Respond with JSON:\n"
             f'{{"tool": "tool_name", "args": {{"param": "value"}}, "thought": "reasoning"}}\n'
-            f'Or if the task is complete:\n'
+            f"Or if the task is complete:\n"
             f'{{"respond": "final answer", "thought": "reasoning"}}'
         )
 
@@ -115,7 +117,7 @@ class ToolAgent(Agent):
             logger.error("LLM tool selection failed: %s", e)
             return self._rule_select_tool(task)
 
-    def _parse_tool_response(self, response: str) -> Optional[AgentAction]:
+    def _parse_tool_response(self, response: str) -> AgentAction | None:
         """Parse LLM response into a tool call or direct response."""
         json_match = re.search(r"\{[^{}]*\}", response, re.DOTALL)
         if not json_match:
@@ -151,14 +153,17 @@ class ToolAgent(Agent):
         except json.JSONDecodeError:
             return AgentAction(action_type="respond", response=response.strip())
 
-    def _rule_select_tool(self, task: str) -> Optional[AgentAction]:
+    def _rule_select_tool(self, task: str) -> AgentAction | None:
         """Rule-based tool selection."""
         task_lower = task.lower()
 
         # Pattern matching for tool selection
         tool_patterns = {
             "calculator": [
-                (r"(?:calculate|compute|what is|solve|evaluate)\s+([\d\+\-\*\/\.\(\)\s\^]+)", "expression"),
+                (
+                    r"(?:calculate|compute|what is|solve|evaluate)\s+([\d\+\-\*\/\.\(\)\s\^]+)",
+                    "expression",
+                ),
             ],
             "search": [
                 (r"(?:search|look up|find)\s+(?:for\s+)?(.+?)(?:\?*$)", "query"),
@@ -235,11 +240,15 @@ class ToolAgent(Agent):
         if not parts:
             errors = [obs.observation_text for obs in self.observation_history if not obs.success]
             if errors:
-                return f"I encountered errors while trying to complete the task:\n" + "\n".join(errors)
+                return "I encountered errors while trying to complete the task:\n" + "\n".join(
+                    errors
+                )
             return "I was unable to complete the task."
 
         # Combine results into a coherent response
         if len(parts) == 1:
             return parts[0]
 
-        return "Here are the results:\n\n" + "\n\n".join(f"{i + 1}. {p}" for i, p in enumerate(parts))
+        return "Here are the results:\n\n" + "\n\n".join(
+            f"{i + 1}. {p}" for i, p in enumerate(parts)
+        )

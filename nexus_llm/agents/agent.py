@@ -7,12 +7,11 @@ memory, and planning capabilities.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
 
 from nexus_llm.agents.config import AgentConfig
+from nexus_llm.agents.executor import Executor
+from nexus_llm.agents.planner import Planner
 from nexus_llm.agents.tool_registry import ToolRegistry
-from nexus_llm.agents.planner import Planner, Plan, Step
-from nexus_llm.agents.executor import Executor, ExecutionResult
 from nexus_llm.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -21,6 +20,7 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 # Agent memory
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class AgentMemory:
@@ -31,8 +31,8 @@ class AgentMemory:
         actions: List of action descriptions taken.
     """
 
-    observations: List[str] = field(default_factory=list)
-    actions: List[str] = field(default_factory=list)
+    observations: list[str] = field(default_factory=list)
+    actions: list[str] = field(default_factory=list)
 
     def add_observation(self, obs: str) -> None:
         self.observations.append(obs)
@@ -56,6 +56,7 @@ class AgentMemory:
 # ---------------------------------------------------------------------------
 # Agent result
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class AgentResult:
@@ -84,6 +85,7 @@ class AgentResult:
 # Agent
 # ---------------------------------------------------------------------------
 
+
 class Agent:
     """ReAct-style agent with tool access, memory, and planning.
 
@@ -103,10 +105,10 @@ class Agent:
 
     def __init__(
         self,
-        config: Optional[AgentConfig] = None,
-        tool_registry: Optional[ToolRegistry] = None,
-        planner: Optional[Planner] = None,
-        executor: Optional[Executor] = None,
+        config: AgentConfig | None = None,
+        tool_registry: ToolRegistry | None = None,
+        planner: Planner | None = None,
+        executor: Executor | None = None,
     ) -> None:
         self.config = config or AgentConfig()
         self.tools = tool_registry or ToolRegistry()

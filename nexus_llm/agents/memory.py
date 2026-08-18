@@ -10,13 +10,12 @@ import hashlib
 import json
 import logging
 import math
-import os
 import time
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +30,8 @@ class MemoryItem:
     access_count: int = 0
     last_accessed: float = field(default_factory=time.time)
     importance: float = 0.5  # 0.0 to 1.0
-    tags: List[str] = field(default_factory=list)
-    ttl: Optional[float] = None  # Time-to-live in seconds
+    tags: list[str] = field(default_factory=list)
+    ttl: float | None = None  # Time-to-live in seconds
 
     @property
     def age(self) -> float:
@@ -77,7 +76,7 @@ class MemoryItem:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "MemoryItem":
+    def from_dict(cls, data: dict) -> MemoryItem:
         """Deserialize from dictionary."""
         return cls(
             key=data["key"],
@@ -110,7 +109,7 @@ class AgentMemory(ABC):
         ...
 
     @abstractmethod
-    def search(self, query: str, top_k: int = 5) -> List[Tuple[str, Any, float]]:
+    def search(self, query: str, top_k: int = 5) -> list[tuple[str, Any, float]]:
         """Search memory for relevant items."""
         ...
 
@@ -132,7 +131,7 @@ class ShortTermMemory(AgentMemory):
     eviction policy and optional time-to-live expiration.
     """
 
-    def __init__(self, capacity: int = 100, default_ttl: Optional[float] = 3600.0):
+    def __init__(self, capacity: int = 100, default_ttl: float | None = 3600.0):
         """Initialize short-term memory.
 
         Args:
@@ -143,7 +142,15 @@ class ShortTermMemory(AgentMemory):
         self.default_ttl = default_ttl
         self._items: OrderedDict[str, MemoryItem] = OrderedDict()
 
-    def store(self, key: str, value: Any, importance: float = 0.5, tags: Optional[List[str]] = None, ttl: Optional[float] = None, **kwargs) -> None:
+    def store(
+        self,
+        key: str,
+        value: Any,
+        importance: float = 0.5,
+        tags: list[str] | None = None,
+        ttl: float | None = None,
+        **kwargs,
+    ) -> None:
         """Store a value in short-term memory."""
         # Evict if at capacity
         while len(self._items) >= self.capacity:
@@ -179,10 +186,10 @@ class ShortTermMemory(AgentMemory):
             return True
         return False
 
-    def search(self, query: str, top_k: int = 5) -> List[Tuple[str, Any, float]]:
+    def search(self, query: str, top_k: int = 5) -> list[tuple[str, Any, float]]:
         """Search short-term memory by key/tag similarity."""
         query_lower = query.lower()
-        results: List[Tuple[str, Any, float]] = []
+        results: list[tuple[str, Any, float]] = []
 
         for key, item in self._items.items():
             if item.is_expired:
@@ -239,15 +246,23 @@ class LongTermMemory(AgentMemory):
     importance-weighted retention. Supports disk persistence.
     """
 
-    def __init__(self, capacity: int = 10000, persist_path: Optional[str] = None):
+    def __init__(self, capacity: int = 10000, persist_path: str | None = None):
         self.capacity = capacity
         self.persist_path = Path(persist_path) if persist_path else None
-        self._items: Dict[str, MemoryItem] = {}
+        self._items: dict[str, MemoryItem] = {}
 
         if self.persist_path and self.persist_path.exists():
             self._load_from_disk()
 
-    def store(self, key: str, value: Any, importance: float = 0.5, tags: Optional[List[str]] = None, ttl: Optional[float] = None, **kwargs) -> None:
+    def store(
+        self,
+        key: str,
+        value: Any,
+        importance: float = 0.5,
+        tags: list[str] | None = None,
+        ttl: float | None = None,
+        **kwargs,
+    ) -> None:
         """Store a value in long-term memory."""
         if len(self._items) >= self.capacity:
             self._evict_lowest_importance()
@@ -280,10 +295,10 @@ class LongTermMemory(AgentMemory):
             return True
         return False
 
-    def search(self, query: str, top_k: int = 5) -> List[Tuple[str, Any, float]]:
+    def search(self, query: str, top_k: int = 5) -> list[tuple[str, Any, float]]:
         """Search long-term memory by key, tag, and value content."""
         query_lower = query.lower()
-        results: List[Tuple[str, Any, float]] = []
+        results: list[tuple[str, Any, float]] = []
 
         for key, item in self._items.items():
             score = 0.0
@@ -302,7 +317,7 @@ class LongTermMemory(AgentMemory):
                 score += 0.5
 
             # Boost by importance and access frequency
-            score *= (0.5 + 0.5 * item.importance)
+            score *= 0.5 + 0.5 * item.importance
             if item.access_count > 0:
                 score *= min(1.0 + 0.1 * math.log1p(item.access_count), 2.0)
 
@@ -345,7 +360,7 @@ class LongTermMemory(AgentMemory):
             return
 
         try:
-            with open(self.persist_path, "r", encoding="utf-8") as f:
+            with open(self.persist_path, encoding="utf-8") as f:
                 data = json.load(f)
             self._items = {key: MemoryItem.from_dict(item_data) for key, item_data in data.items()}
             logger.info("Loaded %d items from long-term memory.", len(self._items))
@@ -357,13 +372,15 @@ class LongTermMemory(AgentMemory):
 class Episode:
     """A recorded episode (experience) in episodic memory."""
 
-    episode_id: str = field(default_factory=lambda: hashlib.md5(str(time.time()).encode()).hexdigest()[:12])
+    episode_id: str = field(
+        default_factory=lambda: hashlib.md5(str(time.time()).encode()).hexdigest()[:12]
+    )
     event: str = ""
-    context: Dict[str, Any] = field(default_factory=dict)
+    context: dict[str, Any] = field(default_factory=dict)
     outcome: str = ""
     timestamp: float = field(default_factory=time.time)
     emotional_valence: float = 0.0  # -1.0 (negative) to 1.0 (positive)
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -387,7 +404,7 @@ class EpisodicMemory(AgentMemory):
 
     def __init__(self, capacity: int = 1000):
         self.capacity = capacity
-        self._episodes: List[Episode] = []
+        self._episodes: list[Episode] = []
 
     def store(self, key: str, value: Any, **kwargs) -> None:
         """Store an episode (key=event, value=outcome)."""
@@ -408,9 +425,9 @@ class EpisodicMemory(AgentMemory):
         self,
         event: str,
         outcome: str = "",
-        context: Optional[Dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
         emotional_valence: float = 0.0,
-        tags: Optional[List[str]] = None,
+        tags: list[str] | None = None,
     ) -> Episode:
         """Record a new episode.
 
@@ -451,10 +468,10 @@ class EpisodicMemory(AgentMemory):
         self._episodes = [ep for ep in self._episodes if key.lower() not in ep.event.lower()]
         return len(self._episodes) < original_len
 
-    def search(self, query: str, top_k: int = 5) -> List[Tuple[str, Any, float]]:
+    def search(self, query: str, top_k: int = 5) -> list[tuple[str, Any, float]]:
         """Search episodic memory for relevant episodes."""
         query_lower = query.lower()
-        scored_episodes: List[Tuple[Episode, float]] = []
+        scored_episodes: list[tuple[Episode, float]] = []
 
         for episode in self._episodes:
             score = 0.0
@@ -475,28 +492,28 @@ class EpisodicMemory(AgentMemory):
             # Recency boost (exponential decay)
             age_hours = (time.time() - episode.timestamp) / 3600
             recency_factor = math.exp(-0.1 * age_hours)
-            score *= (0.5 + 0.5 * recency_factor)
+            score *= 0.5 + 0.5 * recency_factor
 
             # Emotional salience boost
-            score *= (1.0 + 0.3 * abs(episode.emotional_valence))
+            score *= 1.0 + 0.3 * abs(episode.emotional_valence)
 
             if score > 0:
                 scored_episodes.append((episode, score))
 
         scored_episodes.sort(key=lambda x: x[1], reverse=True)
-        return [
-            (ep.event, ep.outcome, score)
-            for ep, score in scored_episodes[:top_k]
-        ]
+        return [(ep.event, ep.outcome, score) for ep, score in scored_episodes[:top_k]]
 
-    def recall_recent(self, n: int = 5) -> List[Episode]:
+    def recall_recent(self, n: int = 5) -> list[Episode]:
         """Recall the n most recent episodes."""
         return self._episodes[-n:]
 
-    def recall_by_emotion(self, valence_range: Tuple[float, float] = (-1.0, 0.0), top_k: int = 5) -> List[Episode]:
+    def recall_by_emotion(
+        self, valence_range: tuple[float, float] = (-1.0, 0.0), top_k: int = 5
+    ) -> list[Episode]:
         """Recall episodes within a range of emotional valence."""
         filtered = [
-            ep for ep in self._episodes
+            ep
+            for ep in self._episodes
             if valence_range[0] <= ep.emotional_valence <= valence_range[1]
         ]
         filtered.sort(key=lambda x: abs(x.emotional_valence), reverse=True)

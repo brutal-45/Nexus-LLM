@@ -10,10 +10,10 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
-from nexus_llm.agents.base import Agent, AgentAction, AgentAction, AgentConfig, AgentObservation
-from nexus_llm.agents.memory import ShortTermMemory, AgentMemory
+from nexus_llm.agents.base import Agent, AgentAction, AgentConfig
+from nexus_llm.agents.memory import AgentMemory
 from nexus_llm.agents.tools import Tool
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class ConversationContext:
 
     def __init__(self, max_history: int = 20):
         self.max_history = max_history
-        self._messages: List[Dict[str, str]] = []
+        self._messages: list[dict[str, str]] = []
         self._summary: str = ""
 
     def add_user_message(self, content: str) -> None:
@@ -37,11 +37,11 @@ class ConversationContext:
         self._messages.append({"role": "assistant", "content": content})
         self._trim_history()
 
-    def get_messages(self) -> List[Dict[str, str]]:
+    def get_messages(self) -> list[dict[str, str]]:
         """Get conversation messages."""
         return list(self._messages)
 
-    def get_recent_messages(self, n: int = 5) -> List[Dict[str, str]]:
+    def get_recent_messages(self, n: int = 5) -> list[dict[str, str]]:
         """Get the n most recent messages."""
         return self._messages[-n:]
 
@@ -59,23 +59,70 @@ class ConversationContext:
         """Trim history to max size, keeping the most recent messages."""
         if len(self._messages) > self.max_history * 2:
             # Keep a summary of older messages
-            old_messages = self._messages[:len(self._messages) - self.max_history]
+            old_messages = self._messages[: len(self._messages) - self.max_history]
             topics = self._extract_topics(old_messages)
             self._summary = f"Earlier conversation topics: {', '.join(topics[:5])}"
-            self._messages = self._messages[-self.max_history:]
+            self._messages = self._messages[-self.max_history :]
 
-    def _extract_topics(self, messages: List[Dict[str, str]]) -> List[str]:
+    def _extract_topics(self, messages: list[dict[str, str]]) -> list[str]:
         """Extract key topics from messages (simple keyword extraction)."""
         stop_words = {
-            "a", "an", "the", "is", "are", "was", "were", "i", "you", "me",
-            "my", "your", "we", "our", "it", "its", "this", "that", "and",
-            "or", "but", "in", "on", "at", "to", "for", "of", "with", "from",
-            "can", "could", "would", "should", "do", "does", "did", "have",
-            "has", "had", "will", "be", "been", "not", "no", "so", "if",
-            "what", "how", "why", "when", "where", "who", "which",
+            "a",
+            "an",
+            "the",
+            "is",
+            "are",
+            "was",
+            "were",
+            "i",
+            "you",
+            "me",
+            "my",
+            "your",
+            "we",
+            "our",
+            "it",
+            "its",
+            "this",
+            "that",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "of",
+            "with",
+            "from",
+            "can",
+            "could",
+            "would",
+            "should",
+            "do",
+            "does",
+            "did",
+            "have",
+            "has",
+            "had",
+            "will",
+            "be",
+            "been",
+            "not",
+            "no",
+            "so",
+            "if",
+            "what",
+            "how",
+            "why",
+            "when",
+            "where",
+            "who",
+            "which",
         }
 
-        word_counts: Dict[str, int] = {}
+        word_counts: dict[str, int] = {}
         for msg in messages:
             words = re.findall(r"\b[a-zA-Z]{3,}\b", msg["content"].lower())
             for word in words:
@@ -104,12 +151,12 @@ class ChatAgent(Agent):
 
     def __init__(
         self,
-        config: Optional[AgentConfig] = None,
-        tools: Optional[Dict[str, Tool]] = None,
-        memory: Optional[AgentMemory] = None,
-        llm_fn: Optional[Callable] = None,
+        config: AgentConfig | None = None,
+        tools: dict[str, Tool] | None = None,
+        memory: AgentMemory | None = None,
+        llm_fn: Callable | None = None,
         max_context_messages: int = 20,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
     ):
         config = config or AgentConfig(name="ChatAgent", description="A conversational agent")
         super().__init__(config=config, tools=tools, memory=memory, llm_fn=llm_fn)
@@ -121,7 +168,7 @@ class ChatAgent(Agent):
             "and maintain a natural conversation flow."
         )
 
-    def chat(self, message: str, context: Optional[Dict[str, Any]] = None) -> str:
+    def chat(self, message: str, context: dict[str, Any] | None = None) -> str:
         """Process a chat message and return a response.
 
         Args:
@@ -139,7 +186,7 @@ class ChatAgent(Agent):
         self.conversation.add_assistant_message(response)
         return response
 
-    def think(self, task: str, context: Optional[Dict[str, Any]] = None) -> Optional[AgentAction]:
+    def think(self, task: str, context: dict[str, Any] | None = None) -> AgentAction | None:
         """Decide how to respond to the user message."""
         conversation_context = self.conversation.format_for_prompt(n=10)
 
@@ -161,11 +208,15 @@ class ChatAgent(Agent):
         else:
             return self._rule_think(task, relevant_tools)
 
-    def _llm_think(self, task: str, prompt_parts: List[str], relevant_tools: List[Tool]) -> Optional[AgentAction]:
+    def _llm_think(
+        self, task: str, prompt_parts: list[str], relevant_tools: list[Tool]
+    ) -> AgentAction | None:
         """Use LLM to decide how to respond."""
-        tool_descriptions = "\n".join(
-            f"- {t.name}: {t.description}" for t in relevant_tools
-        ) if relevant_tools else "No tools needed."
+        tool_descriptions = (
+            "\n".join(f"- {t.name}: {t.description}" for t in relevant_tools)
+            if relevant_tools
+            else "No tools needed."
+        )
 
         prompt = "\n".join(prompt_parts) + (
             f"\n\nDecide how to respond. Either:\n"
@@ -174,7 +225,7 @@ class ChatAgent(Agent):
             f"Available tools:\n{tool_descriptions}\n\n"
             f"Respond in JSON format:\n"
             f'{{"action": "tool_call", "tool": "tool_name", "args": {{...}}, "thought": "why"}}\n'
-            f'or\n'
+            f"or\n"
             f'{{"action": "respond", "response": "your response", "thought": "why"}}'
         )
 
@@ -183,9 +234,12 @@ class ChatAgent(Agent):
             return self._parse_llm_response(response, relevant_tools)
         except Exception as e:
             logger.error("LLM thinking failed: %s", e)
-            return AgentAction(action_type="respond", response=f"I'd be happy to help, but I encountered a processing error. Could you rephrase your question?")
+            return AgentAction(
+                action_type="respond",
+                response="I'd be happy to help, but I encountered a processing error. Could you rephrase your question?",
+            )
 
-    def _parse_llm_response(self, response: str, relevant_tools: List[Tool]) -> Optional[AgentAction]:
+    def _parse_llm_response(self, response: str, relevant_tools: list[Tool]) -> AgentAction | None:
         """Parse the LLM's response into an AgentAction."""
         # Try to extract JSON from the response
         json_match = re.search(r"\{[^{}]*\}", response, re.DOTALL)
@@ -220,7 +274,7 @@ class ChatAgent(Agent):
         # Fallback: treat the whole response as a direct reply
         return AgentAction(action_type="respond", response=response.strip())
 
-    def _rule_think(self, task: str, relevant_tools: List[Tool]) -> AgentAction:
+    def _rule_think(self, task: str, relevant_tools: list[Tool]) -> AgentAction:
         """Rule-based thinking when LLM is not available."""
         task_lower = task.lower()
 
@@ -264,9 +318,21 @@ class ChatAgent(Agent):
 
         # Check for search queries
         if any(t.name == "search" for t in relevant_tools):
-            search_triggers = ["search", "look up", "find information", "what is", "who is", "tell me about"]
+            search_triggers = [
+                "search",
+                "look up",
+                "find information",
+                "what is",
+                "who is",
+                "tell me about",
+            ]
             if any(trigger in task_lower for trigger in search_triggers):
-                query = re.sub(r"^(search|look up|find information about|what is|who is|tell me about)\s+", "", task_lower, flags=re.IGNORECASE)
+                query = re.sub(
+                    r"^(search|look up|find information about|what is|who is|tell me about)\s+",
+                    "",
+                    task_lower,
+                    flags=re.IGNORECASE,
+                )
                 return AgentAction(
                     action_type="tool_call",
                     tool_name="search",
@@ -281,13 +347,25 @@ class ChatAgent(Agent):
             thought="No specific tool needed, responding conversationally.",
         )
 
-    def _find_relevant_tools(self, message: str) -> List[Tool]:
+    def _find_relevant_tools(self, message: str) -> list[Tool]:
         """Find tools that might be relevant to the message."""
         relevant = []
         message_lower = message.lower()
 
         keyword_map = {
-            "calculator": ["calculate", "math", "compute", "solve", "equation", "+", "-", "*", "/", "sum", "average"],
+            "calculator": [
+                "calculate",
+                "math",
+                "compute",
+                "solve",
+                "equation",
+                "+",
+                "-",
+                "*",
+                "/",
+                "sum",
+                "average",
+            ],
             "search": ["search", "look up", "find", "information", "what is", "who is"],
             "weather": ["weather", "temperature", "forecast", "rain", "sunny"],
             "file_read": ["read file", "open file", "show file", "cat", "file content"],
@@ -296,9 +374,8 @@ class ChatAgent(Agent):
         }
 
         for tool_name, keywords in keyword_map.items():
-            if tool_name in self.tools:
-                if any(kw in message_lower for kw in keywords):
-                    relevant.append(self.tools[tool_name])
+            if tool_name in self.tools and any(kw in message_lower for kw in keywords):
+                relevant.append(self.tools[tool_name])
 
         return relevant
 
@@ -311,7 +388,7 @@ class ChatAgent(Agent):
         context_summary = "Based on our conversation, "
 
         if len(recent) > 1:
-            context_summary += f"we've been discussing related topics. "
+            context_summary += "we've been discussing related topics. "
 
         context_summary += f"Regarding your question about '{message[:50]}', "
         context_summary += "I'd need more specific information to give you a detailed answer. Could you clarify what you're looking for?"

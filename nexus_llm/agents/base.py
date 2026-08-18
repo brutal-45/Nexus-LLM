@@ -7,14 +7,13 @@ and configurable behavior.
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 from nexus_llm.agents.memory import AgentMemory, ShortTermMemory
 from nexus_llm.agents.tools import Tool, ToolResult
@@ -41,13 +40,13 @@ class AgentConfig:
     name: str = "Agent"
     description: str = "A general-purpose agent"
     max_iterations: int = 10
-    thinking_model: Optional[str] = None
+    thinking_model: str | None = None
     verbose: bool = False
     temperature: float = 0.7
     max_tokens: int = 2048
     timeout: float = 300.0  # seconds
     retry_attempts: int = 2
-    tools: List[str] = field(default_factory=list)
+    tools: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -55,10 +54,10 @@ class AgentAction:
     """An action taken by the agent."""
 
     action_type: str  # "tool_call", "respond", "think"
-    tool_name: Optional[str] = None
-    tool_args: Optional[Dict[str, Any]] = None
-    thought: Optional[str] = None
-    response: Optional[str] = None
+    tool_name: str | None = None
+    tool_args: dict[str, Any] | None = None
+    thought: str | None = None
+    response: str | None = None
     timestamp: float = field(default_factory=time.time)
 
     def to_dict(self) -> dict:
@@ -77,7 +76,7 @@ class AgentObservation:
     """An observation from the environment after an action."""
 
     action: AgentAction
-    result: Optional[ToolResult] = None
+    result: ToolResult | None = None
     observation_text: str = ""
     success: bool = True
     timestamp: float = field(default_factory=time.time)
@@ -97,10 +96,10 @@ class Agent(ABC):
 
     def __init__(
         self,
-        config: Optional[AgentConfig] = None,
-        tools: Optional[Dict[str, Tool]] = None,
-        memory: Optional[AgentMemory] = None,
-        llm_fn: Optional[Callable] = None,
+        config: AgentConfig | None = None,
+        tools: dict[str, Tool] | None = None,
+        memory: AgentMemory | None = None,
+        llm_fn: Callable | None = None,
     ):
         """Initialize the agent.
 
@@ -111,16 +110,16 @@ class Agent(ABC):
             llm_fn: LLM function for generation. Takes prompt, returns response.
         """
         self.config = config or AgentConfig()
-        self.tools: Dict[str, Tool] = tools or {}
+        self.tools: dict[str, Tool] = tools or {}
         self.memory = memory or ShortTermMemory()
         self.llm_fn = llm_fn
 
         self.agent_id = str(uuid.uuid4())[:8]
         self.state = AgentState.IDLE
         self.iteration = 0
-        self.action_history: List[AgentAction] = []
-        self.observation_history: List[AgentObservation] = []
-        self._current_task: Optional[str] = None
+        self.action_history: list[AgentAction] = []
+        self.observation_history: list[AgentObservation] = []
+        self._current_task: str | None = None
 
     def add_tool(self, tool: Tool) -> None:
         """Register a tool with the agent."""
@@ -134,7 +133,7 @@ class Agent(ABC):
             return True
         return False
 
-    def run(self, task: str, context: Optional[Dict[str, Any]] = None) -> str:
+    def run(self, task: str, context: dict[str, Any] | None = None) -> str:
         """Execute the think/act/observe loop for a task.
 
         Args:
@@ -163,7 +162,9 @@ class Agent(ABC):
 
         while self.iteration < self.config.max_iterations:
             if time.time() - start_time > self.config.timeout:
-                logger.warning("Agent %s timed out after %.1fs.", self.config.name, self.config.timeout)
+                logger.warning(
+                    "Agent %s timed out after %.1fs.", self.config.name, self.config.timeout
+                )
                 final_response = "I ran out of time while processing your request."
                 self.state = AgentState.ERROR
                 break
@@ -223,7 +224,7 @@ class Agent(ABC):
         return final_response
 
     @abstractmethod
-    def think(self, task: str, context: Optional[Dict[str, Any]] = None) -> Optional[AgentAction]:
+    def think(self, task: str, context: dict[str, Any] | None = None) -> AgentAction | None:
         """Decide what action to take based on current state.
 
         Args:
@@ -264,7 +265,6 @@ class Agent(ABC):
 
         Override in subclasses for custom observation handling.
         """
-        pass
 
     def _execute_tool(self, action: AgentAction) -> AgentObservation:
         """Execute a tool call action."""
@@ -343,7 +343,7 @@ class Agent(ABC):
         self.observation_history.clear()
         self._current_task = None
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Get the current status of the agent."""
         return {
             "agent_id": self.agent_id,

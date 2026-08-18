@@ -6,10 +6,8 @@ Chains multiple agents sequentially, passing outputs between them.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
 
 from nexus_llm.agents.agent import Agent, AgentResult
-from nexus_llm.agents.config import AgentConfig
 from nexus_llm.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -18,6 +16,7 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 # Chain result
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ChainResult:
@@ -32,20 +31,18 @@ class ChainResult:
 
     task: str
     final_answer: str
-    agent_results: List[AgentResult] = field(default_factory=list)
+    agent_results: list[AgentResult] = field(default_factory=list)
     success: bool = True
 
     def summary(self) -> str:
         status = "SUCCESS" if self.success else "PARTIAL/FAILED"
-        return (
-            f"[{status}] agents={len(self.agent_results)} "
-            f"answer={self.final_answer[:100]}"
-        )
+        return f"[{status}] agents={len(self.agent_results)} " f"answer={self.final_answer[:100]}"
 
 
 # ---------------------------------------------------------------------------
 # Agent chain
 # ---------------------------------------------------------------------------
+
 
 class AgentChain:
     """Sequential chain of agents that pass outputs between them.
@@ -60,14 +57,15 @@ class AgentChain:
 
     def __init__(
         self,
-        agents: Optional[List[Agent]] = None,
+        agents: list[Agent] | None = None,
         name: str = "agent-chain",
     ) -> None:
-        self.agents: List[Agent] = agents or []
+        self.agents: list[Agent] = agents or []
         self.name = name
         logger.info(
             "AgentChain '%s' initialised with %d agent(s)",
-            name, len(self.agents),
+            name,
+            len(self.agents),
         )
 
     # ------------------------------------------------------------------
@@ -95,7 +93,7 @@ class AgentChain:
                 success=False,
             )
 
-        agent_results: List[AgentResult] = []
+        agent_results: list[AgentResult] = []
         current_input = task
         all_success = True
 
@@ -114,7 +112,10 @@ class AgentChain:
 
             logger.info(
                 "Chain '%s' – running agent %d/%d: %s",
-                self.name, i + 1, len(self.agents), agent_name,
+                self.name,
+                i + 1,
+                len(self.agents),
+                agent_name,
             )
             result = agent.run(augmented_input)
             agent_results.append(result)
@@ -122,7 +123,9 @@ class AgentChain:
             if not result.success:
                 all_success = False
                 logger.warning(
-                    "Agent '%s' failed at chain position %d", agent_name, i + 1,
+                    "Agent '%s' failed at chain position %d",
+                    agent_name,
+                    i + 1,
                 )
 
         final_answer = agent_results[-1].answer if agent_results else ""
@@ -150,7 +153,9 @@ class AgentChain:
         if 0 <= index < len(self.agents):
             removed = self.agents.pop(index)
             logger.debug(
-                "Removed agent '%s' from chain '%s'", removed.config.name, self.name,
+                "Removed agent '%s' from chain '%s'",
+                removed.config.name,
+                self.name,
             )
             return True
         return False
@@ -160,7 +165,9 @@ class AgentChain:
         self.agents.insert(index, agent)
         logger.debug(
             "Inserted agent '%s' at position %d in chain '%s'",
-            agent.config.name, index, self.name,
+            agent.config.name,
+            index,
+            self.name,
         )
 
     @property

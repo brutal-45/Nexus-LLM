@@ -8,7 +8,6 @@ CodeRun, Weather, and extensible Tool base class.
 from __future__ import annotations
 
 import ast
-import json
 import logging
 import math
 import operator
@@ -18,9 +17,9 @@ import sys
 import tempfile
 import time
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +31,7 @@ class ToolResult:
     success: bool
     output: str = ""
     error: str = ""
-    data: Optional[Dict[str, Any]] = None
+    data: dict[str, Any] | None = None
     execution_time: float = 0.0
 
     def __repr__(self) -> str:
@@ -44,7 +43,7 @@ class ToolResult:
 class Tool(ABC):
     """Abstract base class for agent tools."""
 
-    def __init__(self, name: str, description: str, parameters: Optional[Dict[str, Any]] = None):
+    def __init__(self, name: str, description: str, parameters: dict[str, Any] | None = None):
         """Initialize a tool.
 
         Args:
@@ -247,18 +246,22 @@ class SearchTool(Tool):
         results = []
         for key, content in self.MOCK_DATABASE.items():
             if key in query or any(word in content.lower() for word in query.split()):
-                results.append({
-                    "title": f"Result for: {key}",
-                    "snippet": content,
-                    "relevance": 0.9 if key in query else 0.5,
-                })
+                results.append(
+                    {
+                        "title": f"Result for: {key}",
+                        "snippet": content,
+                        "relevance": 0.9 if key in query else 0.5,
+                    }
+                )
 
         if not results:
-            results.append({
-                "title": "General result",
-                "snippet": f"No specific results found for '{query}'. This is a simulated search tool.",
-                "relevance": 0.1,
-            })
+            results.append(
+                {
+                    "title": "General result",
+                    "snippet": f"No specific results found for '{query}'. This is a simulated search tool.",
+                    "relevance": 0.1,
+                }
+            )
 
         results.sort(key=lambda x: x["relevance"], reverse=True)
         output = "\n".join(f"- {r['title']}: {r['snippet']}" for r in results[:3])
@@ -273,7 +276,7 @@ class SearchTool(Tool):
 class FileReadTool(Tool):
     """File reading tool for agents."""
 
-    def __init__(self, allowed_dirs: Optional[List[str]] = None):
+    def __init__(self, allowed_dirs: list[str] | None = None):
         super().__init__(
             name="file_read",
             description="Read the contents of a file from the filesystem.",
@@ -281,8 +284,14 @@ class FileReadTool(Tool):
                 "type": "object",
                 "properties": {
                     "path": {"type": "string", "description": "Path to the file to read."},
-                    "encoding": {"type": "string", "description": "File encoding (default: utf-8)."},
-                    "max_lines": {"type": "integer", "description": "Maximum number of lines to read."},
+                    "encoding": {
+                        "type": "string",
+                        "description": "File encoding (default: utf-8).",
+                    },
+                    "max_lines": {
+                        "type": "integer",
+                        "description": "Maximum number of lines to read.",
+                    },
                 },
                 "required": ["path"],
             },
@@ -306,7 +315,9 @@ class FileReadTool(Tool):
             return ToolResult(success=False, error="No file path provided.")
 
         if not self._is_path_allowed(path):
-            return ToolResult(success=False, error=f"Access denied: path '{path}' is not in allowed directories.")
+            return ToolResult(
+                success=False, error=f"Access denied: path '{path}' is not in allowed directories."
+            )
 
         try:
             file_path = Path(path)
@@ -334,7 +345,7 @@ class FileReadTool(Tool):
 class FileWriteTool(Tool):
     """File writing tool for agents."""
 
-    def __init__(self, allowed_dirs: Optional[List[str]] = None):
+    def __init__(self, allowed_dirs: list[str] | None = None):
         super().__init__(
             name="file_write",
             description="Write content to a file on the filesystem.",
@@ -343,7 +354,10 @@ class FileWriteTool(Tool):
                 "properties": {
                     "path": {"type": "string", "description": "Path to the file to write."},
                     "content": {"type": "string", "description": "Content to write to the file."},
-                    "mode": {"type": "string", "description": "Write mode: 'write' or 'append' (default: 'write')."},
+                    "mode": {
+                        "type": "string",
+                        "description": "Write mode: 'write' or 'append' (default: 'write').",
+                    },
                 },
                 "required": ["path", "content"],
             },
@@ -365,7 +379,9 @@ class FileWriteTool(Tool):
         if not path:
             return ToolResult(success=False, error="No file path provided.")
         if not self._is_path_allowed(path):
-            return ToolResult(success=False, error=f"Access denied: path '{path}' is not in allowed directories.")
+            return ToolResult(
+                success=False, error=f"Access denied: path '{path}' is not in allowed directories."
+            )
 
         try:
             file_path = Path(path)
@@ -399,7 +415,10 @@ class CodeRunTool(Tool):
                 "type": "object",
                 "properties": {
                     "code": {"type": "string", "description": "Python code to execute."},
-                    "timeout": {"type": "integer", "description": f"Execution timeout in seconds (default: {timeout})."},
+                    "timeout": {
+                        "type": "integer",
+                        "description": f"Execution timeout in seconds (default: {timeout}).",
+                    },
                 },
                 "required": ["code"],
             },
@@ -440,11 +459,15 @@ class CodeRunTool(Tool):
             except OSError:
                 pass
 
-            stdout = result.stdout[:self.max_output_chars]
-            stderr = result.stderr[:self.max_output_chars]
+            stdout = result.stdout[: self.max_output_chars]
+            stderr = result.stderr[: self.max_output_chars]
 
             if result.returncode == 0:
-                output = stdout.strip() if stdout.strip() else "(Code executed successfully with no output)"
+                output = (
+                    stdout.strip()
+                    if stdout.strip()
+                    else "(Code executed successfully with no output)"
+                )
                 return ToolResult(
                     success=True,
                     output=output,
@@ -542,5 +565,10 @@ class WeatherTool(Tool):
             return ToolResult(
                 success=True,
                 output=output,
-                data={"location": location, "temp": temp, "condition": condition, "simulated": True},
+                data={
+                    "location": location,
+                    "temp": temp,
+                    "condition": condition,
+                    "simulated": True,
+                },
             )

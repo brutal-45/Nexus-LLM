@@ -5,8 +5,8 @@ Defines the ``AgentConfig`` dataclass with sensible defaults.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -27,13 +27,18 @@ class AgentConfig:
 
     name: str = "default-agent"
     max_iterations: int = 10
-    tools: List[str] = field(default_factory=lambda: [
-        "calculator", "web_search", "file_read", "file_write",
-    ])
+    tools: list[str] = field(
+        default_factory=lambda: [
+            "calculator",
+            "web_search",
+            "file_read",
+            "file_write",
+        ]
+    )
     temperature: float = 0.7
     max_tokens: int = 1024
     verbose: bool = False
-    system_prompt: Optional[str] = None
+    system_prompt: str | None = None
     retry_attempts: int = 2
     retry_delay_seconds: float = 1.0
 
@@ -41,12 +46,12 @@ class AgentConfig:
     # Serialisation helpers
     # ------------------------------------------------------------------
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Return a plain dictionary representation."""
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "AgentConfig":
+    def from_dict(cls, data: dict[str, Any]) -> AgentConfig:
         """Create an ``AgentConfig`` from a dictionary.
 
         Unknown keys are silently ignored so that config files can be

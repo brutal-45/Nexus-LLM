@@ -6,17 +6,15 @@ sources, synthesize findings, and produce cited outputs.
 
 from __future__ import annotations
 
-import json
 import logging
-import re
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 from nexus_llm.agents.base import Agent, AgentAction, AgentConfig, AgentObservation
 from nexus_llm.agents.executor import ActionExecutor
-from nexus_llm.agents.memory import AgentMemory, ShortTermMemory
-from nexus_llm.agents.planner import Plan, Step, StepStatus, TaskPlanner
+from nexus_llm.agents.memory import AgentMemory
+from nexus_llm.agents.planner import Plan, TaskPlanner
 from nexus_llm.agents.tools import SearchTool, Tool
 
 logger = logging.getLogger(__name__)
@@ -61,12 +59,12 @@ class ResearchAgent(Agent):
 
     def __init__(
         self,
-        config: Optional[AgentConfig] = None,
-        tools: Optional[Dict[str, Tool]] = None,
-        memory: Optional[AgentMemory] = None,
-        llm_fn: Optional[Callable] = None,
-        executor: Optional[ActionExecutor] = None,
-        planner: Optional[TaskPlanner] = None,
+        config: AgentConfig | None = None,
+        tools: dict[str, Tool] | None = None,
+        memory: AgentMemory | None = None,
+        llm_fn: Callable | None = None,
+        executor: ActionExecutor | None = None,
+        planner: TaskPlanner | None = None,
     ):
         config = config or AgentConfig(
             name="ResearchAgent",
@@ -82,10 +80,10 @@ class ResearchAgent(Agent):
         self.executor = executor or ActionExecutor(tools=self.tools)
         self.planner = planner or TaskPlanner(llm_fn=llm_fn)
 
-        self._sources: List[Source] = []
-        self._research_plan: Optional[Plan] = None
+        self._sources: list[Source] = []
+        self._research_plan: Plan | None = None
         self._current_step_idx: int = 0
-        self._findings: List[str] = []
+        self._findings: list[str] = []
 
     def research(self, topic: str, depth: int = 3) -> str:
         """Conduct research on a topic.
@@ -108,7 +106,7 @@ class ResearchAgent(Agent):
         # Execute the research
         return self.run(topic, context={"depth": depth})
 
-    def think(self, task: str, context: Optional[Dict[str, Any]] = None) -> Optional[AgentAction]:
+    def think(self, task: str, context: dict[str, Any] | None = None) -> AgentAction | None:
         """Decide the next research action."""
         depth = (context or {}).get("depth", 3)
 
@@ -148,7 +146,9 @@ class ResearchAgent(Agent):
             obs = AgentObservation(
                 action=action,
                 result=result,
-                observation_text=result.output if result.success else f"Search error: {result.error}",
+                observation_text=(
+                    result.output if result.success else f"Search error: {result.error}"
+                ),
                 success=result.success,
             )
 
@@ -169,7 +169,7 @@ class ResearchAgent(Agent):
 
         return super().act(action)
 
-    def _generate_follow_up_queries(self, original_query: str) -> List[str]:
+    def _generate_follow_up_queries(self, original_query: str) -> list[str]:
         """Generate follow-up research queries."""
         if self.llm_fn:
             prompt = (
@@ -199,7 +199,7 @@ class ResearchAgent(Agent):
             return f"No research findings available for: {topic}"
 
         # Deduplicate sources
-        unique_sources: List[Source] = []
+        unique_sources: list[Source] = []
         seen_content: set = set()
         for source in self._sources:
             content_key = source.content[:50]
@@ -208,9 +208,7 @@ class ResearchAgent(Agent):
                 unique_sources.append(source)
 
         if self.llm_fn:
-            sources_text = "\n".join(
-                f"[{s.source_id}] {s.content}" for s in unique_sources
-            )
+            sources_text = "\n".join(f"[{s.source_id}] {s.content}" for s in unique_sources)
             prompt = (
                 f"Research topic: {topic}\n\n"
                 f"Sources:\n{sources_text}\n\n"
@@ -252,7 +250,7 @@ class ResearchAgent(Agent):
 
         return "\n".join(report_parts)
 
-    def get_sources(self) -> List[Source]:
+    def get_sources(self) -> list[Source]:
         """Get all gathered sources."""
         return list(self._sources)
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from nexus_llm.agents.planner import Plan, Step
 from nexus_llm.agents.tool_registry import ToolRegistry
@@ -19,6 +19,7 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 # Execution result
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class StepResult:
@@ -35,7 +36,7 @@ class StepResult:
     step_id: int
     success: bool
     output: str
-    error: Optional[str] = None
+    error: str | None = None
     duration_seconds: float = 0.0
 
 
@@ -51,7 +52,7 @@ class ExecutionResult:
     """
 
     plan: Plan
-    step_results: List[StepResult] = field(default_factory=list)
+    step_results: list[StepResult] = field(default_factory=list)
     success: bool = True
     final_output: str = ""
 
@@ -64,6 +65,7 @@ class ExecutionResult:
 # Executor
 # ---------------------------------------------------------------------------
 
+
 class Executor:
     """Execute plans step-by-step with error handling and retries.
 
@@ -75,7 +77,7 @@ class Executor:
 
     def __init__(
         self,
-        tool_registry: Optional[ToolRegistry] = None,
+        tool_registry: ToolRegistry | None = None,
         retry_attempts: int = 2,
         retry_delay: float = 1.0,
     ) -> None:
@@ -84,7 +86,8 @@ class Executor:
         self.retry_delay = retry_delay
         logger.info(
             "Executor initialised (retries=%d, delay=%.1fs)",
-            retry_attempts, retry_delay,
+            retry_attempts,
+            retry_delay,
         )
 
     # ------------------------------------------------------------------
@@ -101,14 +104,15 @@ class Executor:
         Returns:
             An :class:`ExecutionResult` with per-step details.
         """
-        step_outputs: Dict[int, str] = {}
-        results: List[StepResult] = []
+        step_outputs: dict[int, str] = {}
+        results: list[StepResult] = []
         all_success = True
 
         for step in plan.steps:
             # Inject outputs from dependency steps into parameters
             enriched_params = self._inject_dependencies(
-                step, step_outputs,
+                step,
+                step_outputs,
             )
 
             step_result = self._execute_with_retries(step, enriched_params)
@@ -146,10 +150,10 @@ class Executor:
     def _execute_with_retries(
         self,
         step: Step,
-        params: Dict[str, Any],
+        params: dict[str, Any],
     ) -> StepResult:
         """Try executing a step up to ``retry_attempts + 1`` times."""
-        last_error: Optional[str] = None
+        last_error: str | None = None
 
         for attempt in range(1, self.retry_attempts + 2):  # +1 for initial try
             start = time.monotonic()
@@ -158,7 +162,9 @@ class Executor:
                 duration = time.monotonic() - start
                 logger.debug(
                     "Step %d succeeded (attempt %d, %.2fs)",
-                    step.id, attempt, duration,
+                    step.id,
+                    attempt,
+                    duration,
                 )
                 return StepResult(
                     step_id=step.id,
@@ -171,7 +177,10 @@ class Executor:
                 last_error = str(exc)
                 logger.warning(
                     "Step %d failed (attempt %d/%d): %s",
-                    step.id, attempt, self.retry_attempts + 1, exc,
+                    step.id,
+                    attempt,
+                    self.retry_attempts + 1,
+                    exc,
                 )
                 if attempt <= self.retry_attempts:
                     time.sleep(self.retry_delay)
@@ -183,7 +192,7 @@ class Executor:
             error=last_error,
         )
 
-    def _run_step(self, step: Step, params: Dict[str, Any]) -> str:
+    def _run_step(self, step: Step, params: dict[str, Any]) -> str:
         """Execute a single step exactly once.
 
         Dependency outputs (``prev_output_N``) are filtered out of the
@@ -202,8 +211,10 @@ class Executor:
         return self.registry.execute(step.tool, **filtered)
 
     def _filter_params_for_tool(
-        self, tool_name: str, params: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        self,
+        tool_name: str,
+        params: dict[str, Any],
+    ) -> dict[str, Any]:
         """Remove keys the tool function doesn't accept.
 
         Dependency-injected keys (``prev_output_N``) are kept only if
@@ -235,8 +246,8 @@ class Executor:
     @staticmethod
     def _inject_dependencies(
         step: Step,
-        step_outputs: Dict[int, str],
-    ) -> Dict[str, Any]:
+        step_outputs: dict[int, str],
+    ) -> dict[str, Any]:
         """Inject outputs from dependency steps into step parameters.
 
         The output of dependency step N is available as ``prev_output_N``

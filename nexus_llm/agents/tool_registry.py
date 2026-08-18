@@ -11,7 +11,7 @@ import json
 import math
 import os
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 from nexus_llm.utils.logger import get_logger
 
@@ -21,6 +21,7 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 # Tool descriptor
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ToolInfo:
@@ -34,12 +35,13 @@ class ToolInfo:
 
     name: str
     description: str
-    parameters: Dict[str, str]
+    parameters: dict[str, str]
 
 
 # ---------------------------------------------------------------------------
 # Built-in tools
 # ---------------------------------------------------------------------------
+
 
 def _calculator(expression: str) -> str:
     """Evaluate a mathematical expression safely.
@@ -50,7 +52,7 @@ def _calculator(expression: str) -> str:
     allowed_names = {k: v for k, v in math.__dict__.items() if not k.startswith("_")}
     allowed_names.update({"abs": abs, "round": round, "min": min, "max": max})
     try:
-        result = eval(expression, {"__builtins__": {}}, allowed_names)  # noqa: S307
+        result = eval(expression, {"__builtins__": {}}, allowed_names)
         return str(result)
     except Exception as exc:
         return f"Error evaluating expression: {exc}"
@@ -58,23 +60,25 @@ def _calculator(expression: str) -> str:
 
 def _web_search(query: str) -> str:
     """Mock web search – returns placeholder results."""
-    return json.dumps({
-        "query": query,
-        "results": [
-            {
-                "title": f"Mock result for '{query}'",
-                "url": "https://example.com/mock",
-                "snippet": f"This is a mock search result for the query '{query}'. "
-                           f"In production, this would connect to a real search API.",
-            }
-        ],
-    })
+    return json.dumps(
+        {
+            "query": query,
+            "results": [
+                {
+                    "title": f"Mock result for '{query}'",
+                    "url": "https://example.com/mock",
+                    "snippet": f"This is a mock search result for the query '{query}'. "
+                    f"In production, this would connect to a real search API.",
+                }
+            ],
+        }
+    )
 
 
 def _file_read(path: str) -> str:
     """Read a text file and return its contents."""
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
         return f"Error: File not found: {path}"
@@ -93,7 +97,7 @@ def _file_write(path: str, content: str) -> str:
         return f"Error writing file: {exc}"
 
 
-_BUILTIN_TOOLS: Dict[str, Dict[str, Any]] = {
+_BUILTIN_TOOLS: dict[str, dict[str, Any]] = {
     "calculator": {
         "func": _calculator,
         "description": "Evaluate a mathematical expression and return the result.",
@@ -121,6 +125,7 @@ _BUILTIN_TOOLS: Dict[str, Dict[str, Any]] = {
 # Tool Registry
 # ---------------------------------------------------------------------------
 
+
 class ToolRegistry:
     """Central registry for agent tools.
 
@@ -129,8 +134,8 @@ class ToolRegistry:
     """
 
     def __init__(self) -> None:
-        self._tools: Dict[str, Callable] = {}
-        self._info: Dict[str, ToolInfo] = {}
+        self._tools: dict[str, Callable] = {}
+        self._info: dict[str, ToolInfo] = {}
 
         # Register built-ins
         for name, entry in _BUILTIN_TOOLS.items():
@@ -152,7 +157,7 @@ class ToolRegistry:
         name: str,
         func: Callable,
         description: str = "",
-        parameters: Optional[Dict[str, str]] = None,
+        parameters: dict[str, str] | None = None,
     ) -> None:
         """Register a new tool.
 
@@ -172,11 +177,11 @@ class ToolRegistry:
         )
         logger.debug("Registered tool: %s", name)
 
-    def get_tool(self, name: str) -> Optional[Callable]:
+    def get_tool(self, name: str) -> Callable | None:
         """Return the tool function by name, or ``None``."""
         return self._tools.get(name)
 
-    def list_tools(self) -> List[ToolInfo]:
+    def list_tools(self) -> list[ToolInfo]:
         """Return metadata for all registered tools."""
         return list(self._info.values())
 
