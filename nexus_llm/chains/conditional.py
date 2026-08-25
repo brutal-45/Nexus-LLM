@@ -1,125 +1,126 @@
-"""ConditionalChain — dispatches to a sub-chain based on predicate evaluation."""
+"""Base Chain class for multi-step workflow composition."""
 
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, List, Optional, Tuple
-
-from nexus_llm.chains.chain import Chain
+from abc import ABC, abstractmethod
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
 
-class ConditionalChain(Chain):
-    """Evaluate conditions in order and execute the first matching sub-chain.
+class Chain(ABC):
+    """Abstract base class for all chain types.
 
-    Conditions are ``(predicate, chain)`` pairs.  When :meth:`run` is called,
-    each predicate is evaluated against *input_data*.  The first predicate
-    that returns ``True`` causes its associated chain to be executed.
-
-    If no predicate matches and a *default_chain* is set, the default is used.
-    Otherwise a :class:`ValueError` is raised.
-
-    Parameters
-    ----------
-    name:
-        Human-readable name for the chain.
-    default_chain:
-        Optional fallback chain when no condition matches.
+    A Chain represents a composable multi-step workflow where each step is a
+    callable that receives input data and produces output.  Subclasses define
+    *how* steps are executed (sequentially, in parallel, conditionally, etc.).
     """
 
-    def __init__(
-        self,
-        name: str,
-        default_chain: Optional[Chain] = None,
-    ) -> None:
-        super().__init__(name=name)
-        self._conditions: List[Tuple[Callable[[Any], bool], Chain]] = []
-        self.default_chain = default_chain
+    def __init__(self, name: str, steps: list[Callable] | None = None) -> None:
+        self.name: str = name
+        self._steps: list[Callable] = list(steps) if steps else []
+        self._metadata: dict[str, Any] = {}
 
     # ------------------------------------------------------------------
-    # Condition management
+    # Properties
     # ------------------------------------------------------------------
 
-    def add_condition(self, condition_fn: Callable[[Any], bool], chain: Chain) -> "ConditionalChain":
-        """Register a condition → chain pair.
+    @property
+    def steps(self) -> list[Callable]:
+        """Return a shallow copy of the step list."""
+        return list(self._steps)
+
+    @property
+    def step_count(self) -> int:
+        return len(self._steps)
+
+    # ------------------------------------------------------------------
+    # Step management
+    # ------------------------------------------------------------------
+
+    def add_step(self, step: Callable) -> Chain:
+        """Append a step to the chain and return *self* for fluent usage.
 
         Parameters
         ----------
-        condition_fn:
-            A callable that accepts *input_data* and returns ``True`` when the
-            associated *chain* should be executed.
-        chain:
-            The :class:`Chain` to run when *condition_fn* matches.
+        step:
+            A callable that accepts one positional argument (the input data)
+            and returns a result.
 
         Raises
         ------
         TypeError
-            If *condition_fn* is not callable or *chain* is not a :class:`Chain`.
+            If *step* is not callable.
         """
-        if not callable(condition_fn):
-            raise TypeError(f"condition_fn must be callable, got {type(condition_fn)!r}")
-        if not isinstance(chain, Chain):
-            raise TypeError(f"chain must be a Chain instance, got {type(chain)!r}")
-        self._conditions.append((condition_fn, chain))
-        logger.debug(
-            "Added condition to chain %r (total conditions: %d)",
-            self.name, len(self._conditions),
-        )
+        if not callable(step):
+            raise TypeError(f"Step must be callable, got {type(step)!r}")
+        self._steps.append(step)
+        logger.debug("Added step %r to chain %r", getattr(step, "__name__", step), self.name)
         return self
 
-    def remove_condition(self, index: int) -> None:
-        """Remove the condition at *index*."""
-        if index < 0 or index >= len(self._conditions):
-            raise IndexError(f"Condition index {index} out of range")
-        self._conditions.pop(index)
+    def remove_step(self, index: int) -> None:
+        """Remove the step at *index*.
 
-    @property
-    def conditions(self) -> List[Tuple[Callable[[Any], bool], Chain]]:
-        """Return a shallow copy of the condition list."""
-        return list(self._conditions)
+        Raises
+        ------
+        IndexError
+            If *index* is out of range.
+        """
+        if index < 0 or index >= len(self._steps):
+            raise IndexError(f"Step index {index} out of range (0-{len(self._steps) - 1})")
+        removed = self._steps.pop(index)
+        logger.debug(
+            "Removed step %r from chain %r", getattr(removed, "__name__", removed), self.name
+        )
+
+    def insert_step(self, index: int, step: Callable) -> None:
+        """Insert *step* at *index*."""
+        if not callable(step):
+            raise TypeError(f"Step must be callable, got {type(step)!r}")
+        self._steps.insert(index, step)
+        logger.debug(
+            "Inserted step %r at index %d in chain %r",
+            getattr(step, "__name__", step),
+            index,
+            self.name,
+        )
 
     # ------------------------------------------------------------------
     # Validation
     # ------------------------------------------------------------------
 
     def validate(self) -> bool:
-        """Return ``True`` if at least one condition or a default chain exists."""
-        if self._conditions:
-            return True
-        if self.default_chain is not None and self.default_chain.validate():
-            return True
-        return False
+        """Return ``True`` if the chain is in a valid state.
+
+        A chain is considered valid when:
+        * It has at least one step.
+        * Every step is callable.
+        """
+        if not self._steps:
+            logger.warning("Chain %r has no steps", self.name)
+            return False
+        for i, step in enumerate(self._steps):
+            if not callable(step):
+                logger.warning("Step %d in chain %r is not callable", i, self.name)
+                return False
+        return True
 
     # ------------------------------------------------------------------
     # Execution
     # ------------------------------------------------------------------
 
-    def run(self, input_data: Any = None) -> Any:
-        """Evaluate conditions and run the first matching chain.
+    @abstractmethod
+    def run(self, input_data: Any) -> Any:
+        """Execute the chain with *input_data* and return the result."""
+        ...
 
-        Raises
-        ------
-        ValueError
-            If no condition matches and no default chain is set.
-        """
-        for idx, (condition_fn, chain) in enumerate(self._conditions):
-            try:
-                matches = bool(condition_fn(input_data))
-            except Exception as exc:
-                logger.warning(
-                    "Chain %r condition %d raised %s — skipping",
-                    self.name, idx, exc,
-                )
-                continue
+    # ------------------------------------------------------------------
+    # Dunder helpers
+    # ------------------------------------------------------------------
 
-            if matches:
-                logger.debug("Chain %r matched condition %d — executing sub-chain", self.name, idx)
-                return chain.run(input_data)
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(name={self.name!r}, steps={self.step_count})"
 
-        # No condition matched — try the default.
-        if self.default_chain is not None:
-            logger.debug("Chain %r — no condition matched, running default chain", self.name)
-            return self.default_chain.run(input_data)
-
-        raise ValueError(f"No condition matched for chain {self.name!r} and no default chain set")
+    def __len__(self) -> int:
+        return self.step_count
