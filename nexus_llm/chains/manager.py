@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 from nexus_llm.chains.chain import Chain
-from nexus_llm.chains.sequential import SequentialChain
-from nexus_llm.chains.parallel import ParallelChain
 from nexus_llm.chains.conditional import ConditionalChain
+from nexus_llm.chains.parallel import ParallelChain
+from nexus_llm.chains.sequential import SequentialChain
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class ChainManager:
     """
 
     def __init__(self) -> None:
-        self._chains: Dict[str, Chain] = {}
+        self._chains: dict[str, Chain] = {}
 
     # ------------------------------------------------------------------
     # Factory helpers
@@ -41,13 +41,13 @@ class ChainManager:
     def create_chain(
         self,
         name: str,
-        steps: Optional[List[Callable]] = None,
+        steps: list[Callable] | None = None,
         *,
         chain_type: str = "sequential",
         max_retries: int = 0,
         retry_delay: float = 0.0,
-        max_workers: Optional[int] = None,
-        default_chain: Optional[Chain] = None,
+        max_workers: int | None = None,
+        default_chain: Chain | None = None,
     ) -> Chain:
         """Create a new chain and register it.
 
@@ -126,7 +126,7 @@ class ChainManager:
     # Listing
     # ------------------------------------------------------------------
 
-    def list_chains(self) -> List[str]:
+    def list_chains(self) -> list[str]:
         """Return a sorted list of registered chain names."""
         return sorted(self._chains.keys())
 
