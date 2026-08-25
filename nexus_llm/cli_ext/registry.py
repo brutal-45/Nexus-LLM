@@ -3,20 +3,20 @@
 from __future__ import annotations
 
 import threading
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable
 
 
 class _Command:
     """Internal representation of a registered command."""
 
-    __slots__ = ("name", "func", "help_text")
+    __slots__ = ("func", "help_text", "name")
 
     def __init__(self, name: str, func: Callable, help_text: str) -> None:
         self.name = name
         self.func = func
         self.help_text = help_text
 
-    def __repr__(self) -> str:  # noqa: D105
+    def __repr__(self) -> str:
         return f"<Command {self.name!r}>"
 
 
@@ -35,7 +35,7 @@ class CommandRegistry:
 
     def __init__(self, name: str = "root") -> None:
         self._name = name
-        self._commands: Dict[str, _Command] = {}
+        self._commands: dict[str, _Command] = {}
         self._lock = threading.RLock()
 
     # ------------------------------------------------------------------
@@ -61,12 +61,9 @@ class CommandRegistry:
         with self._lock:
             if name in self._commands:
                 raise ValueError(
-                    f"Command '{name}' is already registered in "
-                    f"group '{self._name}'."
+                    f"Command '{name}' is already registered in " f"group '{self._name}'."
                 )
-            self._commands[name] = _Command(
-                name=name, func=command_func, help_text=help_text
-            )
+            self._commands[name] = _Command(name=name, func=command_func, help_text=help_text)
 
     def unregister(self, name: str) -> None:
         """Remove a registered command.
@@ -79,22 +76,20 @@ class CommandRegistry:
         """
         with self._lock:
             if name not in self._commands:
-                raise KeyError(
-                    f"Command '{name}' not found in group '{self._name}'."
-                )
+                raise KeyError(f"Command '{name}' not found in group '{self._name}'.")
             del self._commands[name]
 
     # ------------------------------------------------------------------
     # Lookup
     # ------------------------------------------------------------------
 
-    def get_command(self, name: str) -> Optional[Callable]:
+    def get_command(self, name: str) -> Callable | None:
         """Return the callable for *name*, or ``None`` if not found."""
         with self._lock:
             cmd = self._commands.get(name)
             return cmd.func if cmd else None
 
-    def get_help(self, name: str) -> Optional[str]:
+    def get_help(self, name: str) -> str | None:
         """Return the help text for *name*, or ``None``."""
         with self._lock:
             cmd = self._commands.get(name)
@@ -104,19 +99,17 @@ class CommandRegistry:
     # Listing
     # ------------------------------------------------------------------
 
-    def list_commands(self) -> List[str]:
+    def list_commands(self) -> list[str]:
         """Return a sorted list of registered command names."""
         with self._lock:
             return sorted(self._commands.keys())
 
-    def list_commands_with_help(self) -> List[Tuple[str, str]]:
+    def list_commands_with_help(self) -> list[tuple[str, str]]:
         """Return ``[(name, help_text), ...]`` sorted by name."""
         with self._lock:
             return [
                 (cmd.name, cmd.help_text)
-                for cmd in sorted(
-                    self._commands.values(), key=lambda c: c.name
-                )
+                for cmd in sorted(self._commands.values(), key=lambda c: c.name)
             ]
 
     # ------------------------------------------------------------------
@@ -138,9 +131,7 @@ class CommandRegistry:
         """
         cmd = self._commands.get(name)
         if cmd is None:
-            raise KeyError(
-                f"Command '{name}' not found in group '{self._name}'."
-            )
+            raise KeyError(f"Command '{name}' not found in group '{self._name}'.")
         return cmd.func(*args, **kwargs)
 
     # ------------------------------------------------------------------
@@ -155,11 +146,8 @@ class CommandRegistry:
     def __contains__(self, name: str) -> bool:  # type: ignore[override]
         return name in self._commands
 
-    def __len__(self) -> int:  # noqa: D105
+    def __len__(self) -> int:
         return len(self._commands)
 
-    def __repr__(self) -> str:  # noqa: D105
-        return (
-            f"<CommandRegistry name={self._name!r} "
-            f"commands={len(self._commands)}>"
-        )
+    def __repr__(self) -> str:
+        return f"<CommandRegistry name={self._name!r} " f"commands={len(self._commands)}>"

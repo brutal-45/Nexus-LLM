@@ -10,14 +10,14 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Collection
 from pathlib import Path
-from typing import Any, Collection, List, Optional, Sequence, Union
 from urllib.parse import urlparse
-
 
 # ---------------------------------------------------------------------------
 # Model name validator
 # ---------------------------------------------------------------------------
+
 
 def validate_model_name(value: str) -> str:
     """Validate a model name or HuggingFace model ID.
@@ -42,14 +42,16 @@ def validate_model_name(value: str) -> str:
     value = value.strip()
 
     # Allow local paths
-    if value.startswith("/") or value.startswith("./") or value.startswith("~"):
+    if value.startswith(("/", "./", "~")):
         path = Path(value).expanduser()
         if not path.exists():
             raise ValueError(f"Model path does not exist: {value}")
         return str(path)
 
     # Validate HuggingFace model ID format: org/model-name or model-name
-    pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?(/[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?)?$"
+    pattern = (
+        r"^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?(/[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?)?$"
+    )
     if not re.match(pattern, value):
         raise ValueError(
             f"Invalid model name '{value}'. Must be a HuggingFace model ID "
@@ -62,6 +64,7 @@ def validate_model_name(value: str) -> str:
 # ---------------------------------------------------------------------------
 # Path validator
 # ---------------------------------------------------------------------------
+
 
 def validate_path(
     value: str,
@@ -119,10 +122,11 @@ def validate_path(
 # URL validator
 # ---------------------------------------------------------------------------
 
+
 def validate_url(
     value: str,
     *,
-    allowed_schemes: Optional[List[str]] = None,
+    allowed_schemes: list[str] | None = None,
 ) -> str:
     """Validate a URL.
 
@@ -152,8 +156,7 @@ def validate_url(
 
     if parsed.scheme not in schemes:
         raise ValueError(
-            f"URL scheme '{parsed.scheme}' not allowed. "
-            f"Allowed schemes: {', '.join(schemes)}"
+            f"URL scheme '{parsed.scheme}' not allowed. " f"Allowed schemes: {', '.join(schemes)}"
         )
 
     if not parsed.hostname:
@@ -166,7 +169,8 @@ def validate_url(
 # Port validator
 # ---------------------------------------------------------------------------
 
-def validate_port(value: Union[str, int]) -> int:
+
+def validate_port(value: str | int) -> int:
     """Validate a network port number.
 
     Args:
@@ -189,6 +193,7 @@ def validate_port(value: Union[str, int]) -> int:
     # Warn about well-known ports
     if port < 1024:
         import warnings
+
         warnings.warn(
             f"Port {port} is a well-known port and may require elevated privileges.",
             UserWarning,
@@ -202,11 +207,12 @@ def validate_port(value: Union[str, int]) -> int:
 # Numeric validators
 # ---------------------------------------------------------------------------
 
+
 def validate_positive_int(
-    value: Union[str, int],
+    value: str | int,
     *,
     min_value: int = 1,
-    max_value: Optional[int] = None,
+    max_value: int | None = None,
 ) -> int:
     """Validate a positive integer.
 
@@ -236,10 +242,10 @@ def validate_positive_int(
 
 
 def validate_float_range(
-    value: Union[str, float],
+    value: str | float,
     *,
-    min_value: Optional[float] = None,
-    max_value: Optional[float] = None,
+    min_value: float | None = None,
+    max_value: float | None = None,
     name: str = "value",
 ) -> float:
     """Validate a float within an optional range.
@@ -274,6 +280,7 @@ def validate_float_range(
 # Choice validator
 # ---------------------------------------------------------------------------
 
+
 def validate_choice(
     value: str,
     choices: Collection[str],
@@ -300,9 +307,8 @@ def validate_choice(
         matched = lower_choices.get(value.lower())
         if matched is not None:
             return matched
-    else:
-        if value in choices:
-            return value
+    elif value in choices:
+        return value
 
     choices_str = ", ".join(f"'{c}'" for c in sorted(choices))
     raise ValueError(f"{name} must be one of: {choices_str}, got '{value}'")
@@ -311,6 +317,7 @@ def validate_choice(
 # ---------------------------------------------------------------------------
 # File extension validator
 # ---------------------------------------------------------------------------
+
 
 def validate_file_extension(
     value: str,
@@ -347,8 +354,7 @@ def validate_file_extension(
     if compare_ext not in normalized_exts:
         ext_str = ", ".join(f"'{e}'" for e in sorted(normalized_exts))
         raise ValueError(
-            f"File extension '{file_ext}' not allowed. "
-            f"Allowed extensions: {ext_str}"
+            f"File extension '{file_ext}' not allowed. " f"Allowed extensions: {ext_str}"
         )
 
     return value

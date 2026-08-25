@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from nexus_llm.cli_ext.registry import CommandRegistry
@@ -86,5 +86,5 @@ class CLIExtension(abc.ABC):
     # Dunder helpers
     # ------------------------------------------------------------------
 
-    def __repr__(self) -> str:  # noqa: D105
+    def __repr__(self) -> str:
         return f"<CLIExtension name={self._name!r} version={self._version!r}>"

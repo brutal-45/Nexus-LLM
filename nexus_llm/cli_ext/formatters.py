@@ -10,10 +10,11 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any
 
 try:
     import yaml
+
     HAS_YAML = True
 except ImportError:
     HAS_YAML = False
@@ -22,6 +23,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Abstract base
 # ---------------------------------------------------------------------------
+
 
 class OutputFormatter(ABC):
     """Abstract base class for output formatters."""
@@ -47,6 +49,7 @@ class OutputFormatter(ABC):
 # Table Formatter
 # ---------------------------------------------------------------------------
 
+
 class TableFormatter(OutputFormatter):
     """Formats data as an ASCII table with aligned columns.
 
@@ -65,7 +68,7 @@ class TableFormatter(OutputFormatter):
         self,
         data: Any,
         *,
-        headers: Optional[List[str]] = None,
+        headers: list[str] | None = None,
         max_col_width: int = DEFAULT_MAX_COL_WIDTH,
         padding: int = DEFAULT_PADDING,
         show_borders: bool = False,
@@ -101,12 +104,7 @@ class TableFormatter(OutputFormatter):
             rows = [[str(item)] for item in data]
 
         # Truncate long values
-        rows = [
-            [
-                self._truncate(cell, max_col_width) for cell in row
-            ]
-            for row in rows
-        ]
+        rows = [[self._truncate(cell, max_col_width) for cell in row] for row in rows]
 
         # Calculate column widths
         col_widths = [len(h) for h in headers]
@@ -118,24 +116,20 @@ class TableFormatter(OutputFormatter):
         pad = " " * padding
 
         # Build output
-        lines: List[str] = []
+        lines: list[str] = []
 
         if show_borders:
             lines.append(self._separator(col_widths, padding))
 
         # Header
-        header_line = pad.join(
-            h.ljust(col_widths[i]) for i, h in enumerate(headers)
-        )
+        header_line = pad.join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
         lines.append(header_line)
 
         if show_borders:
             lines.append(self._separator(col_widths, padding))
         else:
             # Underline header
-            lines.append(pad.join(
-                "-" * col_widths[i] for i in range(len(headers))
-            ))
+            lines.append(pad.join("-" * col_widths[i] for i in range(len(headers))))
 
         # Data rows
         for row in rows:
@@ -158,12 +152,14 @@ class TableFormatter(OutputFormatter):
         return text[: max_width - 3] + "..."
 
     @staticmethod
-    def _separator(col_widths: List[int], padding: int) -> str:
+    def _separator(col_widths: list[int], padding: int) -> str:
         """Create a horizontal separator line."""
         pad_sep = "-" * padding
-        return "+" + pad_sep.join(
-            "-" * w for w in col_widths
-        ).replace(pad_sep, "-" * padding) + "+" if padding > 0 else ""
+        return (
+            "+" + pad_sep.join("-" * w for w in col_widths).replace(pad_sep, "-" * padding) + "+"
+            if padding > 0
+            else ""
+        )
         # Simplified separator
         inner = ("-" * padding).join("-" * w for w in col_widths)
         return f"+{inner}+"
@@ -172,6 +168,7 @@ class TableFormatter(OutputFormatter):
 # ---------------------------------------------------------------------------
 # JSON Formatter
 # ---------------------------------------------------------------------------
+
 
 class JsonFormatter(OutputFormatter):
     """Formats data as pretty-printed JSON."""
@@ -209,6 +206,7 @@ class JsonFormatter(OutputFormatter):
 # YAML Formatter
 # ---------------------------------------------------------------------------
 
+
 class YamlFormatter(OutputFormatter):
     """Formats data as YAML."""
 
@@ -236,9 +234,7 @@ class YamlFormatter(OutputFormatter):
             ImportError: If PyYAML is not installed.
         """
         if not HAS_YAML:
-            return "# YAML output requires PyYAML\n" + json.dumps(
-                data, indent=2, default=str
-            )
+            return "# YAML output requires PyYAML\n" + json.dumps(data, indent=2, default=str)
 
         return yaml.dump(
             data,
@@ -252,7 +248,7 @@ class YamlFormatter(OutputFormatter):
 # Unified format function
 # ---------------------------------------------------------------------------
 
-_FORMATTERS: Dict[str, OutputFormatter] = {
+_FORMATTERS: dict[str, OutputFormatter] = {
     "table": TableFormatter(),
     "json": JsonFormatter(),
     "yaml": YamlFormatter(),
@@ -280,7 +276,5 @@ def format_output(
     formatter = _FORMATTERS.get(fmt)
     if formatter is None:
         supported = ", ".join(_FORMATTERS.keys())
-        raise ValueError(
-            f"Unsupported format '{fmt}'. Supported: {supported}"
-        )
+        raise ValueError(f"Unsupported format '{fmt}'. Supported: {supported}")
     return formatter.format(data, **kwargs)

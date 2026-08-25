@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 from nexus_llm.cli_ext.extension import CLIExtension
-
-if TYPE_CHECKING:
-    from nexus_llm.cli_ext.registry import CommandRegistry
 
 
 class CLIPlugin(CLIExtension):
@@ -32,8 +29,8 @@ class CLIPlugin(CLIExtension):
 
     def __init__(self, name: str, version: str = "0.1.0") -> None:
         super().__init__(name, version)
-        self._subcommands: Dict[str, Dict[str, Dict[str, Any]]] = {}
-        self._hooks: Dict[str, Dict[str, List[Callable]]] = {
+        self._subcommands: dict[str, dict[str, dict[str, Any]]] = {}
+        self._hooks: dict[str, dict[str, list[Callable]]] = {
             "before": {},
             "after": {},
         }
@@ -62,13 +59,11 @@ class CLIPlugin(CLIExtension):
             "help_text": help_text,
         }
 
-    def get_subcommands(self, parent: str) -> Dict[str, Dict[str, Any]]:
+    def get_subcommands(self, parent: str) -> dict[str, dict[str, Any]]:
         """Return all subcommands registered under *parent*."""
         return dict(self._subcommands.get(parent, {}))
 
-    def execute_subcommand(
-        self, parent: str, name: str, *args: Any, **kwargs: Any
-    ) -> Any:
+    def execute_subcommand(self, parent: str, name: str, *args: Any, **kwargs: Any) -> Any:
         """Execute a registered subcommand.
 
         Args:
@@ -87,9 +82,7 @@ class CLIPlugin(CLIExtension):
             raise KeyError(f"No subcommands registered under '{parent}'.")
         sub = parent_cmds.get(name)
         if sub is None:
-            raise KeyError(
-                f"Subcommand '{name}' not found under '{parent}'."
-            )
+            raise KeyError(f"Subcommand '{name}' not found under '{parent}'.")
         return sub["func"](*args, **kwargs)
 
     # ------------------------------------------------------------------
@@ -113,20 +106,16 @@ class CLIPlugin(CLIExtension):
             ValueError: If *phase* is not ``"before"`` or ``"after"``.
         """
         if phase not in ("before", "after"):
-            raise ValueError(
-                f"Invalid hook phase '{phase}'. Must be 'before' or 'after'."
-            )
+            raise ValueError(f"Invalid hook phase '{phase}'. Must be 'before' or 'after'.")
         self._hooks[phase].setdefault(command, []).append(callback)
 
-    def get_hooks(self, phase: str, command: str) -> List[Callable]:
+    def get_hooks(self, phase: str, command: str) -> list[Callable]:
         """Return the hooks registered for a given phase and command."""
         if phase not in ("before", "after"):
             raise ValueError(f"Invalid phase '{phase}'.")
         return list(self._hooks[phase].get(command, []))
 
-    def run_hooks(
-        self, phase: str, command: str, *args: Any, **kwargs: Any
-    ) -> None:
+    def run_hooks(self, phase: str, command: str, *args: Any, **kwargs: Any) -> None:
         """Execute all hooks for *phase* and *command*.
 
         Hooks are executed in registration order.  If a hook raises an
