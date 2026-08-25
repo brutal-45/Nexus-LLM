@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable
 
 from nexus_llm.chains.chain import Chain
 
@@ -34,9 +34,9 @@ class ParallelChain(Chain):
     def __init__(
         self,
         name: str,
-        steps: Optional[List[Callable]] = None,
-        max_workers: Optional[int] = None,
-        timeout: Optional[float] = None,
+        steps: list[Callable] | None = None,
+        max_workers: int | None = None,
+        timeout: float | None = None,
     ) -> None:
         super().__init__(name=name, steps=steps)
         self.max_workers = max_workers
@@ -46,7 +46,7 @@ class ParallelChain(Chain):
     # Execution
     # ------------------------------------------------------------------
 
-    def run(self, input_data: Any = None) -> List[Any]:
+    def run(self, input_data: Any = None) -> list[Any]:
         """Run all steps concurrently and return a list of results.
 
         The returned list is ordered to match the step insertion order.
@@ -59,8 +59,8 @@ class ParallelChain(Chain):
         if not self.validate():
             raise RuntimeError(f"Chain {self.name!r} is not valid (no steps or non-callable step)")
 
-        results: List[Any] = [None] * len(self._steps)
-        errors: List[Optional[Exception]] = [None] * len(self._steps)
+        results: list[Any] = [None] * len(self._steps)
+        errors: list[Exception | None] = [None] * len(self._steps)
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             # Submit all steps, keeping track of index for ordered results.
@@ -75,13 +75,16 @@ class ParallelChain(Chain):
                     results[idx] = future.result(timeout=self.timeout)
                     logger.debug(
                         "Chain %r parallel step %d completed",
-                        self.name, idx,
+                        self.name,
+                        idx,
                     )
                 except Exception as exc:
                     errors[idx] = exc
                     logger.error(
                         "Chain %r parallel step %d failed: %s",
-                        self.name, idx, exc,
+                        self.name,
+                        idx,
+                        exc,
                     )
 
         # If any step failed, raise the first error encountered.
