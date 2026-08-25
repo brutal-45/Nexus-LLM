@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable
 
 from nexus_llm.chains.chain import Chain
 
@@ -33,7 +33,7 @@ class SequentialChain(Chain):
     def __init__(
         self,
         name: str,
-        steps: Optional[List[Callable]] = None,
+        steps: list[Callable] | None = None,
         max_retries: int = 0,
         retry_delay: float = 0.0,
     ) -> None:
@@ -68,7 +68,9 @@ class SequentialChain(Chain):
             result = self._run_step_with_retries(step, step_name, idx, result)
             logger.debug(
                 "Chain %r step %d (%s) completed → %s",
-                self.name, idx, step_name,
+                self.name,
+                idx,
+                step_name,
                 type(result).__name__,
             )
         return result
@@ -85,7 +87,7 @@ class SequentialChain(Chain):
         input_data: Any,
     ) -> Any:
         """Execute a single step with optional retry logic."""
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
         attempts = 1 + self.max_retries
 
         for attempt in range(attempts):
@@ -96,15 +98,23 @@ class SequentialChain(Chain):
                 if attempt < self.max_retries:
                     logger.warning(
                         "Chain %r step %d (%s) failed on attempt %d/%d: %s — retrying",
-                        self.name, step_index, step_name,
-                        attempt + 1, attempts, exc,
+                        self.name,
+                        step_index,
+                        step_name,
+                        attempt + 1,
+                        attempts,
+                        exc,
                     )
                     if self.retry_delay > 0:
                         time.sleep(self.retry_delay)
                 else:
                     logger.error(
                         "Chain %r step %d (%s) failed after %d attempt(s): %s",
-                        self.name, step_index, step_name, attempts, exc,
+                        self.name,
+                        step_index,
+                        step_name,
+                        attempts,
+                        exc,
                     )
 
         raise StepError(
