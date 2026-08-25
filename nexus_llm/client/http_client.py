@@ -4,13 +4,15 @@ Provides the HttpClient for making synchronous HTTP requests to
 the Nexus-LLM API server.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
-from urllib.request import Request, urlopen
+from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +30,9 @@ class HttpClientConfig:
     """
 
     base_url: str = "http://localhost:8000"
-    api_key: Optional[str] = None
+    api_key: str | None = None
     timeout: int = 60
-    headers: Dict[str, str] = field(default_factory=dict)
+    headers: dict[str, str] = field(default_factory=dict)
     verify_ssl: bool = True
 
 
@@ -46,7 +48,7 @@ class HttpClient:
         response = client.chat(messages=[{"role": "user", "content": "Hello!"}])
     """
 
-    def __init__(self, config: Optional[HttpClientConfig] = None) -> None:
+    def __init__(self, config: HttpClientConfig | None = None) -> None:
         self._config = config or HttpClientConfig()
         self._session_headers = self._build_headers()
         logger.debug("HttpClient initialized: %s", self._config.base_url)
@@ -57,12 +59,12 @@ class HttpClient:
 
     def chat(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         model: str = "",
         temperature: float = 0.7,
         max_tokens: int = 2048,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Send a chat completion request.
 
         Args:
@@ -91,7 +93,7 @@ class HttpClient:
         max_tokens: int = 2048,
         temperature: float = 0.7,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Send a text completion request.
 
         Args:
@@ -118,7 +120,7 @@ class HttpClient:
         input_text: Any,
         model: str = "",
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Send an embedding request.
 
         Args:
@@ -132,7 +134,7 @@ class HttpClient:
         payload = {"input": input_text, "model": model, **kwargs}
         return self._post("/v1/embeddings", payload)
 
-    def list_models(self) -> Dict[str, Any]:
+    def list_models(self) -> dict[str, Any]:
         """List available models.
 
         Returns:
@@ -140,7 +142,7 @@ class HttpClient:
         """
         return self._get("/v1/models")
 
-    def get_model(self, model_id: str) -> Dict[str, Any]:
+    def get_model(self, model_id: str) -> dict[str, Any]:
         """Get details for a specific model.
 
         Args:
@@ -151,7 +153,7 @@ class HttpClient:
         """
         return self._get(f"/v1/models/{model_id}")
 
-    def health(self) -> Dict[str, Any]:
+    def health(self) -> dict[str, Any]:
         """Check server health.
 
         Returns:
@@ -159,19 +161,19 @@ class HttpClient:
         """
         return self._get("/health")
 
-    def _get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """Make a GET request."""
         url = f"{self._config.base_url}{path}"
         if params:
             url += "?" + urlencode(params)
         return self._request("GET", url)
 
-    def _post(self, path: str, data: Any) -> Dict[str, Any]:
+    def _post(self, path: str, data: Any) -> dict[str, Any]:
         """Make a POST request."""
         url = f"{self._config.base_url}{path}"
         return self._request("POST", url, data=data)
 
-    def _request(self, method: str, url: str, data: Any = None) -> Dict[str, Any]:
+    def _request(self, method: str, url: str, data: Any = None) -> dict[str, Any]:
         """Make an HTTP request."""
         body = None
         if data is not None:
@@ -199,7 +201,7 @@ class HttpClient:
         except Exception as exc:
             return {"error": str(exc)}
 
-    def _build_headers(self) -> Dict[str, str]:
+    def _build_headers(self) -> dict[str, str]:
         """Build default request headers."""
         headers = dict(self._config.headers)
         if self._config.api_key:

@@ -5,8 +5,10 @@ for interacting with the Nexus-LLM platform, combining synchronous
 and asynchronous client features.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from nexus_llm.client.http_client import HttpClient, HttpClientConfig
 
@@ -40,7 +42,7 @@ class NexusSDK:
     def __init__(
         self,
         base_url: str = "http://localhost:8000",
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         timeout: int = 60,
         default_model: str = "",
     ) -> None:
@@ -53,11 +55,13 @@ class NexusSDK:
             default_model: Default model to use for requests.
         """
         self._default_model = default_model
-        self._client = HttpClient(HttpClientConfig(
-            base_url=base_url,
-            api_key=api_key,
-            timeout=timeout,
-        ))
+        self._client = HttpClient(
+            HttpClientConfig(
+                base_url=base_url,
+                api_key=api_key,
+                timeout=timeout,
+            )
+        )
         logger.info("NexusSDK initialized: base_url=%s, model=%s", base_url, default_model)
 
     @property
@@ -72,12 +76,12 @@ class NexusSDK:
     def chat(
         self,
         message: str,
-        model: Optional[str] = None,
-        system_prompt: Optional[str] = None,
+        model: str | None = None,
+        system_prompt: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 2048,
-        history: Optional[List[Dict[str, str]]] = None,
-    ) -> Dict[str, Any]:
+        history: list[dict[str, str]] | None = None,
+    ) -> dict[str, Any]:
         """Send a chat message and get a response.
 
         Args:
@@ -91,7 +95,7 @@ class NexusSDK:
         Returns:
             API response dictionary.
         """
-        messages: List[Dict[str, str]] = []
+        messages: list[dict[str, str]] = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         if history:
@@ -108,10 +112,10 @@ class NexusSDK:
     def complete(
         self,
         prompt: str,
-        model: Optional[str] = None,
+        model: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 2048,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate a text completion.
 
         Args:
@@ -133,8 +137,8 @@ class NexusSDK:
     def embed(
         self,
         texts: Any,
-        model: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        model: str | None = None,
+    ) -> dict[str, Any]:
         """Generate embeddings for text.
 
         Args:
@@ -149,7 +153,7 @@ class NexusSDK:
             model=model or self._default_model,
         )
 
-    def models(self) -> Dict[str, Any]:
+    def models(self) -> dict[str, Any]:
         """List available models.
 
         Returns:
@@ -157,7 +161,7 @@ class NexusSDK:
         """
         return self._client.list_models()
 
-    def model_info(self, model_id: str) -> Dict[str, Any]:
+    def model_info(self, model_id: str) -> dict[str, Any]:
         """Get information about a specific model.
 
         Args:
@@ -168,7 +172,7 @@ class NexusSDK:
         """
         return self._client.get_model(model_id)
 
-    def health(self) -> Dict[str, Any]:
+    def health(self) -> dict[str, Any]:
         """Check server health.
 
         Returns:
@@ -176,7 +180,7 @@ class NexusSDK:
         """
         return self._client.health()
 
-    def extract_text(self, response: Dict[str, Any]) -> str:
+    def extract_text(self, response: dict[str, Any]) -> str:
         """Extract the assistant's text from a chat response.
 
         Args:
@@ -193,7 +197,7 @@ class NexusSDK:
             pass
         return ""
 
-    def extract_embedding(self, response: Dict[str, Any], index: int = 0) -> List[float]:
+    def extract_embedding(self, response: dict[str, Any], index: int = 0) -> list[float]:
         """Extract an embedding vector from a response.
 
         Args:

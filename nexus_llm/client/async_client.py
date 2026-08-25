@@ -4,10 +4,15 @@ Provides the AsyncClient for making asynchronous HTTP requests to
 the Nexus-LLM API server using asyncio and aiohttp (or fallback).
 """
 
+from __future__ import annotations
+
 import json
 import logging
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any
+
+from typing_extensions import Self
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +30,10 @@ class AsyncClientConfig:
     """
 
     base_url: str = "http://localhost:8000"
-    api_key: Optional[str] = None
+    api_key: str | None = None
     timeout: int = 60
     max_connections: int = 10
-    headers: Dict[str, str] = field(default_factory=dict)
+    headers: dict[str, str] = field(default_factory=dict)
 
 
 class AsyncClient:
@@ -43,7 +48,7 @@ class AsyncClient:
         response = await client.chat(messages=[{"role": "user", "content": "Hello!"}])
     """
 
-    def __init__(self, config: Optional[AsyncClientConfig] = None) -> None:
+    def __init__(self, config: AsyncClientConfig | None = None) -> None:
         self._config = config or AsyncClientConfig()
         self._session: Any = None
         self._headers = self._build_headers()
@@ -58,22 +63,25 @@ class AsyncClient:
         if self._session is None or self._session.closed:
             try:
                 import aiohttp
+
                 self._session = aiohttp.ClientSession(
                     headers=self._headers,
                     timeout=aiohttp.ClientTimeout(total=self._config.timeout),
                 )
             except ImportError:
-                raise RuntimeError("aiohttp is required for AsyncClient. Install with: pip install aiohttp")
+                raise RuntimeError(
+                    "aiohttp is required for AsyncClient. Install with: pip install aiohttp"
+                )
         return self._session
 
     async def chat(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         model: str = "",
         temperature: float = 0.7,
         max_tokens: int = 2048,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Send an async chat completion request.
 
         Args:
@@ -102,7 +110,7 @@ class AsyncClient:
         max_tokens: int = 2048,
         temperature: float = 0.7,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Send an async text completion request."""
         payload = {
             "prompt": prompt,
@@ -118,25 +126,25 @@ class AsyncClient:
         input_text: Any,
         model: str = "",
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Send an async embedding request."""
         payload = {"input": input_text, "model": model, **kwargs}
         return await self._post("/v1/embeddings", payload)
 
-    async def list_models(self) -> Dict[str, Any]:
+    async def list_models(self) -> dict[str, Any]:
         """List available models asynchronously."""
         return await self._get("/v1/models")
 
-    async def health(self) -> Dict[str, Any]:
+    async def health(self) -> dict[str, Any]:
         """Check server health asynchronously."""
         return await self._get("/health")
 
     async def stream_chat(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         model: str = "",
         **kwargs: Any,
-    ) -> AsyncIterator[Dict[str, Any]]:
+    ) -> AsyncIterator[dict[str, Any]]:
         """Stream chat completion responses.
 
         Args:
@@ -169,21 +177,21 @@ class AsyncClient:
             await self._session.close()
             self._session = None
 
-    async def _get(self, path: str) -> Dict[str, Any]:
+    async def _get(self, path: str) -> dict[str, Any]:
         """Make an async GET request."""
         session = await self._get_session()
         url = f"{self._config.base_url}{path}"
         async with session.get(url) as response:
             return await response.json()
 
-    async def _post(self, path: str, data: Any) -> Dict[str, Any]:
+    async def _post(self, path: str, data: Any) -> dict[str, Any]:
         """Make an async POST request."""
         session = await self._get_session()
         url = f"{self._config.base_url}{path}"
         async with session.post(url, json=data) as response:
             return await response.json()
 
-    def _build_headers(self) -> Dict[str, str]:
+    def _build_headers(self) -> dict[str, str]:
         """Build default request headers."""
         headers = dict(self._config.headers)
         if self._config.api_key:
@@ -191,8 +199,8 @@ class AsyncClient:
         headers["User-Agent"] = "Nexus-LLM-AsyncClient/1.0"
         return headers
 
-    async def __aenter__(self) -> "AsyncClient":
+    async def __aenter__(self) -> Self:
         return self
 
-    async def __aexit__(self, *exc: Any) -> None:
+    async def __aexit__(self, *exc: object) -> None:
         await self.close()

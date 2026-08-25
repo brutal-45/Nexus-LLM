@@ -4,18 +4,21 @@ Provides the WebSocketClient for real-time streaming communication
 with the Nexus-LLM server via WebSocket protocol.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
 # Try to import websocket
 try:
     import websocket
+
     _HAS_WEBSOCKET = True
 except ImportError:
     _HAS_WEBSOCKET = False
@@ -36,7 +39,7 @@ class WSClientConfig:
     """
 
     url: str = "ws://localhost:8000/ws"
-    api_key: Optional[str] = None
+    api_key: str | None = None
     reconnect: bool = True
     reconnect_interval: float = 5.0
     max_reconnects: int = 10
@@ -73,14 +76,14 @@ class WebSocketClient:
         client.close()
     """
 
-    def __init__(self, config: Optional[WSClientConfig] = None) -> None:
+    def __init__(self, config: WSClientConfig | None = None) -> None:
         self._config = config or WSClientConfig()
         self._ws: Any = None
         self._connected = False
         self._reconnect_count = 0
-        self._message_handlers: Dict[str, List[Callable]] = {}
+        self._message_handlers: dict[str, list[Callable]] = {}
         self._lock = threading.Lock()
-        self._receive_thread: Optional[threading.Thread] = None
+        self._receive_thread: threading.Thread | None = None
         logger.debug("WebSocketClient initialized: %s", self._config.url)
 
     @property
@@ -163,10 +166,12 @@ class WebSocketClient:
         Returns:
             True if the message was sent.
         """
-        return self.send(WSMessage(
-            type="chat",
-            data={"content": content, "model": model, **kwargs},
-        ))
+        return self.send(
+            WSMessage(
+                type="chat",
+                data={"content": content, "model": model, **kwargs},
+            )
+        )
 
     def on(self, event_type: str, handler: Callable) -> None:
         """Register a handler for a specific message type.
@@ -177,7 +182,7 @@ class WebSocketClient:
         """
         self._message_handlers.setdefault(event_type, []).append(handler)
 
-    def off(self, event_type: str, handler: Optional[Callable] = None) -> None:
+    def off(self, event_type: str, handler: Callable | None = None) -> None:
         """Remove a handler for a message type.
 
         Args:
@@ -223,7 +228,11 @@ class WebSocketClient:
         if self._config.reconnect and self._reconnect_count < self._config.max_reconnects:
             self._reconnect_count += 1
             time.sleep(self._config.reconnect_interval)
-            logger.info("Reconnecting (attempt %d/%d)...", self._reconnect_count, self._config.max_reconnects)
+            logger.info(
+                "Reconnecting (attempt %d/%d)...",
+                self._reconnect_count,
+                self._config.max_reconnects,
+            )
             self.connect()
 
     def _dispatch(self, event_type: str, data: Any) -> None:

@@ -5,6 +5,8 @@ concurrently, with support for rate limiting, retry logic, and
 progress tracking.
 """
 
+from __future__ import annotations
+
 import logging
 import threading
 import time
@@ -12,7 +14,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 from nexus_llm.client.http_client import HttpClient, HttpClientConfig
 
@@ -44,8 +46,8 @@ class BatchRequest:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     method: str = "POST"
     endpoint: str = ""
-    params: Dict[str, Any] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    params: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -63,7 +65,7 @@ class BatchResult:
     request_id: str = ""
     success: bool = True
     response: Any = None
-    error: Optional[str] = None
+    error: str | None = None
     duration_ms: float = 0.0
 
 
@@ -100,18 +102,20 @@ class BatchClient:
     def __init__(
         self,
         base_url: str = "http://localhost:8000",
-        api_key: Optional[str] = None,
-        config: Optional[BatchConfig] = None,
+        api_key: str | None = None,
+        config: BatchConfig | None = None,
     ) -> None:
         self._config = config or BatchConfig()
-        self._client = HttpClient(HttpClientConfig(
-            base_url=base_url,
-            api_key=api_key,
-            timeout=self._config.timeout,
-        ))
-        self._requests: List[BatchRequest] = []
+        self._client = HttpClient(
+            HttpClientConfig(
+                base_url=base_url,
+                api_key=api_key,
+                timeout=self._config.timeout,
+            )
+        )
+        self._requests: list[BatchRequest] = []
         self._status = BatchStatus.PENDING
-        self._results: List[BatchResult] = []
+        self._results: list[BatchResult] = []
         self._lock = threading.Lock()
         self._cancel_event = threading.Event()
         logger.debug("BatchClient initialized: max_workers=%d", self._config.max_workers)
@@ -127,7 +131,7 @@ class BatchClient:
         return len(self._requests)
 
     @property
-    def results(self) -> List[BatchResult]:
+    def results(self) -> list[BatchResult]:
         """Results from the last batch execution."""
         return list(self._results)
 
@@ -141,7 +145,7 @@ class BatchClient:
             self._requests.append(request)
             logger.debug("Added request: %s", request.id)
 
-    def add_requests(self, requests: List[BatchRequest]) -> None:
+    def add_requests(self, requests: list[BatchRequest]) -> None:
         """Add multiple requests to the batch.
 
         Args:
@@ -157,7 +161,7 @@ class BatchClient:
             self._results.clear()
             self._status = BatchStatus.PENDING
 
-    def execute(self) -> List[BatchResult]:
+    def execute(self) -> list[BatchResult]:
         """Execute all queued requests concurrently.
 
         Returns:
@@ -182,13 +186,17 @@ class BatchClient:
                     result = future.result()
                     self._results.append(result)
                 except Exception as exc:
-                    self._results.append(BatchResult(
-                        request_id=futures[future],
-                        success=False,
-                        error=str(exc),
-                    ))
+                    self._results.append(
+                        BatchResult(
+                            request_id=futures[future],
+                            success=False,
+                            error=str(exc),
+                        )
+                    )
 
-        self._status = BatchStatus.CANCELLED if self._cancel_event.is_set() else BatchStatus.COMPLETED
+        self._status = (
+            BatchStatus.CANCELLED if self._cancel_event.is_set() else BatchStatus.COMPLETED
+        )
         logger.info("Batch execution completed: %d results", len(self._results))
         return self._results
 
@@ -246,7 +254,7 @@ class BatchClient:
             duration_ms=(time.perf_counter() - start) * 1000,
         )
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get a summary of the last batch execution.
 
         Returns:
@@ -255,10 +263,7 @@ class BatchClient:
         total = len(self._results)
         successes = sum(1 for r in self._results if r.success)
         failures = total - successes
-        avg_duration = (
-            sum(r.duration_ms for r in self._results) / total
-            if total > 0 else 0.0
-        )
+        avg_duration = sum(r.duration_ms for r in self._results) / total if total > 0 else 0.0
         return {
             "total": total,
             "successes": successes,
