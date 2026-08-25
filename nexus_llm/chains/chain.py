@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +17,9 @@ class Chain(ABC):
     *how* steps are executed (sequentially, in parallel, conditionally, etc.).
     """
 
-    def __init__(self, name: str, steps: Optional[List[Callable]] = None) -> None:
+    def __init__(self, name: str, steps: list[Callable] | None = None) -> None:
         self.name: str = name
-        self._steps: List[Callable] = list(steps) if steps else []
+        self._steps: list[Callable] = list(steps) if steps else []
         self._metadata: dict[str, Any] = {}
 
     # ------------------------------------------------------------------
@@ -27,7 +27,7 @@ class Chain(ABC):
     # ------------------------------------------------------------------
 
     @property
-    def steps(self) -> List[Callable]:
+    def steps(self) -> list[Callable]:
         """Return a shallow copy of the step list."""
         return list(self._steps)
 
@@ -39,7 +39,7 @@ class Chain(ABC):
     # Step management
     # ------------------------------------------------------------------
 
-    def add_step(self, step: Callable) -> "Chain":
+    def add_step(self, step: Callable) -> Chain:
         """Append a step to the chain and return *self* for fluent usage.
 
         Parameters
@@ -70,14 +70,21 @@ class Chain(ABC):
         if index < 0 or index >= len(self._steps):
             raise IndexError(f"Step index {index} out of range (0-{len(self._steps) - 1})")
         removed = self._steps.pop(index)
-        logger.debug("Removed step %r from chain %r", getattr(removed, "__name__", removed), self.name)
+        logger.debug(
+            "Removed step %r from chain %r", getattr(removed, "__name__", removed), self.name
+        )
 
     def insert_step(self, index: int, step: Callable) -> None:
         """Insert *step* at *index*."""
         if not callable(step):
             raise TypeError(f"Step must be callable, got {type(step)!r}")
         self._steps.insert(index, step)
-        logger.debug("Inserted step %r at index %d in chain %r", getattr(step, "__name__", step), index, self.name)
+        logger.debug(
+            "Inserted step %r at index %d in chain %r",
+            getattr(step, "__name__", step),
+            index,
+            self.name,
+        )
 
     # ------------------------------------------------------------------
     # Validation
