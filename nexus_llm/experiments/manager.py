@@ -4,8 +4,10 @@ Central registry that creates, retrieves, lists, deletes, and
 compares experiments.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from nexus_llm.experiments.experiment import Experiment, ExperimentState
 
@@ -29,7 +31,7 @@ class ExperimentManager:
     """
 
     def __init__(self) -> None:
-        self._experiments: Dict[str, Experiment] = {}
+        self._experiments: dict[str, Experiment] = {}
 
     # ------------------------------------------------------------------
     # CRUD
@@ -38,7 +40,7 @@ class ExperimentManager:
     def create_experiment(
         self,
         name: str,
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
     ) -> Experiment:
         """Create a new experiment and register it.
 
@@ -53,7 +55,8 @@ class ExperimentManager:
         self._experiments[experiment.id] = experiment
         logger.info(
             "Created experiment %s (%s) with config keys: %s",
-            experiment.name, experiment.id,
+            experiment.name,
+            experiment.id,
             list(config.keys()) if config else [],
         )
         return experiment
@@ -76,8 +79,8 @@ class ExperimentManager:
 
     def list_experiments(
         self,
-        state: Optional[ExperimentState] = None,
-    ) -> List[Experiment]:
+        state: ExperimentState | None = None,
+    ) -> list[Experiment]:
         """List all registered experiments, optionally filtered by state.
 
         Args:
@@ -109,7 +112,7 @@ class ExperimentManager:
     # Comparison
     # ------------------------------------------------------------------
 
-    def compare_experiments(self, ids: List[str]) -> Dict[str, Any]:
+    def compare_experiments(self, ids: list[str]) -> dict[str, Any]:
         """Compare multiple experiments side-by-side.
 
         The comparison includes status, parameters, and the final value
@@ -135,16 +138,16 @@ class ExperimentManager:
         statuses = [exp.get_status() for exp in experiments]
 
         # Metric comparison: collect the last recorded value per metric
-        metric_comparison: Dict[str, Dict[str, Any]] = {}
+        metric_comparison: dict[str, dict[str, Any]] = {}
         for exp in experiments:
-            last_metrics: Dict[str, float] = {}
+            last_metrics: dict[str, float] = {}
             for record in exp.metrics:
                 last_metrics[record["name"]] = record["value"]
             for mname, mval in last_metrics.items():
                 metric_comparison.setdefault(mname, {})[exp.id] = mval
 
         # Parameter comparison
-        parameter_comparison: Dict[str, Dict[str, Any]] = {}
+        parameter_comparison: dict[str, dict[str, Any]] = {}
         for exp in experiments:
             for pname, pval in exp.parameters.items():
                 parameter_comparison.setdefault(pname, {})[exp.id] = pval
