@@ -7,7 +7,6 @@ management for systematic hyperparameter optimization.
 
 from __future__ import annotations
 
-import copy
 import itertools
 import json
 import math
@@ -15,17 +14,19 @@ import os
 import random
 import time
 import uuid
+from collections.abc import Generator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, Generator, List, Optional, Sequence, Tuple, Union
-
+from typing import Any, Callable
 
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class SearchStrategy(str, Enum):
     """Hyperparameter search strategy."""
+
     GRID = "grid"
     RANDOM = "random"
     BAYESIAN = "bayesian"
@@ -33,6 +34,7 @@ class SearchStrategy(str, Enum):
 
 class ParamType(str, Enum):
     """Type of a hyperparameter."""
+
     INT = "int"
     FLOAT = "float"
     CATEGORICAL = "categorical"
@@ -43,14 +45,16 @@ class ParamType(str, Enum):
 # Parameter space
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ParamSpec:
     """Specification for a single hyperparameter."""
+
     name: str
     param_type: ParamType
-    low: Optional[float] = None
-    high: Optional[float] = None
-    choices: Optional[List[Any]] = None
+    low: float | None = None
+    high: float | None = None
+    choices: list[Any] | None = None
     log_scale: bool = False
 
     def sample(self) -> Any:
@@ -77,7 +81,7 @@ class ParamSpec:
             return random.choice([True, False])
         raise ValueError(f"Unknown param type: {self.param_type}")
 
-    def grid_values(self, num_points: int = 10) -> List[Any]:
+    def grid_values(self, num_points: int = 10) -> list[Any]:
         """Generate evenly-spaced values for grid search.
 
         Args:
@@ -95,9 +99,16 @@ class ParamSpec:
             lo = self.low or 0.0
             hi = self.high or 1.0
             if self.log_scale and lo > 0:
-                logs = [math.exp(x) for x in itertools.islice(
-                    (math.log(lo) + i * (math.log(hi) - math.log(lo)) / (num_points - 1)
-                     for i in range(num_points)), num_points)]
+                logs = [
+                    math.exp(x)
+                    for x in itertools.islice(
+                        (
+                            math.log(lo) + i * (math.log(hi) - math.log(lo)) / (num_points - 1)
+                            for i in range(num_points)
+                        ),
+                        num_points,
+                    )
+                ]
                 return logs
             return [lo + i * (hi - lo) / (num_points - 1) for i in range(num_points)]
         elif self.param_type == ParamType.CATEGORICAL:
@@ -106,7 +117,7 @@ class ParamSpec:
             return [True, False]
         return []
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "param_type": self.param_type.value,
@@ -120,9 +131,10 @@ class ParamSpec:
 @dataclass
 class ParamSpace:
     """A collection of hyperparameter specifications."""
-    params: Dict[str, ParamSpec] = field(default_factory=dict)
 
-    def add_int(self, name: str, low: int, high: int, log_scale: bool = False) -> "ParamSpace":
+    params: dict[str, ParamSpec] = field(default_factory=dict)
+
+    def add_int(self, name: str, low: int, high: int, log_scale: bool = False) -> ParamSpace:
         """Add an integer parameter.
 
         Args:
@@ -135,12 +147,15 @@ class ParamSpace:
             Self for chaining.
         """
         self.params[name] = ParamSpec(
-            name=name, param_type=ParamType.INT,
-            low=float(low), high=float(high), log_scale=log_scale,
+            name=name,
+            param_type=ParamType.INT,
+            low=float(low),
+            high=float(high),
+            log_scale=log_scale,
         )
         return self
 
-    def add_float(self, name: str, low: float, high: float, log_scale: bool = False) -> "ParamSpace":
+    def add_float(self, name: str, low: float, high: float, log_scale: bool = False) -> ParamSpace:
         """Add a float parameter.
 
         Args:
@@ -153,12 +168,15 @@ class ParamSpace:
             Self for chaining.
         """
         self.params[name] = ParamSpec(
-            name=name, param_type=ParamType.FLOAT,
-            low=low, high=high, log_scale=log_scale,
+            name=name,
+            param_type=ParamType.FLOAT,
+            low=low,
+            high=high,
+            log_scale=log_scale,
         )
         return self
 
-    def add_categorical(self, name: str, choices: List[Any]) -> "ParamSpace":
+    def add_categorical(self, name: str, choices: list[Any]) -> ParamSpace:
         """Add a categorical parameter.
 
         Args:
@@ -169,11 +187,13 @@ class ParamSpace:
             Self for chaining.
         """
         self.params[name] = ParamSpec(
-            name=name, param_type=ParamType.CATEGORICAL, choices=choices,
+            name=name,
+            param_type=ParamType.CATEGORICAL,
+            choices=choices,
         )
         return self
 
-    def add_bool(self, name: str) -> "ParamSpace":
+    def add_bool(self, name: str) -> ParamSpace:
         """Add a boolean parameter.
 
         Args:
@@ -185,7 +205,7 @@ class ParamSpace:
         self.params[name] = ParamSpec(name=name, param_type=ParamType.BOOL)
         return self
 
-    def sample(self) -> Dict[str, Any]:
+    def sample(self) -> dict[str, Any]:
         """Sample a random configuration from the space.
 
         Returns:
@@ -193,7 +213,7 @@ class ParamSpace:
         """
         return {name: spec.sample() for name, spec in self.params.items()}
 
-    def grid(self, num_points: int = 10) -> Generator[Dict[str, Any], None, None]:
+    def grid(self, num_points: int = 10) -> Generator[dict[str, Any], None, None]:
         """Generate grid search configurations.
 
         Args:
@@ -222,7 +242,7 @@ class ParamSpace:
             total *= len(spec.grid_values(num_points))
         return total
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {name: spec.to_dict() for name, spec in self.params.items()}
 
 
@@ -230,29 +250,31 @@ class ParamSpace:
 # Trial tracking
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Trial:
     """A single hyperparameter trial."""
+
     trial_id: str = ""
-    params: Dict[str, Any] = field(default_factory=dict)
-    metrics: Dict[str, float] = field(default_factory=dict)
+    params: dict[str, Any] = field(default_factory=dict)
+    metrics: dict[str, float] = field(default_factory=dict)
     status: str = "pending"  # pending, running, completed, failed, pruned
     created_at: float = field(default_factory=time.time)
-    completed_at: Optional[float] = None
-    error: Optional[str] = None
+    completed_at: float | None = None
+    error: str | None = None
 
     def __post_init__(self) -> None:
         if not self.trial_id:
             self.trial_id = str(uuid.uuid4())[:12]
 
     @property
-    def objective_value(self) -> Optional[float]:
+    def objective_value(self) -> float | None:
         """Get the primary objective metric value."""
         if self.metrics:
             return next(iter(self.metrics.values()))
         return None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "trial_id": self.trial_id,
             "params": self.params,
@@ -268,9 +290,11 @@ class Trial:
 # Search config
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class SearchConfig:
     """Configuration for hyperparameter search."""
+
     strategy: SearchStrategy = SearchStrategy.RANDOM
     num_trials: int = 50
     grid_points: int = 10  # Points per dimension for grid search
@@ -278,10 +302,10 @@ class SearchConfig:
     objective_mode: str = "min"  # 'min' or 'max'
     early_stopping: bool = False
     early_stopping_patience: int = 10
-    seed: Optional[int] = None
+    seed: int | None = None
     max_concurrent: int = 1
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "strategy": self.strategy.value,
             "num_trials": self.num_trials,
@@ -298,6 +322,7 @@ class SearchConfig:
 # ---------------------------------------------------------------------------
 # Hyperparameter Search
 # ---------------------------------------------------------------------------
+
 
 class HyperparameterSearch:
     """Systematic hyperparameter search and optimization.
@@ -330,23 +355,23 @@ class HyperparameterSearch:
     def __init__(
         self,
         space: ParamSpace,
-        config: Optional[SearchConfig] = None,
+        config: SearchConfig | None = None,
     ) -> None:
         self._space = space
         self._config = config or SearchConfig()
-        self._trials: List[Trial] = []
-        self._best_trial: Optional[Trial] = None
+        self._trials: list[Trial] = []
+        self._best_trial: Trial | None = None
 
         if self._config.seed is not None:
             random.seed(self._config.seed)
 
     @property
-    def trials(self) -> List[Trial]:
+    def trials(self) -> list[Trial]:
         """All completed and pending trials."""
         return list(self._trials)
 
     @property
-    def best_trial(self) -> Optional[Trial]:
+    def best_trial(self) -> Trial | None:
         """Trial with the best objective value."""
         return self._best_trial
 
@@ -361,9 +386,9 @@ class HyperparameterSearch:
 
     def run(
         self,
-        objective: Callable[[Dict[str, Any]], Dict[str, float]],
-        callback: Optional[Callable[[Trial], None]] = None,
-    ) -> List[Trial]:
+        objective: Callable[[dict[str, Any]], dict[str, float]],
+        callback: Callable[[Trial], None] | None = None,
+    ) -> list[Trial]:
         """Execute the hyperparameter search.
 
         Args:
@@ -385,8 +410,8 @@ class HyperparameterSearch:
     def _run_grid(
         self,
         objective: Callable,
-        callback: Optional[Callable] = None,
-    ) -> List[Trial]:
+        callback: Callable | None = None,
+    ) -> list[Trial]:
         """Execute grid search."""
         count = 0
         no_improve = 0
@@ -418,8 +443,8 @@ class HyperparameterSearch:
     def _run_random(
         self,
         objective: Callable,
-        callback: Optional[Callable] = None,
-    ) -> List[Trial]:
+        callback: Callable | None = None,
+    ) -> list[Trial]:
         """Execute random search."""
         no_improve = 0
 
@@ -446,8 +471,8 @@ class HyperparameterSearch:
     def _run_bayesian(
         self,
         objective: Callable,
-        callback: Optional[Callable] = None,
-    ) -> List[Trial]:
+        callback: Callable | None = None,
+    ) -> list[Trial]:
         """Execute simplified Bayesian optimization.
 
         Uses a TPE-like approach: builds a model of good vs bad regions
@@ -474,13 +499,15 @@ class HyperparameterSearch:
 
         return self._trials
 
-    def _bayesian_sample(self) -> Dict[str, Any]:
+    def _bayesian_sample(self) -> dict[str, Any]:
         """Sample using a simplified Bayesian strategy.
 
         Fits Gaussian distributions to the best-performing region
         and samples from them with some exploration noise.
         """
-        completed = [t for t in self._trials if t.status == "completed" and t.objective_value is not None]
+        completed = [
+            t for t in self._trials if t.status == "completed" and t.objective_value is not None
+        ]
         if not completed:
             return self._space.sample()
 
@@ -493,7 +520,7 @@ class HyperparameterSearch:
         good_trials = completed[:n_good]
 
         # Compute mean and std for numeric params from good trials
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         for name, spec in self._space.params.items():
             good_values = [t.params.get(name) for t in good_trials if name in t.params]
             good_values = [v for v in good_values if v is not None]
@@ -516,15 +543,18 @@ class HyperparameterSearch:
                     val = random.gauss(mean, std)
 
                 val = max(lo, min(hi, val))
-                params[name] = int(round(val)) if spec.param_type == ParamType.INT else val
+                params[name] = round(val) if spec.param_type == ParamType.INT else val
 
             elif spec.param_type == ParamType.CATEGORICAL:
                 # Weighted choice favoring good values
                 from collections import Counter
+
                 counts = Counter(good_values)
                 total = sum(counts.values())
-                weights = [counts.get(c, 1) / (total + len(spec.choices or []))
-                          for c in (spec.choices or good_values)]
+                weights = [
+                    counts.get(c, 1) / (total + len(spec.choices or []))
+                    for c in (spec.choices or good_values)
+                ]
                 choices = spec.choices or good_values
                 params[name] = random.choices(choices, weights=weights, k=1)[0]
 
@@ -540,7 +570,7 @@ class HyperparameterSearch:
 
     def _evaluate_trial(
         self,
-        params: Dict[str, Any],
+        params: dict[str, Any],
         objective: Callable,
         step: int,
     ) -> Trial:
@@ -577,7 +607,7 @@ class HyperparameterSearch:
             return True
         return self._is_better_value(trial.objective_value, self._best_trial.objective_value)
 
-    def _is_better_value(self, value: float, reference: Optional[float]) -> bool:
+    def _is_better_value(self, value: float, reference: float | None) -> bool:
         """Check if a value is better than the reference."""
         if reference is None:
             return True
@@ -589,17 +619,17 @@ class HyperparameterSearch:
     # Queries
     # ------------------------------------------------------------------
 
-    def get_best_trial(self) -> Optional[Trial]:
+    def get_best_trial(self) -> Trial | None:
         """Get the best trial by objective metric."""
         return self._best_trial
 
-    def get_best_params(self) -> Optional[Dict[str, Any]]:
+    def get_best_params(self) -> dict[str, Any] | None:
         """Get the parameters from the best trial."""
         if self._best_trial:
             return dict(self._best_trial.params)
         return None
 
-    def get_n_best(self, n: int = 5) -> List[Trial]:
+    def get_n_best(self, n: int = 5) -> list[Trial]:
         """Get the top N trials by objective metric.
 
         Args:
@@ -608,12 +638,14 @@ class HyperparameterSearch:
         Returns:
             List of Trial objects sorted by objective.
         """
-        completed = [t for t in self._trials if t.status == "completed" and t.objective_value is not None]
+        completed = [
+            t for t in self._trials if t.status == "completed" and t.objective_value is not None
+        ]
         reverse = self._config.objective_mode == "max"
         completed.sort(key=lambda t: t.objective_value or 0, reverse=reverse)
         return completed[:n]
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get search statistics.
 
         Returns:
@@ -657,7 +689,7 @@ class HyperparameterSearch:
         return path
 
     @classmethod
-    def load(cls, path: str) -> "HyperparameterSearch":
+    def load(cls, path: str) -> HyperparameterSearch:
         """Load search results from a JSON file.
 
         Args:
@@ -666,7 +698,7 @@ class HyperparameterSearch:
         Returns:
             Reconstructed HyperparameterSearch object.
         """
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
 
         # Reconstruct space
