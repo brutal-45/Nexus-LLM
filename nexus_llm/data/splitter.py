@@ -26,8 +26,8 @@ from __future__ import annotations
 
 import logging
 import random
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple, Union
+from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class SplitConfig:
@@ -64,14 +65,15 @@ class SplitConfig:
 # Functional splitting helpers
 # ---------------------------------------------------------------------------
 
+
 def split_data(
-    data: List[Any],
+    data: list[Any],
     train_ratio: float = 0.8,
     val_ratio: float = 0.1,
     test_ratio: float = 0.1,
     shuffle: bool = True,
     seed: int = 42,
-) -> Tuple[List[Any], List[Any], List[Any]]:
+) -> tuple[list[Any], list[Any], list[Any]]:
     """Split *data* into train / validation / test sets.
 
     Args:
@@ -105,11 +107,11 @@ def split_data(
 
 
 def k_fold_split(
-    data: List[Any],
+    data: list[Any],
     k: int = 5,
     shuffle: bool = True,
     seed: int = 42,
-) -> List[Tuple[List[Any], List[Any]]]:
+) -> list[tuple[list[Any], list[Any]]]:
     """Generate *k* train/validation fold pairs.
 
     Args:
@@ -126,7 +128,7 @@ def k_fold_split(
         random.seed(seed)
         random.shuffle(items)
     fold_size = len(items) // k
-    folds: List[Tuple[List[Any], List[Any]]] = []
+    folds: list[tuple[list[Any], list[Any]]] = []
     for i in range(k):
         start = i * fold_size
         end = start + fold_size if i < k - 1 else len(items)
@@ -137,11 +139,11 @@ def k_fold_split(
 
 
 def stratified_split(
-    data: List[Dict[str, Any]],
+    data: list[dict[str, Any]],
     label_key: str = "label",
     train_ratio: float = 0.8,
     seed: int = 42,
-) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Split *data* while preserving label proportions.
 
     Args:
@@ -154,13 +156,13 @@ def stratified_split(
         ``(train, val)`` tuple.
     """
     random.seed(seed)
-    by_label: Dict[Any, List[Dict[str, Any]]] = {}
+    by_label: dict[Any, list[dict[str, Any]]] = {}
     for item in data:
         label = item.get(label_key)
         by_label.setdefault(label, []).append(item)
 
-    train: List[Dict[str, Any]] = []
-    val: List[Dict[str, Any]] = []
+    train: list[dict[str, Any]] = []
+    val: list[dict[str, Any]] = []
     for label, items in by_label.items():
         random.shuffle(items)
         split_idx = int(len(items) * train_ratio)
@@ -170,11 +172,11 @@ def stratified_split(
 
 
 def stratified_k_fold(
-    data: List[Dict[str, Any]],
+    data: list[dict[str, Any]],
     k: int = 5,
     label_key: str = "label",
     seed: int = 42,
-) -> List[Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]]:
+) -> list[tuple[list[dict[str, Any]], list[dict[str, Any]]]]:
     """Stratified k-fold cross-validation.
 
     Preserves label proportions in each fold.  Each label group is
@@ -190,20 +192,20 @@ def stratified_k_fold(
         List of ``(train_fold, val_fold)`` tuples.
     """
     random.seed(seed)
-    by_label: Dict[Any, List[Dict[str, Any]]] = {}
+    by_label: dict[Any, list[dict[str, Any]]] = {}
     for item in data:
         label = item.get(label_key)
         by_label.setdefault(label, []).append(item)
 
     # Distribute each label's items across k folds
-    fold_data: List[List[Dict[str, Any]]] = [[] for _ in range(k)]
+    fold_data: list[list[dict[str, Any]]] = [[] for _ in range(k)]
     for label, items in by_label.items():
         random.shuffle(items)
         for idx, item in enumerate(items):
             fold_data[idx % k].append(item)
 
     # Build train/val pairs
-    folds: List[Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]] = []
+    folds: list[tuple[list[dict[str, Any]], list[dict[str, Any]]]] = []
     for i in range(k):
         val = fold_data[i]
         train = [item for j, fold in enumerate(fold_data) if j != i for item in fold]
@@ -212,11 +214,11 @@ def stratified_k_fold(
 
 
 def time_based_split(
-    data: List[Dict[str, Any]],
+    data: list[dict[str, Any]],
     time_key: str = "timestamp",
-    train_until: Optional[Union[str, float]] = None,
-    val_until: Optional[Union[str, float]] = None,
-) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
+    train_until: str | float | None = None,
+    val_until: str | float | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     """Split data chronologically based on a timestamp field.
 
     Rows with ``time_key <= train_until`` go to train, those with
@@ -241,9 +243,9 @@ def time_based_split(
     if train_until is not None and val_until is not None and val_until < train_until:
         raise ValueError("val_until must be >= train_until")
 
-    train: List[Dict[str, Any]] = []
-    val: List[Dict[str, Any]] = []
-    test: List[Dict[str, Any]] = []
+    train: list[dict[str, Any]] = []
+    val: list[dict[str, Any]] = []
+    test: list[dict[str, Any]] = []
 
     for row in data:
         t = row.get(time_key)
@@ -259,7 +261,9 @@ def time_based_split(
 
     logger.info(
         "Time-based split: train=%d, val=%d, test=%d",
-        len(train), len(val), len(test),
+        len(train),
+        len(val),
+        len(test),
     )
     return train, val, test
 
@@ -267,6 +271,7 @@ def time_based_split(
 # ---------------------------------------------------------------------------
 # DataSplitter class
 # ---------------------------------------------------------------------------
+
 
 class DataSplitter:
     """Stateful data splitter backed by a :class:`SplitConfig`.
@@ -284,7 +289,7 @@ class DataSplitter:
         folds = splitter.k_fold(my_data, k=10)
     """
 
-    def __init__(self, config: Optional[SplitConfig] = None) -> None:
+    def __init__(self, config: SplitConfig | None = None) -> None:
         self._config = config or SplitConfig()
 
     @property
@@ -294,9 +299,7 @@ class DataSplitter:
 
     # -- Delegating methods -------------------------------------------------
 
-    def split(
-        self, data: List[Any]
-    ) -> Tuple[List[Any], List[Any], List[Any]]:
+    def split(self, data: list[Any]) -> tuple[list[Any], list[Any], list[Any]]:
         """Split data into train / val / test using the configured ratios."""
         return split_data(
             data,
@@ -307,37 +310,33 @@ class DataSplitter:
             seed=self._config.seed,
         )
 
-    def k_fold(
-        self, data: List[Any], k: int = 5
-    ) -> List[Tuple[List[Any], List[Any]]]:
+    def k_fold(self, data: list[Any], k: int = 5) -> list[tuple[list[Any], list[Any]]]:
         """Generate *k* cross-validation folds."""
         return k_fold_split(data, k, shuffle=self._config.shuffle, seed=self._config.seed)
 
     def stratified_split(
         self,
-        data: List[Dict[str, Any]],
+        data: list[dict[str, Any]],
         label_key: str = "label",
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """Stratified train/validation split preserving label proportions."""
-        return stratified_split(
-            data, label_key, self._config.train_ratio, self._config.seed
-        )
+        return stratified_split(data, label_key, self._config.train_ratio, self._config.seed)
 
     def stratified_k_fold(
         self,
-        data: List[Dict[str, Any]],
+        data: list[dict[str, Any]],
         k: int = 5,
         label_key: str = "label",
-    ) -> List[Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]]:
+    ) -> list[tuple[list[dict[str, Any]], list[dict[str, Any]]]]:
         """Stratified k-fold cross-validation."""
         return stratified_k_fold(data, k, label_key, self._config.seed)
 
     def time_based(
         self,
-        data: List[Dict[str, Any]],
+        data: list[dict[str, Any]],
         time_key: str = "timestamp",
-        train_until: Optional[Union[str, float]] = None,
-        val_until: Optional[Union[str, float]] = None,
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
+        train_until: str | float | None = None,
+        val_until: str | float | None = None,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
         """Chronological train/val/test split."""
         return time_based_split(data, time_key, train_until, val_until)
