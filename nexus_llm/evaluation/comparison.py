@@ -6,7 +6,6 @@ tables with statistical significance testing.
 
 import logging
 import math
-from typing import Any, Dict, List, Optional, Tuple
 
 from nexus_llm.evaluation.report import EvaluationReport
 
@@ -25,15 +24,15 @@ class ComparisonResult:
     """
 
     def __init__(self) -> None:
-        self.model_names: List[str] = []
+        self.model_names: list[str] = []
         self.metrics: set = set()
-        self.scores: Dict[str, Dict[str, float]] = {}
-        self.differences: Dict[str, Dict[str, float]] = {}
-        self.winners: Dict[str, str] = {}
+        self.scores: dict[str, dict[str, float]] = {}
+        self.differences: dict[str, dict[str, float]] = {}
+        self.winners: dict[str, str] = {}
 
     def summary(self) -> str:
         """Return a human-readable comparison table."""
-        lines: List[str] = [
+        lines: list[str] = [
             "Model Comparison",
             "=" * 60,
         ]
@@ -129,7 +128,7 @@ class ComparisonEngine:
 
     def compare_multiple(
         self,
-        results_dict: Dict[str, EvaluationReport],
+        results_dict: dict[str, EvaluationReport],
     ) -> ComparisonResult:
         """Compare evaluation reports from multiple models.
 
@@ -152,7 +151,7 @@ class ComparisonEngine:
         lower_is_better = {"perplexity", "avg_latency_ms"}
 
         for metric in result.metrics:
-            values: Dict[str, float] = {}
+            values: dict[str, float] = {}
             for name, report in results_dict.items():
                 values[name] = report.scores[metric]
 
@@ -167,7 +166,7 @@ class ComparisonEngine:
             baseline = result.model_names[0]
             for metric in result.metrics:
                 baseline_val = result.scores[baseline].get(metric, 0.0)
-                diffs: Dict[str, float] = {}
+                diffs: dict[str, float] = {}
                 for name in result.model_names[1:]:
                     diffs[f"{baseline}_vs_{name}"] = (
                         result.scores[name].get(metric, 0.0) - baseline_val
@@ -194,7 +193,7 @@ class ComparisonEngine:
         if not comparison.winners:
             return "tie"
 
-        tally: Dict[str, int] = {}
+        tally: dict[str, int] = {}
         for model_name in comparison.winners.values():
             tally[model_name] = tally.get(model_name, 0) + 1
 
@@ -207,8 +206,8 @@ class ComparisonEngine:
 
     def statistical_significance(
         self,
-        scores_a: List[float],
-        scores_b: List[float],
+        scores_a: list[float],
+        scores_b: list[float],
     ) -> bool:
         """Perform a simple two-tailed paired t-test at α = 0.05.
 
