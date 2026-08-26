@@ -1,8 +1,9 @@
 """Configuration management for Nexus-LLM."""
 
+from __future__ import annotations
+
 import os
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any
 from pathlib import Path
 
 import yaml
@@ -15,6 +16,7 @@ DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config" / "default_config.yaml"
 @dataclass
 class ModelSettings:
     """Model-related settings."""
+
     name: str = "gpt2-medium"
     device: str = "auto"  # auto, cpu, cuda, mps
     precision: str = "fp32"  # fp32, fp16, bf16, 8bit, 4bit
@@ -31,16 +33,18 @@ class ModelSettings:
 @dataclass
 class ServerSettings:
     """Server-related settings."""
+
     host: str = "127.0.0.1"
     port: int = 8000
     workers: int = 1
     cors_origins: list = field(default_factory=lambda: ["*"])
-    api_key: Optional[str] = None
+    api_key: str | None = None
 
 
 @dataclass
 class TerminalSettings:
     """Terminal-related settings."""
+
     theme: str = "dark"
     show_tokens: bool = True
     show_timing: bool = True
@@ -54,6 +58,7 @@ class TerminalSettings:
 @dataclass
 class TrainingSettings:
     """Training-related settings."""
+
     output_dir: str = str(PROJECT_ROOT / "models" / "fine-tuned")
     lora_r: int = 8
     lora_alpha: int = 16
@@ -71,6 +76,7 @@ class TrainingSettings:
 @dataclass
 class Settings:
     """Main settings for Nexus-LLM."""
+
     model: ModelSettings = field(default_factory=ModelSettings)
     server: ServerSettings = field(default_factory=ServerSettings)
     terminal: TerminalSettings = field(default_factory=TerminalSettings)
@@ -80,12 +86,12 @@ class Settings:
     log_file: str = str(PROJECT_ROOT / "logs" / "nexus_llm.log")
 
     @classmethod
-    def from_yaml(cls, path: str) -> "Settings":
+    def from_yaml(cls, path: str) -> Settings:
         """Load settings from a YAML file."""
         settings = cls()
         if not os.path.exists(path):
             return settings
-        with open(path, "r") as f:
+        with open(path) as f:
             data = yaml.safe_load(f) or {}
 
         if "model" in data:
@@ -113,16 +119,17 @@ class Settings:
     def to_yaml(self, path: str) -> None:
         """Save settings to a YAML file."""
         import dataclasses
+
         data = dataclasses.asdict(self)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as f:
             yaml.dump(data, f, default_flow_style=False)
 
 
-_settings_instance: Optional[Settings] = None
+_settings_instance: Settings | None = None
 
 
-def get_settings(config_path: Optional[str] = None) -> Settings:
+def get_settings(config_path: str | None = None) -> Settings:
     """Get or create the global settings instance."""
     global _settings_instance
     if _settings_instance is None:
