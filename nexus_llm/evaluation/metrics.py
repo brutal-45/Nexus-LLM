@@ -4,10 +4,9 @@ Provides standard NLP metrics: perplexity, BLEU, ROUGE, distinct-n,
 and simple statistics.
 """
 
-import math
 import logging
-from collections import Counter, defaultdict
-from typing import Dict, List, Optional, Sequence, Tuple
+import math
+from collections import Counter
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +28,7 @@ class MetricsCalculator:
     # Perplexity
     # ------------------------------------------------------------------
 
-    def perplexity(self, logits: List[List[float]], labels: List[int]) -> float:
+    def perplexity(self, logits: list[list[float]], labels: list[int]) -> float:
         """Compute perplexity from logit vectors and ground-truth labels.
 
         Args:
@@ -42,9 +41,7 @@ class MetricsCalculator:
             the total log-probability is zero.
         """
         if len(logits) != len(labels):
-            raise ValueError(
-                f"Logits length ({len(logits)}) != labels length ({len(labels)})"
-            )
+            raise ValueError(f"Logits length ({len(logits)}) != labels length ({len(labels)})")
         if not logits:
             return float("inf")
 
@@ -129,7 +126,7 @@ class MetricsCalculator:
         self,
         reference: str,
         hypothesis: str,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Compute ROUGE-1, ROUGE-2, and ROUGE-L F1 scores.
 
         Args:
@@ -156,7 +153,7 @@ class MetricsCalculator:
     # Distinct-n
     # ------------------------------------------------------------------
 
-    def distinct_n(self, texts: List[str], n: int = 2) -> float:
+    def distinct_n(self, texts: list[str], n: int = 2) -> float:
         """Compute Distinct-n diversity metric over a list of texts.
 
         Distinct-n is the ratio of unique n-grams to total n-grams across
@@ -169,7 +166,7 @@ class MetricsCalculator:
         Returns:
             Distinct-n score in [0, 1].
         """
-        all_ngrams: List[Tuple[str, ...]] = []
+        all_ngrams: list[tuple[str, ...]] = []
         for text in texts:
             tokens = text.split()
             for i in range(len(tokens) - n + 1):
@@ -184,7 +181,7 @@ class MetricsCalculator:
     # Average length
     # ------------------------------------------------------------------
 
-    def average_length(self, texts: List[str]) -> float:
+    def average_length(self, texts: list[str]) -> float:
         """Compute the average token count across *texts*.
 
         Args:
@@ -202,12 +199,12 @@ class MetricsCalculator:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _ngrams(tokens: List[str], n: int) -> Counter:
+    def _ngrams(tokens: list[str], n: int) -> Counter:
         """Return a Counter of n-grams."""
         return Counter(tuple(tokens[i : i + n]) for i in range(len(tokens) - n + 1))
 
     @staticmethod
-    def _rouge_n(ref: List[str], hyp: List[str], n: int) -> float:
+    def _rouge_n(ref: list[str], hyp: list[str], n: int) -> float:
         """ROUGE-N F1 score."""
         ref_ngrams = MetricsCalculator._ngrams(ref, n)
         hyp_ngrams = MetricsCalculator._ngrams(hyp, n)
@@ -227,7 +224,7 @@ class MetricsCalculator:
         return 2 * precision * recall / (precision + recall)
 
     @staticmethod
-    def _rouge_l(ref: List[str], hyp: List[str]) -> float:
+    def _rouge_l(ref: list[str], hyp: list[str]) -> float:
         """ROUGE-L F1 score based on longest common subsequence."""
         m, n = len(ref), len(hyp)
         if m == 0 or n == 0:
