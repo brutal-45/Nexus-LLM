@@ -31,8 +31,9 @@ from __future__ import annotations
 
 import logging
 import random
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, Tuple, Union
+from collections.abc import Iterator, Sequence
+from dataclasses import dataclass
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Dataclass for a single processing step
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ProcessingStep:
@@ -52,7 +54,7 @@ class ProcessingStep:
     """
 
     name: str
-    fn: Callable[[List[Dict[str, Any]]], List[Dict[str, Any]]]
+    fn: Callable[[list[dict[str, Any]]], list[dict[str, Any]]]
     description: str = ""
 
 
@@ -60,25 +62,27 @@ class ProcessingStep:
 # Standalone helper functions
 # ---------------------------------------------------------------------------
 
-def filter_empty(data: List[Dict[str, Any]], text_key: str = "text") -> List[Dict[str, Any]]:
+
+def filter_empty(data: list[dict[str, Any]], text_key: str = "text") -> list[dict[str, Any]]:
     """Remove rows where *text_key* is blank or whitespace-only."""
     return [d for d in data if d.get(text_key, "").strip()]
 
 
 def filter_by_length(
-    data: List[Dict[str, Any]],
+    data: list[dict[str, Any]],
     min_length: int = 1,
     max_length: int = 10000,
     text_key: str = "text",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Keep rows whose *text_key* length falls within [min_length, max_length]."""
     return [d for d in data if min_length <= len(d.get(text_key, "")) <= max_length]
 
 
-def normalize_text(data: List[Dict[str, Any]], text_key: str = "text") -> List[Dict[str, Any]]:
+def normalize_text(data: list[dict[str, Any]], text_key: str = "text") -> list[dict[str, Any]]:
     """Collapse runs of whitespace into single spaces and strip."""
     import re
-    result: List[Dict[str, Any]] = []
+
+    result: list[dict[str, Any]] = []
     for d in data:
         new_d = dict(d)
         new_d[text_key] = re.sub(r"\s+", " ", new_d.get(text_key, "")).strip()
@@ -86,9 +90,9 @@ def normalize_text(data: List[Dict[str, Any]], text_key: str = "text") -> List[D
     return result
 
 
-def lowercase_text(data: List[Dict[str, Any]], text_key: str = "text") -> List[Dict[str, Any]]:
+def lowercase_text(data: list[dict[str, Any]], text_key: str = "text") -> list[dict[str, Any]]:
     """Lowercase the *text_key* field in every row."""
-    result: List[Dict[str, Any]] = []
+    result: list[dict[str, Any]] = []
     for d in data:
         new_d = dict(d)
         new_d[text_key] = new_d.get(text_key, "").lower()
@@ -96,10 +100,10 @@ def lowercase_text(data: List[Dict[str, Any]], text_key: str = "text") -> List[D
     return result
 
 
-def deduplicate(data: List[Dict[str, Any]], key: str = "text") -> List[Dict[str, Any]]:
+def deduplicate(data: list[dict[str, Any]], key: str = "text") -> list[dict[str, Any]]:
     """Remove rows with duplicate values for *key*, keeping the first occurrence."""
     seen: set = set()
-    result: List[Dict[str, Any]] = []
+    result: list[dict[str, Any]] = []
     for d in data:
         val = d.get(key, "")
         if val not in seen:
@@ -108,17 +112,15 @@ def deduplicate(data: List[Dict[str, Any]], key: str = "text") -> List[Dict[str,
     return result
 
 
-def sample_data(data: List[Dict[str, Any]], n: int = 100, seed: int = 42) -> List[Dict[str, Any]]:
+def sample_data(data: list[dict[str, Any]], n: int = 100, seed: int = 42) -> list[dict[str, Any]]:
     """Return *n* randomly sampled rows (without replacement)."""
     random.seed(seed)
     return random.sample(data, min(n, len(data)))
 
 
-def rename_key(
-    data: List[Dict[str, Any]], old_key: str, new_key: str
-) -> List[Dict[str, Any]]:
+def rename_key(data: list[dict[str, Any]], old_key: str, new_key: str) -> list[dict[str, Any]]:
     """Rename *old_key* to *new_key* in every row that contains it."""
-    result: List[Dict[str, Any]] = []
+    result: list[dict[str, Any]] = []
     for d in data:
         new_d = dict(d)
         if old_key in new_d:
@@ -130,6 +132,7 @@ def rename_key(
 # ---------------------------------------------------------------------------
 # DataProcessor
 # ---------------------------------------------------------------------------
+
 
 class DataProcessor:
     """Chainable data transformation pipeline with lazy/eager execution.
@@ -154,8 +157,8 @@ class DataProcessor:
         if mode not in ("eager", "lazy"):
             raise ValueError(f"mode must be 'eager' or 'lazy', got '{mode}'")
         self._mode = mode
-        self._steps: List[ProcessingStep] = []
-        self._data: Optional[List[Dict[str, Any]]] = None
+        self._steps: list[ProcessingStep] = []
+        self._data: list[dict[str, Any]] | None = None
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -167,7 +170,7 @@ class DataProcessor:
             self._data = step.fn(self._data)
         self._steps.append(step)
 
-    def _add_step(self, name: str, fn: Callable, description: str = "") -> "DataProcessor":
+    def _add_step(self, name: str, fn: Callable, description: str = "") -> DataProcessor:
         """Register a step; apply immediately in eager mode."""
         step = ProcessingStep(name=name, fn=fn, description=description)
         if self._mode == "eager" and self._data is not None:
@@ -181,53 +184,53 @@ class DataProcessor:
 
     def filter(
         self,
-        predicate: Callable[[Dict[str, Any]], bool],
+        predicate: Callable[[dict[str, Any]], bool],
         description: str = "",
-    ) -> "DataProcessor":
+    ) -> DataProcessor:
         """Keep only rows for which *predicate* returns True."""
 
-        def _fn(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        def _fn(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
             return [row for row in data if predicate(row)]
 
         return self._add_step("filter", _fn, description or "filter(predicate)")
 
     def map(
         self,
-        transform: Callable[[Dict[str, Any]], Dict[str, Any]],
+        transform: Callable[[dict[str, Any]], dict[str, Any]],
         description: str = "",
-    ) -> "DataProcessor":
+    ) -> DataProcessor:
         """Apply *transform* to every row."""
 
-        def _fn(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        def _fn(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
             return [transform(row) for row in data]
 
         return self._add_step("map", _fn, description or "map(transform)")
 
-    def rename(self, old_key: str, new_key: str) -> "DataProcessor":
+    def rename(self, old_key: str, new_key: str) -> DataProcessor:
         """Rename a column from *old_key* to *new_key*."""
         desc = f"rename({old_key!r} -> {new_key!r})"
         return self._add_step("rename", lambda data: rename_key(data, old_key, new_key), desc)
 
-    def select(self, columns: List[str]) -> "DataProcessor":
+    def select(self, columns: list[str]) -> DataProcessor:
         """Keep only the specified *columns* in each row."""
 
-        def _fn(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        def _fn(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
             return [{k: v for k, v in row.items() if k in columns} for row in data]
 
         return self._add_step("select", _fn, f"select({columns})")
 
-    def drop(self, columns: List[str]) -> "DataProcessor":
+    def drop(self, columns: list[str]) -> DataProcessor:
         """Drop the specified *columns* from each row."""
 
-        def _fn(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        def _fn(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
             return [{k: v for k, v in row.items() if k not in columns} for row in data]
 
         return self._add_step("drop", _fn, f"drop({columns})")
 
-    def shuffle(self, seed: int = 42) -> "DataProcessor":
+    def shuffle(self, seed: int = 42) -> DataProcessor:
         """Shuffle the row order using the given random *seed*."""
 
-        def _fn(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        def _fn(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
             items = list(data)
             random.seed(seed)
             random.shuffle(items)
@@ -235,41 +238,43 @@ class DataProcessor:
 
         return self._add_step("shuffle", _fn, f"shuffle(seed={seed})")
 
-    def sample(self, n: int, seed: int = 42) -> "DataProcessor":
+    def sample(self, n: int, seed: int = 42) -> DataProcessor:
         """Randomly sample *n* rows without replacement."""
 
-        def _fn(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        def _fn(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
             return sample_data(data, n=n, seed=seed)
 
         return self._add_step("sample", _fn, f"sample(n={n}, seed={seed})")
 
-    def batch(self, batch_size: int) -> "DataProcessor":
+    def batch(self, batch_size: int) -> DataProcessor:
         """Group rows into batches of *batch_size*.
 
         Returns a list of lists (each inner list is a batch).
         """
 
-        def _fn(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        def _fn(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
             # Flatten-friendly: we store batches as special rows
-            batches: List[Dict[str, Any]] = []
+            batches: list[dict[str, Any]] = []
             for i in range(0, len(data), batch_size):
-                batches.append({"_batch": data[i : i + batch_size], "_batch_index": i // batch_size})
+                batches.append(
+                    {"_batch": data[i : i + batch_size], "_batch_index": i // batch_size}
+                )
             return batches
 
         return self._add_step("batch", _fn, f"batch(batch_size={batch_size})")
 
-    def unique(self, key: str = "text") -> "DataProcessor":
+    def unique(self, key: str = "text") -> DataProcessor:
         """Remove rows with duplicate values for *key*, keeping the first."""
 
-        def _fn(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        def _fn(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
             return deduplicate(data, key=key)
 
         return self._add_step("unique", _fn, f"unique(key={key!r})")
 
-    def sort(self, key: str, reverse: bool = False) -> "DataProcessor":
+    def sort(self, key: str, reverse: bool = False) -> DataProcessor:
         """Sort rows by the value of *key*."""
 
-        def _fn(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        def _fn(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
             return sorted(data, key=lambda row: row.get(key, ""), reverse=reverse)
 
         return self._add_step("sort", _fn, f"sort(key={key!r}, reverse={reverse})")
@@ -294,7 +299,7 @@ class DataProcessor:
         self._steps.clear()
         self._data = None
 
-    def list_steps(self) -> List[str]:
+    def list_steps(self) -> list[str]:
         """Return the names of all registered steps."""
         return [s.name for s in self._steps]
 
@@ -302,7 +307,7 @@ class DataProcessor:
     # Execution
     # ------------------------------------------------------------------
 
-    def process(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def process(self, data: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Execute all steps on *data* and return the result.
 
         In eager mode this is a no-op if data was already set via
@@ -313,7 +318,7 @@ class DataProcessor:
             result = step.fn(result)
         return result
 
-    def process_single(self, item: Dict[str, Any]) -> Dict[str, Any]:
+    def process_single(self, item: dict[str, Any]) -> dict[str, Any]:
         """Execute all steps on a single row."""
         result = dict(item)
         for step in self._steps:
@@ -323,7 +328,7 @@ class DataProcessor:
             result = wrapped[0]
         return result
 
-    def feed(self, data: List[Dict[str, Any]]) -> "DataProcessor":
+    def feed(self, data: list[dict[str, Any]]) -> DataProcessor:
         """Provide input data for eager-mode processing."""
         self._data = list(data)
         if self._mode == "eager":
@@ -331,7 +336,7 @@ class DataProcessor:
                 self._data = step.fn(self._data)
         return self
 
-    def collect(self, data: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+    def collect(self, data: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
         """Run the pipeline and return results.
 
         Args:
@@ -356,9 +361,9 @@ class DataProcessor:
 
     def stream(
         self,
-        data: Sequence[Dict[str, Any]],
+        data: Sequence[dict[str, Any]],
         batch_size: int = 1,
-    ) -> Iterator[Dict[str, Any]]:
+    ) -> Iterator[dict[str, Any]]:
         """Apply all steps incrementally and yield rows.
 
         This is a memory-friendly way to process large datasets: rows
@@ -372,7 +377,7 @@ class DataProcessor:
         Yields:
             Transformed row dictionaries.
         """
-        buffer: List[Dict[str, Any]] = []
+        buffer: list[dict[str, Any]] = []
         chunk_size = max(1000, batch_size * 10)
 
         for i in range(0, len(data), chunk_size):
