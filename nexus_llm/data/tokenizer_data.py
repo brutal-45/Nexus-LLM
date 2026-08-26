@@ -25,10 +25,9 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +35,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class TokenizerConfig:
@@ -53,9 +53,7 @@ class TokenizerConfig:
 
     vocab_size: int = 32000
     min_frequency: int = 2
-    special_tokens: List[str] = field(
-        default_factory=lambda: ["<pad>", "<unk>", "<bos>", "<eos>"]
-    )
+    special_tokens: list[str] = field(default_factory=lambda: ["<pad>", "<unk>", "<bos>", "<eos>"])
     unk_token: str = "<unk>"
     pad_token: str = "<pad>"
     bos_token: str = "<bos>"
@@ -65,6 +63,7 @@ class TokenizerConfig:
 # ---------------------------------------------------------------------------
 # SimpleTokenizer – lightweight word-level tokenizer (test-friendly)
 # ---------------------------------------------------------------------------
+
 
 class SimpleTokenizer:
     """Minimal word-level tokenizer for vocabulary building and encoding.
@@ -77,10 +76,10 @@ class SimpleTokenizer:
         config: Tokenizer configuration.
     """
 
-    def __init__(self, config: Optional[TokenizerConfig] = None) -> None:
+    def __init__(self, config: TokenizerConfig | None = None) -> None:
         self._config = config or TokenizerConfig()
-        self._vocab: Dict[str, int] = {}
-        self._id_to_token: Dict[int, str] = {}
+        self._vocab: dict[str, int] = {}
+        self._id_to_token: dict[int, str] = {}
         self._initialized: bool = False
 
     @property
@@ -95,7 +94,7 @@ class SimpleTokenizer:
 
     # -- Vocabulary building ------------------------------------------------
 
-    def build_vocab(self, texts: List[str]) -> None:
+    def build_vocab(self, texts: list[str]) -> None:
         """Build vocabulary from *texts*.
 
         Special tokens are assigned the first IDs, then the most frequent
@@ -123,7 +122,7 @@ class SimpleTokenizer:
 
     # -- Encoding / Decoding ------------------------------------------------
 
-    def encode(self, text: str) -> List[int]:
+    def encode(self, text: str) -> list[int]:
         """Encode *text* into a list of token IDs."""
         if not self._initialized:
             raise RuntimeError("Tokenizer not initialized. Call build_vocab first.")
@@ -131,13 +130,11 @@ class SimpleTokenizer:
         unk_id = self._vocab.get(self._config.unk_token, 1)
         return [self._vocab.get(word, unk_id) for word in words]
 
-    def decode(self, ids: List[int]) -> str:
+    def decode(self, ids: list[int]) -> str:
         """Decode a list of token IDs back into a string."""
         if not self._initialized:
             raise RuntimeError("Tokenizer not initialized.")
-        return " ".join(
-            self._id_to_token.get(id_, self._config.unk_token) for id_ in ids
-        )
+        return " ".join(self._id_to_token.get(id_, self._config.unk_token) for id_ in ids)
 
     # -- Lookup helpers -----------------------------------------------------
 
@@ -149,7 +146,7 @@ class SimpleTokenizer:
         """Return the string for *id_*, or the UNK token."""
         return self._id_to_token.get(id_, self._config.unk_token)
 
-    def get_vocab(self) -> Dict[str, int]:
+    def get_vocab(self) -> dict[str, int]:
         """Return a copy of the vocabulary mapping."""
         return dict(self._vocab)
 
@@ -162,9 +159,10 @@ class SimpleTokenizer:
 # BPE merge rule computation
 # ---------------------------------------------------------------------------
 
-def _get_pairs(word: Tuple[str, ...]) -> Set[Tuple[str, str]]:
+
+def _get_pairs(word: tuple[str, ...]) -> set[tuple[str, str]]:
     """Return set of adjacent symbol pairs in *word*."""
-    pairs: Set[Tuple[str, str]] = set()
+    pairs: set[tuple[str, str]] = set()
     prev = word[0]
     for symbol in word[1:]:
         pairs.add((prev, symbol))
@@ -173,10 +171,10 @@ def _get_pairs(word: Tuple[str, ...]) -> Set[Tuple[str, str]]:
 
 
 def compute_bpe_merges(
-    texts: List[str],
+    texts: list[str],
     num_merges: int = 1000,
     min_frequency: int = 2,
-) -> List[Tuple[str, str]]:
+) -> list[tuple[str, str]]:
     """Compute BPE merge rules from *texts*.
 
     Args:
@@ -188,14 +186,14 @@ def compute_bpe_merges(
         Ordered list of merge pairs ``(left, right)``.
     """
     # Build initial word frequencies (character-level split)
-    word_freqs: Dict[Tuple[str, ...], int] = Counter()
+    word_freqs: dict[tuple[str, ...], int] = Counter()
     for text in texts:
         for word in text.lower().split():
             # Each character becomes a symbol; add end-of-word marker
             symbols = tuple(word) + ("</w>",)
             word_freqs[symbols] += 1
 
-    merges: List[Tuple[str, str]] = []
+    merges: list[tuple[str, str]] = []
 
     for _ in range(num_merges):
         # Count all pairs
@@ -215,16 +213,12 @@ def compute_bpe_merges(
         merges.append(best_pair)
 
         # Merge the best pair in all words
-        new_word_freqs: Dict[Tuple[str, ...], int] = {}
+        new_word_freqs: dict[tuple[str, ...], int] = {}
         for word, freq in word_freqs.items():
-            new_word: List[str] = []
+            new_word: list[str] = []
             i = 0
             while i < len(word):
-                if (
-                    i < len(word) - 1
-                    and word[i] == best_pair[0]
-                    and word[i + 1] == best_pair[1]
-                ):
+                if i < len(word) - 1 and word[i] == best_pair[0] and word[i + 1] == best_pair[1]:
                     new_word.append(best_pair[0] + best_pair[1])
                     i += 2
                 else:
@@ -240,6 +234,7 @@ def compute_bpe_merges(
 # ---------------------------------------------------------------------------
 # TokenizerDataBuilder
 # ---------------------------------------------------------------------------
+
 
 class TokenizerDataBuilder:
     """End-to-end tokenizer data preparation.
@@ -257,10 +252,10 @@ class TokenizerDataBuilder:
         builder.save("tokenizer.json")
     """
 
-    def __init__(self, config: Optional[TokenizerConfig] = None) -> None:
+    def __init__(self, config: TokenizerConfig | None = None) -> None:
         self._config = config or TokenizerConfig()
         self._tokenizer = SimpleTokenizer(self._config)
-        self._merges: List[Tuple[str, str]] = []
+        self._merges: list[tuple[str, str]] = []
         self._built = False
 
     @property
@@ -274,12 +269,12 @@ class TokenizerDataBuilder:
         return self._tokenizer.vocab_size
 
     @property
-    def merges(self) -> List[Tuple[str, str]]:
+    def merges(self) -> list[tuple[str, str]]:
         """BPE merge rules (empty until :meth:`build_from_texts` is called)."""
         return list(self._merges)
 
     @property
-    def vocab(self) -> Dict[str, int]:
+    def vocab(self) -> dict[str, int]:
         """Current vocabulary mapping."""
         return self._tokenizer.get_vocab()
 
@@ -287,9 +282,9 @@ class TokenizerDataBuilder:
 
     def build_from_texts(
         self,
-        texts: List[str],
+        texts: list[str],
         num_merges: int = 1000,
-    ) -> "TokenizerDataBuilder":
+    ) -> TokenizerDataBuilder:
         """Build vocabulary and BPE merges from a corpus.
 
         Args:
@@ -306,7 +301,8 @@ class TokenizerDataBuilder:
         self._built = True
         logger.info(
             "TokenizerDataBuilder: vocab_size=%d, merges=%d",
-            self.vocab_size, len(self._merges),
+            self.vocab_size,
+            len(self._merges),
         )
         return self
 
@@ -331,7 +327,7 @@ class TokenizerDataBuilder:
         self._tokenizer._id_to_token[new_id] = token
         return new_id
 
-    def add_special_tokens(self, tokens: List[str]) -> List[int]:
+    def add_special_tokens(self, tokens: list[str]) -> list[int]:
         """Add multiple special tokens.
 
         Returns:
@@ -341,11 +337,11 @@ class TokenizerDataBuilder:
 
     # -- Encoding / Decoding ------------------------------------------------
 
-    def encode(self, text: str) -> List[int]:
+    def encode(self, text: str) -> list[int]:
         """Encode *text* using the built vocabulary."""
         return self._tokenizer.encode(text)
 
-    def decode(self, ids: List[int]) -> str:
+    def decode(self, ids: list[int]) -> str:
         """Decode token IDs back into text."""
         return self._tokenizer.decode(ids)
 
@@ -359,7 +355,7 @@ class TokenizerDataBuilder:
 
     # -- Application of BPE merges ------------------------------------------
 
-    def apply_bpe(self, word: str) -> List[str]:
+    def apply_bpe(self, word: str) -> list[str]:
         """Apply learned BPE merges to a single word.
 
         Args:
@@ -380,7 +376,7 @@ class TokenizerDataBuilder:
 
     # -- Serialization ------------------------------------------------------
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize the tokenizer data to a dictionary."""
         return {
             "config": {
@@ -407,7 +403,7 @@ class TokenizerDataBuilder:
         logger.info("Saved tokenizer data to %s", path)
 
     @classmethod
-    def load(cls, path: str) -> "TokenizerDataBuilder":
+    def load(cls, path: str) -> TokenizerDataBuilder:
         """Load tokenizer data from a JSON file.
 
         Args:
@@ -416,7 +412,7 @@ class TokenizerDataBuilder:
         Returns:
             A ``TokenizerDataBuilder`` with restored state.
         """
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
 
         cfg_data = data.get("config", {})
@@ -443,7 +439,7 @@ class TokenizerDataBuilder:
         """Whether vocabulary and merges have been computed."""
         return self._built
 
-    def get_special_token_ids(self) -> Dict[str, int]:
+    def get_special_token_ids(self) -> dict[str, int]:
         """Return a mapping of special token names to their IDs."""
         vocab = self._tokenizer.get_vocab()
         return {t: vocab[t] for t in self._config.special_tokens if t in vocab}
