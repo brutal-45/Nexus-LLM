@@ -27,10 +27,9 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import re
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +37,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # ValidationResult
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ValidationResult:
@@ -53,15 +53,15 @@ class ValidationResult:
 
     is_valid: bool = True
     score: float = 1.0
-    issues: List[Dict[str, Any]] = field(default_factory=list)
-    stats: Dict[str, Any] = field(default_factory=dict)
+    issues: list[dict[str, Any]] = field(default_factory=list)
+    stats: dict[str, Any] = field(default_factory=dict)
 
     def add_issue(
         self,
         severity: str,
         check: str,
         message: str,
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         """Record a validation issue.
 
@@ -71,7 +71,7 @@ class ValidationResult:
             message: Human-readable description.
             details: Optional extra information.
         """
-        issue: Dict[str, Any] = {
+        issue: dict[str, Any] = {
             "severity": severity,
             "check": check,
             "message": message,
@@ -82,11 +82,11 @@ class ValidationResult:
         if severity == "error":
             self.is_valid = False
 
-    def errors(self) -> List[Dict[str, Any]]:
+    def errors(self) -> list[dict[str, Any]]:
         """Return only issues with severity ``error``."""
         return [i for i in self.issues if i["severity"] == "error"]
 
-    def warnings(self) -> List[Dict[str, Any]]:
+    def warnings(self) -> list[dict[str, Any]]:
         """Return only issues with severity ``warning``."""
         return [i for i in self.issues if i["severity"] == "warning"]
 
@@ -111,11 +111,12 @@ class ValidationResult:
 # Individual check functions
 # ---------------------------------------------------------------------------
 
+
 def check_schema(
-    data: List[Dict[str, Any]],
-    required_keys: List[str],
-    key_types: Optional[Dict[str, type]] = None,
-) -> List[Dict[str, Any]]:
+    data: list[dict[str, Any]],
+    required_keys: list[str],
+    key_types: dict[str, type] | None = None,
+) -> list[dict[str, Any]]:
     """Validate that every row has the required keys with correct types.
 
     Args:
@@ -126,35 +127,39 @@ def check_schema(
     Returns:
         List of issue dicts.
     """
-    issues: List[Dict[str, Any]] = []
+    issues: list[dict[str, Any]] = []
     for idx, row in enumerate(data):
         for key in required_keys:
             if key not in row:
-                issues.append({
-                    "severity": "error",
-                    "check": "schema",
-                    "message": f"Row {idx} missing required key: {key!r}",
-                    "details": {"row_index": idx, "key": key},
-                })
+                issues.append(
+                    {
+                        "severity": "error",
+                        "check": "schema",
+                        "message": f"Row {idx} missing required key: {key!r}",
+                        "details": {"row_index": idx, "key": key},
+                    }
+                )
             elif key_types and key in key_types:
                 expected = key_types[key]
                 if not isinstance(row[key], expected):
-                    issues.append({
-                        "severity": "error",
-                        "check": "schema_type",
-                        "message": (
-                            f"Row {idx} key {key!r} expected type "
-                            f"{expected.__name__}, got {type(row[key]).__name__}"
-                        ),
-                        "details": {"row_index": idx, "key": key},
-                    })
+                    issues.append(
+                        {
+                            "severity": "error",
+                            "check": "schema_type",
+                            "message": (
+                                f"Row {idx} key {key!r} expected type "
+                                f"{expected.__name__}, got {type(row[key]).__name__}"
+                            ),
+                            "details": {"row_index": idx, "key": key},
+                        }
+                    )
     return issues
 
 
 def check_completeness(
-    data: List[Dict[str, Any]],
-    check_keys: Optional[List[str]] = None,
-) -> List[Dict[str, Any]]:
+    data: list[dict[str, Any]],
+    check_keys: list[str] | None = None,
+) -> list[dict[str, Any]]:
     """Check for null, empty, or whitespace-only field values.
 
     Args:
@@ -164,10 +169,8 @@ def check_completeness(
     Returns:
         List of issue dicts.
     """
-    issues: List[Dict[str, Any]] = []
-    keys_to_check = check_keys or (
-        list(data[0].keys()) if data else []
-    )
+    issues: list[dict[str, Any]] = []
+    keys_to_check = check_keys or (list(data[0].keys()) if data else [])
     missing_counts: Counter = Counter()
 
     for idx, row in enumerate(data):
@@ -176,44 +179,50 @@ def check_completeness(
             if val is None:
                 missing_counts[key] += 1
                 if missing_counts[key] <= 5:  # Report first 5 per key
-                    issues.append({
-                        "severity": "warning",
-                        "check": "completeness",
-                        "message": f"Row {idx} has None for key {key!r}",
-                        "details": {"row_index": idx, "key": key},
-                    })
+                    issues.append(
+                        {
+                            "severity": "warning",
+                            "check": "completeness",
+                            "message": f"Row {idx} has None for key {key!r}",
+                            "details": {"row_index": idx, "key": key},
+                        }
+                    )
             elif isinstance(val, str) and not val.strip():
                 missing_counts[key] += 1
                 if missing_counts[key] <= 5:
-                    issues.append({
-                        "severity": "warning",
-                        "check": "completeness",
-                        "message": f"Row {idx} has empty string for key {key!r}",
-                        "details": {"row_index": idx, "key": key},
-                    })
+                    issues.append(
+                        {
+                            "severity": "warning",
+                            "check": "completeness",
+                            "message": f"Row {idx} has empty string for key {key!r}",
+                            "details": {"row_index": idx, "key": key},
+                        }
+                    )
 
     # Summary for keys with many missing values
     for key, count in missing_counts.items():
         if count > 5:
-            issues.append({
-                "severity": "warning",
-                "check": "completeness_summary",
-                "message": f"Key {key!r} has {count} missing/empty values",
-                "details": {"key": key, "count": count},
-            })
+            issues.append(
+                {
+                    "severity": "warning",
+                    "check": "completeness_summary",
+                    "message": f"Key {key!r} has {count} missing/empty values",
+                    "details": {"key": key, "count": count},
+                }
+            )
 
     return issues
 
 
 def check_text_length(
-    data: List[Dict[str, Any]],
+    data: list[dict[str, Any]],
     text_key: str = "text",
     min_chars: int = 1,
     max_chars: int = 100000,
     min_words: int = 0,
     max_words: int = 100000,
     outlier_threshold: float = 3.0,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Validate text length constraints and flag statistical outliers.
 
     Args:
@@ -228,9 +237,9 @@ def check_text_length(
     Returns:
         List of issue dicts.
     """
-    issues: List[Dict[str, Any]] = []
-    lengths: List[int] = []
-    word_counts: List[int] = []
+    issues: list[dict[str, Any]] = []
+    lengths: list[int] = []
+    word_counts: list[int] = []
 
     for idx, row in enumerate(data):
         text = row.get(text_key, "")
@@ -240,59 +249,74 @@ def check_text_length(
         word_counts.append(word_count)
 
         if char_len < min_chars:
-            issues.append({
-                "severity": "error",
-                "check": "text_length",
-                "message": f"Row {idx} text too short: {char_len} chars (min={min_chars})",
-                "details": {"row_index": idx, "char_length": char_len},
-            })
+            issues.append(
+                {
+                    "severity": "error",
+                    "check": "text_length",
+                    "message": f"Row {idx} text too short: {char_len} chars (min={min_chars})",
+                    "details": {"row_index": idx, "char_length": char_len},
+                }
+            )
         elif char_len > max_chars:
-            issues.append({
-                "severity": "error",
-                "check": "text_length",
-                "message": f"Row {idx} text too long: {char_len} chars (max={max_chars})",
-                "details": {"row_index": idx, "char_length": char_len},
-            })
+            issues.append(
+                {
+                    "severity": "error",
+                    "check": "text_length",
+                    "message": f"Row {idx} text too long: {char_len} chars (max={max_chars})",
+                    "details": {"row_index": idx, "char_length": char_len},
+                }
+            )
 
         if word_count < min_words:
-            issues.append({
-                "severity": "warning",
-                "check": "word_count",
-                "message": f"Row {idx} too few words: {word_count} (min={min_words})",
-                "details": {"row_index": idx, "word_count": word_count},
-            })
+            issues.append(
+                {
+                    "severity": "warning",
+                    "check": "word_count",
+                    "message": f"Row {idx} too few words: {word_count} (min={min_words})",
+                    "details": {"row_index": idx, "word_count": word_count},
+                }
+            )
         elif word_count > max_words:
-            issues.append({
-                "severity": "warning",
-                "check": "word_count",
-                "message": f"Row {idx} too many words: {word_count} (max={max_words})",
-                "details": {"row_index": idx, "word_count": word_count},
-            })
+            issues.append(
+                {
+                    "severity": "warning",
+                    "check": "word_count",
+                    "message": f"Row {idx} too many words: {word_count} (max={max_words})",
+                    "details": {"row_index": idx, "word_count": word_count},
+                }
+            )
 
     # Outlier detection (only if enough data)
     if len(lengths) >= 10:
         import statistics
+
         mean_len = statistics.mean(lengths)
         stdev_len = statistics.stdev(lengths) if len(lengths) > 1 else 0
         if stdev_len > 0:
             for idx, char_len in enumerate(lengths):
                 z = abs(char_len - mean_len) / stdev_len
                 if z > outlier_threshold:
-                    issues.append({
-                        "severity": "info",
-                        "check": "length_outlier",
-                        "message": f"Row {idx} is a length outlier (z={z:.1f}, chars={char_len})",
-                        "details": {"row_index": idx, "z_score": round(z, 2), "char_length": char_len},
-                    })
+                    issues.append(
+                        {
+                            "severity": "info",
+                            "check": "length_outlier",
+                            "message": f"Row {idx} is a length outlier (z={z:.1f}, chars={char_len})",
+                            "details": {
+                                "row_index": idx,
+                                "z_score": round(z, 2),
+                                "char_length": char_len,
+                            },
+                        }
+                    )
 
     return issues
 
 
 def check_duplicates(
-    data: List[Dict[str, Any]],
-    keys: Optional[List[str]] = None,
+    data: list[dict[str, Any]],
+    keys: list[str] | None = None,
     similarity_threshold: float = 1.0,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Detect exact and near-duplicate rows.
 
     Args:
@@ -306,11 +330,11 @@ def check_duplicates(
     Returns:
         List of issue dicts.
     """
-    issues: List[Dict[str, Any]] = []
+    issues: list[dict[str, Any]] = []
     keys = keys or (list(data[0].keys()) if data else [])
 
     # Exact duplicate detection via hash
-    seen_hashes: Dict[str, int] = {}
+    seen_hashes: dict[str, int] = {}
     duplicate_count = 0
 
     for idx, row in enumerate(data):
@@ -320,26 +344,30 @@ def check_duplicates(
         if h in seen_hashes:
             duplicate_count += 1
             if duplicate_count <= 10:  # Report first 10
-                issues.append({
-                    "severity": "warning",
-                    "check": "exact_duplicate",
-                    "message": f"Row {idx} is an exact duplicate of row {seen_hashes[h]}",
-                    "details": {"row_index": idx, "duplicate_of": seen_hashes[h]},
-                })
+                issues.append(
+                    {
+                        "severity": "warning",
+                        "check": "exact_duplicate",
+                        "message": f"Row {idx} is an exact duplicate of row {seen_hashes[h]}",
+                        "details": {"row_index": idx, "duplicate_of": seen_hashes[h]},
+                    }
+                )
         else:
             seen_hashes[h] = idx
 
     if duplicate_count > 10:
-        issues.append({
-            "severity": "warning",
-            "check": "duplicate_summary",
-            "message": f"Found {duplicate_count} exact duplicate rows total",
-            "details": {"count": duplicate_count},
-        })
+        issues.append(
+            {
+                "severity": "warning",
+                "check": "duplicate_summary",
+                "message": f"Found {duplicate_count} exact duplicate rows total",
+                "details": {"count": duplicate_count},
+            }
+        )
 
     # Near-duplicate detection (Jaccard similarity on word sets)
     if similarity_threshold < 1.0 and len(data) <= 10000:
-        word_sets: List[Set[str]] = []
+        word_sets: list[set[str]] = []
         near_dup_count = 0
         for row in data:
             text = " ".join(str(row.get(k, "")) for k in keys).lower()
@@ -356,32 +384,37 @@ def check_duplicates(
                     if sim >= similarity_threshold and sim < 1.0:
                         near_dup_count += 1
                         if near_dup_count <= 10:
-                            issues.append({
-                                "severity": "info",
-                                "check": "near_duplicate",
-                                "message": (
-                                    f"Rows {i} and {j} are near-duplicates "
-                                    f"(similarity={sim:.3f})"
-                                ),
-                                "details": {
-                                    "row_a": i, "row_b": j,
-                                    "similarity": round(sim, 3),
-                                },
-                            })
+                            issues.append(
+                                {
+                                    "severity": "info",
+                                    "check": "near_duplicate",
+                                    "message": (
+                                        f"Rows {i} and {j} are near-duplicates "
+                                        f"(similarity={sim:.3f})"
+                                    ),
+                                    "details": {
+                                        "row_a": i,
+                                        "row_b": j,
+                                        "similarity": round(sim, 3),
+                                    },
+                                }
+                            )
 
         if near_dup_count > 10:
-            issues.append({
-                "severity": "info",
-                "check": "near_duplicate_summary",
-                "message": f"Found {near_dup_count} near-duplicate pairs total",
-                "details": {"count": near_dup_count},
-            })
+            issues.append(
+                {
+                    "severity": "info",
+                    "check": "near_duplicate_summary",
+                    "message": f"Found {near_dup_count} near-duplicate pairs total",
+                    "details": {"count": near_dup_count},
+                }
+            )
 
     return issues
 
 
 def compute_quality_score(
-    data: List[Dict[str, Any]],
+    data: list[dict[str, Any]],
     text_key: str = "text",
 ) -> float:
     """Compute a heuristic quality score for the dataset.
@@ -405,8 +438,8 @@ def compute_quality_score(
     completeness = non_empty / n
 
     # Word diversity
-    all_words: List[str] = []
-    lengths: List[int] = []
+    all_words: list[str] = []
+    lengths: list[int] = []
     for row in data:
         text = row.get(text_key, "")
         words = text.lower().split()
@@ -419,6 +452,7 @@ def compute_quality_score(
 
     # Length reasonableness (penalize < 10 or > 100000 chars)
     import statistics
+
     avg_len = statistics.mean(lengths) if lengths else 0
     if avg_len < 10:
         length_score = avg_len / 10.0
@@ -435,18 +469,14 @@ def compute_quality_score(
             text_set.add(hashlib.sha256(t.encode("utf-8")).hexdigest())
     unique_ratio = len(text_set) / non_empty if non_empty > 0 else 0.0
 
-    score = (
-        0.30 * completeness
-        + 0.30 * diversity
-        + 0.20 * length_score
-        + 0.20 * unique_ratio
-    )
+    score = 0.30 * completeness + 0.30 * diversity + 0.20 * length_score + 0.20 * unique_ratio
     return round(max(0.0, min(1.0, score)), 3)
 
 
 # ---------------------------------------------------------------------------
 # DataValidator class
 # ---------------------------------------------------------------------------
+
 
 class DataValidator:
     """Orchestrates multiple validation checks on a dataset.
@@ -481,14 +511,14 @@ class DataValidator:
 
     def __init__(
         self,
-        required_keys: Optional[List[str]] = None,
-        key_types: Optional[Dict[str, type]] = None,
+        required_keys: list[str] | None = None,
+        key_types: dict[str, type] | None = None,
         text_key: str = "text",
         min_chars: int = 1,
         max_chars: int = 100000,
         min_words: int = 0,
         max_words: int = 100000,
-        duplicate_keys: Optional[List[str]] = None,
+        duplicate_keys: list[str] | None = None,
         similarity_threshold: float = 1.0,
         enable_schema: bool = True,
         enable_completeness: bool = True,
@@ -513,7 +543,7 @@ class DataValidator:
 
     # -- Public API ---------------------------------------------------------
 
-    def validate(self, data: List[Dict[str, Any]]) -> ValidationResult:
+    def validate(self, data: list[dict[str, Any]]) -> ValidationResult:
         """Run all enabled validation checks on *data*.
 
         Args:
@@ -571,7 +601,7 @@ class DataValidator:
 
         return result
 
-    def validate_schema(self, data: List[Dict[str, Any]]) -> ValidationResult:
+    def validate_schema(self, data: list[dict[str, Any]]) -> ValidationResult:
         """Run only schema validation."""
         result = ValidationResult()
         if self._required_keys:
@@ -579,14 +609,14 @@ class DataValidator:
                 result.add_issue(**issue)
         return result
 
-    def validate_completeness(self, data: List[Dict[str, Any]]) -> ValidationResult:
+    def validate_completeness(self, data: list[dict[str, Any]]) -> ValidationResult:
         """Run only completeness checks."""
         result = ValidationResult()
         for issue in check_completeness(data, self._required_keys or None):
             result.add_issue(**issue)
         return result
 
-    def validate_text_length(self, data: List[Dict[str, Any]]) -> ValidationResult:
+    def validate_text_length(self, data: list[dict[str, Any]]) -> ValidationResult:
         """Run only text-length checks."""
         result = ValidationResult()
         for issue in check_text_length(
@@ -600,16 +630,17 @@ class DataValidator:
             result.add_issue(**issue)
         return result
 
-    def validate_duplicates(self, data: List[Dict[str, Any]]) -> ValidationResult:
+    def validate_duplicates(self, data: list[dict[str, Any]]) -> ValidationResult:
         """Run only duplicate checks."""
         result = ValidationResult()
         for issue in check_duplicates(
-            data, keys=self._duplicate_keys,
+            data,
+            keys=self._duplicate_keys,
             similarity_threshold=self._similarity_threshold,
         ):
             result.add_issue(**issue)
         return result
 
-    def quality_score(self, data: List[Dict[str, Any]]) -> float:
+    def quality_score(self, data: list[dict[str, Any]]) -> float:
         """Return the heuristic quality score for *data*."""
         return compute_quality_score(data, text_key=self._text_key)
