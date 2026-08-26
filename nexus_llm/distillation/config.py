@@ -6,7 +6,7 @@ schedule.
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any
 
 
 @dataclass
@@ -48,31 +48,21 @@ class DistillationConfig:
     def __post_init__(self) -> None:
         """Validate configuration after initialisation."""
         if self.temperature <= 0:
-            raise ValueError(
-                f"temperature must be positive, got {self.temperature}"
-            )
+            raise ValueError(f"temperature must be positive, got {self.temperature}")
         if not 0.0 <= self.alpha <= 1.0:
-            raise ValueError(
-                f"alpha must be in [0, 1], got {self.alpha}"
-            )
+            raise ValueError(f"alpha must be in [0, 1], got {self.alpha}")
         if self.learning_rate <= 0:
-            raise ValueError(
-                f"learning_rate must be positive, got {self.learning_rate}"
-            )
+            raise ValueError(f"learning_rate must be positive, got {self.learning_rate}")
         if self.batch_size <= 0:
-            raise ValueError(
-                f"batch_size must be a positive integer, got {self.batch_size}"
-            )
+            raise ValueError(f"batch_size must be a positive integer, got {self.batch_size}")
         if self.epochs <= 0:
-            raise ValueError(
-                f"epochs must be a positive integer, got {self.epochs}"
-            )
+            raise ValueError(f"epochs must be a positive integer, got {self.epochs}")
 
     # ------------------------------------------------------------------
     # Serialisation helpers
     # ------------------------------------------------------------------
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialise the configuration to a plain dictionary."""
         return {
             "temperature": self.temperature,
@@ -83,7 +73,7 @@ class DistillationConfig:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "DistillationConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "DistillationConfig":
         """Deserialise a configuration from a plain dictionary.
 
         Args:
