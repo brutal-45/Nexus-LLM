@@ -10,27 +10,28 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from nexus_llm.experiments.experiment import Experiment, ExperimentStatus, MetricRecord
-
+from nexus_llm.experiments.experiment import Experiment
 
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class MetricComparison:
     """Comparison of a single metric across experiments."""
-    metric_name: str
-    values: Dict[str, Optional[float]]  # experiment_id -> value
-    best_experiment_id: Optional[str] = None
-    best_value: Optional[float] = None
-    worst_experiment_id: Optional[str] = None
-    worst_value: Optional[float] = None
-    difference: Optional[float] = None  # best - worst
 
-    def to_dict(self) -> Dict[str, Any]:
+    metric_name: str
+    values: dict[str, float | None]  # experiment_id -> value
+    best_experiment_id: str | None = None
+    best_value: float | None = None
+    worst_experiment_id: str | None = None
+    worst_value: float | None = None
+    difference: float | None = None  # best - worst
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "metric_name": self.metric_name,
             "values": self.values,
@@ -45,12 +46,13 @@ class MetricComparison:
 @dataclass
 class ParamDifference:
     """Difference in a parameter between experiments."""
-    param_name: str
-    values: Dict[str, Any]  # experiment_id -> value
-    is_same: bool = True
-    unique_values: List[Any] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    param_name: str
+    values: dict[str, Any]  # experiment_id -> value
+    is_same: bool = True
+    unique_values: list[Any] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "param_name": self.param_name,
             "values": self.values,
@@ -62,15 +64,16 @@ class ParamDifference:
 @dataclass
 class ComparisonResult:
     """Result of comparing multiple experiments."""
-    experiment_ids: List[str]
-    experiment_names: Dict[str, str] = field(default_factory=dict)
-    metric_comparisons: List[MetricComparison] = field(default_factory=list)
-    param_differences: List[ParamDifference] = field(default_factory=list)
-    common_metrics: List[str] = field(default_factory=list)
-    common_params: List[str] = field(default_factory=list)
-    rankings: Dict[str, int] = field(default_factory=dict)  # exp_id -> rank
 
-    def to_dict(self) -> Dict[str, Any]:
+    experiment_ids: list[str]
+    experiment_names: dict[str, str] = field(default_factory=dict)
+    metric_comparisons: list[MetricComparison] = field(default_factory=list)
+    param_differences: list[ParamDifference] = field(default_factory=list)
+    common_metrics: list[str] = field(default_factory=list)
+    common_params: list[str] = field(default_factory=list)
+    rankings: dict[str, int] = field(default_factory=dict)  # exp_id -> rank
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "experiment_ids": self.experiment_ids,
             "experiment_names": self.experiment_names,
@@ -85,6 +88,7 @@ class ComparisonResult:
 # ---------------------------------------------------------------------------
 # Experiment Comparator
 # ---------------------------------------------------------------------------
+
 
 class ExperimentComparator:
     """Compare and rank multiple experiments.
@@ -116,9 +120,9 @@ class ExperimentComparator:
 
     def compare(
         self,
-        experiments: List[Experiment],
+        experiments: list[Experiment],
         metric_mode: str = "min",
-        rank_metric: Optional[str] = None,
+        rank_metric: str | None = None,
     ) -> ComparisonResult:
         """Compare multiple experiments.
 
@@ -133,22 +137,21 @@ class ExperimentComparator:
         if len(experiments) < 2:
             raise ValueError("At least 2 experiments are required for comparison")
 
-        exp_map = {exp.id: exp for exp in experiments}
+        {exp.id: exp for exp in experiments}
         exp_ids = [exp.id for exp in experiments]
         exp_names = {exp.id: exp.name for exp in experiments}
 
         # Find common and unique metrics
-        all_metric_names: Dict[str, Set[str]] = {}
+        all_metric_names: dict[str, set[str]] = {}
         for exp in experiments:
             for name in exp.get_metric_names():
                 if name not in all_metric_names:
                     all_metric_names[name] = set()
                 all_metric_names[name].add(exp.id)
 
-        common_metrics = sorted([
-            name for name, ids in all_metric_names.items()
-            if len(ids) == len(experiments)
-        ])
+        common_metrics = sorted(
+            [name for name, ids in all_metric_names.items() if len(ids) == len(experiments)]
+        )
 
         # Compare metrics
         metric_comparisons = []
@@ -157,25 +160,26 @@ class ExperimentComparator:
             metric_comparisons.append(comparison)
 
         # Find parameter differences
-        all_param_names: Set[str] = set()
+        all_param_names: set[str] = set()
         for exp in experiments:
             all_param_names.update(exp.params.keys())
 
-        common_params = sorted([
-            name for name in all_param_names
-            if all(name in exp.params for exp in experiments)
-        ])
+        common_params = sorted(
+            [name for name in all_param_names if all(name in exp.params for exp in experiments)]
+        )
 
         param_diffs = []
         for param_name in sorted(all_param_names):
             values = {exp.id: exp.params.get(param_name) for exp in experiments}
-            unique = list(set(v for v in values.values() if v is not None))
-            param_diffs.append(ParamDifference(
-                param_name=param_name,
-                values=values,
-                is_same=len(unique) <= 1,
-                unique_values=unique,
-            ))
+            unique = list({v for v in values.values() if v is not None})
+            param_diffs.append(
+                ParamDifference(
+                    param_name=param_name,
+                    values=values,
+                    is_same=len(unique) <= 1,
+                    unique_values=unique,
+                )
+            )
 
         # Rank experiments
         rankings = {}
@@ -195,12 +199,12 @@ class ExperimentComparator:
 
     def _compare_metric(
         self,
-        experiments: List[Experiment],
+        experiments: list[Experiment],
         metric_name: str,
         mode: str,
     ) -> MetricComparison:
         """Compare a single metric across experiments."""
-        values: Dict[str, Optional[float]] = {}
+        values: dict[str, float | None] = {}
         for exp in experiments:
             best = exp.get_best_metric(metric_name, mode=mode)
             values[exp.id] = best.value if best else None
@@ -238,10 +242,10 @@ class ExperimentComparator:
 
     def _rank_experiments(
         self,
-        experiments: List[Experiment],
+        experiments: list[Experiment],
         metric_name: str,
         mode: str,
-    ) -> Dict[str, int]:
+    ) -> dict[str, int]:
         """Rank experiments by a metric."""
         scored = []
         for exp in experiments:
@@ -266,7 +270,7 @@ class ExperimentComparator:
         comparison: ComparisonResult,
         metric_name: str,
         mode: str = "min",
-    ) -> Dict[str, int]:
+    ) -> dict[str, int]:
         """Re-rank experiments by a specific metric from comparison data.
 
         Args:
@@ -295,7 +299,7 @@ class ExperimentComparator:
         self,
         exp1: Experiment,
         exp2: Experiment,
-    ) -> List[ParamDifference]:
+    ) -> list[ParamDifference]:
         """Find parameters that differ between two experiments.
 
         Args:
@@ -311,12 +315,14 @@ class ExperimentComparator:
             v1 = exp1.params.get(name)
             v2 = exp2.params.get(name)
             if v1 != v2:
-                diffs.append(ParamDifference(
-                    param_name=name,
-                    values={exp1.id: v1, exp2.id: v2},
-                    is_same=False,
-                    unique_values=list({v1, v2} - {None}),
-                ))
+                diffs.append(
+                    ParamDifference(
+                        param_name=name,
+                        values={exp1.id: v1, exp2.id: v2},
+                        is_same=False,
+                        unique_values=list({v1, v2} - {None}),
+                    )
+                )
         return diffs
 
     def find_metric_differences(
@@ -324,7 +330,7 @@ class ExperimentComparator:
         exp1: Experiment,
         exp2: Experiment,
         mode: str = "min",
-    ) -> List[MetricComparison]:
+    ) -> list[MetricComparison]:
         """Compare metrics between two experiments.
 
         Args:
@@ -366,7 +372,7 @@ class ExperimentComparator:
             return self._generate_markdown_report(comparison)
 
         # Default: text format
-        lines: List[str] = []
+        lines: list[str] = []
         lines.append("=" * 60)
         lines.append("EXPERIMENT COMPARISON REPORT")
         lines.append("=" * 60)
@@ -385,7 +391,11 @@ class ExperimentComparator:
                 lines.append(f"\n  {mc.metric_name}:")
                 for eid, val in mc.values.items():
                     marker = " <-- BEST" if eid == mc.best_experiment_id else ""
-                    marker += " WORST" if eid == mc.worst_experiment_id and eid != mc.best_experiment_id else ""
+                    marker += (
+                        " WORST"
+                        if eid == mc.worst_experiment_id and eid != mc.best_experiment_id
+                        else ""
+                    )
                     name = comparison.experiment_names.get(eid, eid)
                     lines.append(f"    {name}: {val}{marker}")
                 if mc.difference is not None:
@@ -406,7 +416,7 @@ class ExperimentComparator:
         if same:
             lines.append(f"\nCommon Parameters ({len(same)}):")
             for pd in same[:10]:
-                val = list(pd.values.values())[0]
+                val = next(iter(pd.values.values()))
                 lines.append(f"  {pd.param_name} = {val}")
             if len(same) > 10:
                 lines.append(f"  ... and {len(same) - 10} more")
@@ -416,7 +426,7 @@ class ExperimentComparator:
 
     def _generate_markdown_report(self, comparison: ComparisonResult) -> str:
         """Generate a Markdown comparison report."""
-        lines: List[str] = []
+        lines: list[str] = []
         lines.append("# Experiment Comparison Report\n")
 
         # Overview table
@@ -431,10 +441,16 @@ class ExperimentComparator:
         # Metrics table
         if comparison.metric_comparisons:
             lines.append("\n## Metric Comparisons\n")
-            header = "| Metric | " + " | ".join(
-                comparison.experiment_names.get(eid, eid) for eid in comparison.experiment_ids
-            ) + " | Best | Difference |"
-            sep = "|--------" + "|--------" * len(comparison.experiment_ids) + "|------|------------|"
+            header = (
+                "| Metric | "
+                + " | ".join(
+                    comparison.experiment_names.get(eid, eid) for eid in comparison.experiment_ids
+                )
+                + " | Best | Difference |"
+            )
+            sep = (
+                "|--------" + "|--------" * len(comparison.experiment_ids) + "|------|------------|"
+            )
             lines.append(header)
             lines.append(sep)
             for mc in comparison.metric_comparisons:
@@ -442,7 +458,9 @@ class ExperimentComparator:
                     f"{mc.values.get(eid, 'N/A')}" if mc.values.get(eid) is not None else "N/A"
                     for eid in comparison.experiment_ids
                 )
-                best_name = comparison.experiment_names.get(mc.best_experiment_id, mc.best_experiment_id or "")
+                best_name = comparison.experiment_names.get(
+                    mc.best_experiment_id, mc.best_experiment_id or ""
+                )
                 diff = f"{mc.difference:.6f}" if mc.difference is not None else "N/A"
                 lines.append(f"| {mc.metric_name} | {vals} | {best_name} | {diff} |")
 
@@ -450,14 +468,20 @@ class ExperimentComparator:
         differing = [pd for pd in comparison.param_differences if not pd.is_same]
         if differing:
             lines.append("\n## Differing Parameters\n")
-            header = "| Parameter | " + " | ".join(
-                comparison.experiment_names.get(eid, eid) for eid in comparison.experiment_ids
-            ) + " |"
+            header = (
+                "| Parameter | "
+                + " | ".join(
+                    comparison.experiment_names.get(eid, eid) for eid in comparison.experiment_ids
+                )
+                + " |"
+            )
             sep = "|-----------" + "|----------" * len(comparison.experiment_ids) + "|"
             lines.append(header)
             lines.append(sep)
             for pd in differing:
-                vals = " | ".join(str(pd.values.get(eid, "N/A")) for eid in comparison.experiment_ids)
+                vals = " | ".join(
+                    str(pd.values.get(eid, "N/A")) for eid in comparison.experiment_ids
+                )
                 lines.append(f"| {pd.param_name} | {vals} |")
 
         return "\n".join(lines)
@@ -492,4 +516,3 @@ class ExperimentComparator:
 
 
 # Required import for type hint
-from typing import Set  # noqa: E402 - used in method bodies
