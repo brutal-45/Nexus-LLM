@@ -5,12 +5,13 @@ Provides :class:`DistillationTrainer` — a higher-level wrapper around
 and checkpoint saving.
 """
 
+from __future__ import annotations
+
 import json
 import logging
-import os
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from nexus_llm.distillation.config import DistillationConfig
 from nexus_llm.distillation.distiller import Distiller
@@ -39,8 +40,8 @@ class DistillationTrainer:
 
     def __init__(
         self,
-        config: Optional[DistillationConfig] = None,
-        distiller: Optional[Distiller] = None,
+        config: DistillationConfig | None = None,
+        distiller: Distiller | None = None,
         checkpoint_dir: str = "checkpoints/distillation",
         checkpoint_every: int = 500,
         log_every: int = 10,
@@ -66,7 +67,7 @@ class DistillationTrainer:
         # Runtime state
         self._global_step = 0
         self._current_epoch = 0
-        self._history: List[Dict[str, Any]] = []
+        self._history: list[dict[str, Any]] = []
         self._best_loss = float("inf")
 
     # ------------------------------------------------------------------
@@ -84,7 +85,7 @@ class DistillationTrainer:
         return self._current_epoch
 
     @property
-    def history(self) -> List[Dict[str, Any]]:
+    def history(self) -> list[dict[str, Any]]:
         """Training history — one entry per logged step."""
         return list(self._history)
 
@@ -96,8 +97,8 @@ class DistillationTrainer:
         self,
         teacher: Any,
         student: Any,
-        dataset: List[Dict[str, Any]],
-        config: Optional[DistillationConfig] = None,
+        dataset: list[dict[str, Any]],
+        config: DistillationConfig | None = None,
     ) -> Any:
         """Run the distillation training loop.
 
@@ -162,9 +163,7 @@ class DistillationTrainer:
                     [torch.as_tensor(s["input_ids"]) for s in batch],
                     batch_first=True,
                 ).to(device)
-                labels = torch.cat(
-                    [torch.as_tensor(s["labels"]) for s in batch]
-                ).to(device)
+                labels = torch.cat([torch.as_tensor(s["labels"]) for s in batch]).to(device)
                 attention_mask = (input_ids != 0).long()
 
                 # --- Teacher forward ---
@@ -175,9 +174,7 @@ class DistillationTrainer:
                     )
 
                 # --- Student forward ---
-                student_outputs = student(
-                    input_ids=input_ids, attention_mask=attention_mask
-                )
+                student_outputs = student(input_ids=input_ids, attention_mask=attention_mask)
                 student_logits = (
                     student_outputs.logits
                     if hasattr(student_outputs, "logits")
@@ -304,8 +301,7 @@ class DistillationTrainer:
     def _print_header(cfg: DistillationConfig) -> None:
         """Print the training configuration header."""
         logger.info(
-            "Configuration: temperature=%.1f, alpha=%.2f, lr=%.2e, "
-            "batch_size=%d, epochs=%d",
+            "Configuration: temperature=%.1f, alpha=%.2f, lr=%.2e, " "batch_size=%d, epochs=%d",
             cfg.temperature,
             cfg.alpha,
             cfg.learning_rate,
@@ -385,7 +381,6 @@ class DistillationTrainer:
     def _resolve_device(model: Any) -> str:
         """Determine the device a model lives on."""
         try:
-            import torch
             return str(next(model.parameters()).device)
         except Exception:
             return "cpu"
