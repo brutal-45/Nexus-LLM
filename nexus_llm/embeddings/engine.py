@@ -4,10 +4,12 @@ Generates vector embeddings from text, computes cosine similarity,
 and supports both mock (deterministic) and real model backends.
 """
 
+from __future__ import annotations
+
 import hashlib
 import logging
 import math
-from typing import Any, Callable, List, Optional
+from typing import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +35,7 @@ class EmbeddingEngine:
     def __init__(
         self,
         dimension: int = DEFAULT_DIMENSION,
-        embed_fn: Optional[Callable[[str], List[float]]] = None,
+        embed_fn: Callable[[str], list[float]] | None = None,
     ) -> None:
         """Initialise the engine.
 
@@ -49,7 +51,7 @@ class EmbeddingEngine:
     # Embedding generation
     # ------------------------------------------------------------------
 
-    def embed(self, text: str) -> List[float]:
+    def embed(self, text: str) -> list[float]:
         """Generate an embedding for a single text string.
 
         Args:
@@ -70,7 +72,7 @@ class EmbeddingEngine:
 
         return self._mock_embed(text)
 
-    def embed_batch(self, texts: List[str]) -> List[List[float]]:
+    def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for a batch of texts.
 
         Args:
@@ -91,7 +93,7 @@ class EmbeddingEngine:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def similarity(emb1: List[float], emb2: List[float]) -> float:
+    def similarity(emb1: list[float], emb2: list[float]) -> float:
         """Compute cosine similarity between two embedding vectors.
 
         Args:
@@ -105,9 +107,7 @@ class EmbeddingEngine:
             ValueError: If vectors have different lengths or are zero-length.
         """
         if len(emb1) != len(emb2):
-            raise ValueError(
-                f"Vector length mismatch: {len(emb1)} vs {len(emb2)}"
-            )
+            raise ValueError(f"Vector length mismatch: {len(emb1)} vs {len(emb2)}")
         if not emb1:
             raise ValueError("Cannot compute similarity of empty vectors")
 
@@ -124,7 +124,7 @@ class EmbeddingEngine:
     # Mock embedding
     # ------------------------------------------------------------------
 
-    def _mock_embed(self, text: str) -> List[float]:
+    def _mock_embed(self, text: str) -> list[float]:
         """Produce a deterministic mock embedding from text.
 
         Uses SHA-256 hashing to generate reproducible float values
@@ -133,11 +133,11 @@ class EmbeddingEngine:
         # Generate enough hash bytes for the dimension
         raw = b""
         for i in range(max(1, (self.dimension * 4 + 31) // 32)):
-            h = hashlib.sha256(f"{text}|chunk{i}".encode("utf-8")).digest()
+            h = hashlib.sha256(f"{text}|chunk{i}".encode()).digest()
             raw += h
 
         # Convert bytes to floats
-        values: List[float] = []
+        values: list[float] = []
         for i in range(self.dimension):
             # Use 4 bytes per float
             offset = i * 4
