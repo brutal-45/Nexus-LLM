@@ -8,7 +8,7 @@ import csv
 import io
 import json
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +29,14 @@ class ExperimentTracker:
 
     def __init__(self) -> None:
         # experiment_id -> list of metric records
-        self._records: Dict[str, List[Dict[str, Any]]] = {}
-        self._global_step: Dict[str, int] = {}
+        self._records: dict[str, list[dict[str, Any]]] = {}
+        self._global_step: dict[str, int] = {}
 
     # ------------------------------------------------------------------
     # Recording
     # ------------------------------------------------------------------
 
-    def track(self, experiment_id: str, metrics_dict: Dict[str, float]) -> None:
+    def track(self, experiment_id: str, metrics_dict: dict[str, float]) -> None:
         """Record a snapshot of metrics for an experiment.
 
         Each call increments the internal step counter for the experiment.
@@ -50,19 +50,21 @@ class ExperimentTracker:
             self._global_step[experiment_id] = 0
 
         step = self._global_step[experiment_id]
-        record: Dict[str, Any] = {"step": step, "metrics": dict(metrics_dict)}
+        record: dict[str, Any] = {"step": step, "metrics": dict(metrics_dict)}
         self._records[experiment_id].append(record)
         self._global_step[experiment_id] = step + 1
         logger.debug(
             "Tracked metrics for %s at step %d: %s",
-            experiment_id, step, metrics_dict,
+            experiment_id,
+            step,
+            metrics_dict,
         )
 
     # ------------------------------------------------------------------
     # Querying
     # ------------------------------------------------------------------
 
-    def get_history(self, experiment_id: str) -> List[Dict[str, Any]]:
+    def get_history(self, experiment_id: str) -> list[dict[str, Any]]:
         """Return the full metric history for an experiment.
 
         Args:
@@ -83,7 +85,7 @@ class ExperimentTracker:
         experiment_id: str,
         metric: str,
         mode: str = "min",
-    ) -> Tuple[int, float]:
+    ) -> tuple[int, float]:
         """Find the step with the best (min or max) value for a metric.
 
         Args:
@@ -102,7 +104,7 @@ class ExperimentTracker:
         if not history:
             raise ValueError(f"No records for experiment {experiment_id!r}")
 
-        candidates: List[Tuple[int, float]] = []
+        candidates: list[tuple[int, float]] = []
         for record in history:
             if metric not in record["metrics"]:
                 continue
@@ -110,8 +112,7 @@ class ExperimentTracker:
 
         if not candidates:
             raise KeyError(
-                f"Metric {metric!r} not found in records for experiment "
-                f"{experiment_id!r}"
+                f"Metric {metric!r} not found in records for experiment " f"{experiment_id!r}"
             )
 
         if mode == "min":
@@ -145,8 +146,7 @@ class ExperimentTracker:
             return self._export_markdown(history, experiment_id)
         else:
             raise ValueError(
-                f"Unsupported export format {format!r}; "
-                f"expected 'json', 'csv', or 'markdown'."
+                f"Unsupported export format {format!r}; " f"expected 'json', 'csv', or 'markdown'."
             )
 
     # ------------------------------------------------------------------
@@ -154,46 +154,36 @@ class ExperimentTracker:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _export_json(history: List[Dict[str, Any]], experiment_id: str) -> str:
+    def _export_json(history: list[dict[str, Any]], experiment_id: str) -> str:
         payload = {"experiment_id": experiment_id, "records": history}
         return json.dumps(payload, indent=2)
 
     @staticmethod
-    def _export_csv(history: List[Dict[str, Any]]) -> str:
+    def _export_csv(history: list[dict[str, Any]]) -> str:
         if not history:
             return ""
         # Collect all metric names across all records
-        metric_names: List[str] = sorted(
-            {name for rec in history for name in rec["metrics"]}
-        )
+        metric_names: list[str] = sorted({name for rec in history for name in rec["metrics"]})
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(["step"] + metric_names)
         for rec in history:
-            row = [rec["step"]] + [
-                rec["metrics"].get(name, "") for name in metric_names
-            ]
+            row = [rec["step"]] + [rec["metrics"].get(name, "") for name in metric_names]
             writer.writerow(row)
         return output.getvalue()
 
     @staticmethod
-    def _export_markdown(
-        history: List[Dict[str, Any]], experiment_id: str
-    ) -> str:
+    def _export_markdown(history: list[dict[str, Any]], experiment_id: str) -> str:
         if not history:
             return f"## Experiment: {experiment_id}\n\n_No records._\n"
-        metric_names: List[str] = sorted(
-            {name for rec in history for name in rec["metrics"]}
-        )
+        metric_names: list[str] = sorted({name for rec in history for name in rec["metrics"]})
         lines = [f"## Experiment: {experiment_id}", ""]
         header = "| Step | " + " | ".join(metric_names) + " |"
         separator = "|------|" + "|".join(["------" for _ in metric_names]) + "|"
         lines.append(header)
         lines.append(separator)
         for rec in history:
-            values = " | ".join(
-                str(rec["metrics"].get(name, "—")) for name in metric_names
-            )
+            values = " | ".join(str(rec["metrics"].get(name, "—")) for name in metric_names)
             lines.append(f"| {rec['step']} | {values} |")
         return "\n".join(lines) + "\n"
 
