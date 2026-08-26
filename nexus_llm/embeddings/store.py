@@ -4,18 +4,18 @@ In-memory vector store with metadata support, similarity search,
 and optional JSON-based persistence.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import math
 import os
-from typing import Any, Dict, List, Optional, Tuple
-
-from nexus_llm.embeddings.engine import EmbeddingEngine
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 # Type alias for search results
-SearchResult = Tuple[str, float, Dict[str, Any]]
+SearchResult = tuple[str, float, dict[str, Any]]
 
 
 class EmbeddingStore:
@@ -30,7 +30,7 @@ class EmbeddingStore:
 
     def __init__(
         self,
-        persistence_path: Optional[str] = None,
+        persistence_path: str | None = None,
     ) -> None:
         """Initialise the store.
 
@@ -39,8 +39,8 @@ class EmbeddingStore:
                               When provided, data is loaded on init and
                               saved after every mutation.
         """
-        self._vectors: Dict[str, List[float]] = {}
-        self._metadata: Dict[str, Dict[str, Any]] = {}
+        self._vectors: dict[str, list[float]] = {}
+        self._metadata: dict[str, dict[str, Any]] = {}
         self._persistence_path = persistence_path
 
         if persistence_path and os.path.exists(persistence_path):
@@ -53,8 +53,8 @@ class EmbeddingStore:
     def add(
         self,
         id: str,
-        embedding: List[float],
-        metadata: Optional[Dict[str, Any]] = None,
+        embedding: list[float],
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Add or update an embedding in the store.
 
@@ -85,7 +85,7 @@ class EmbeddingStore:
             return True
         return False
 
-    def get(self, id: str) -> Optional[Tuple[List[float], Dict[str, Any]]]:
+    def get(self, id: str) -> tuple[list[float], dict[str, Any]] | None:
         """Retrieve an embedding and its metadata by ID.
 
         Args:
@@ -108,9 +108,9 @@ class EmbeddingStore:
 
     def search(
         self,
-        query_embedding: List[float],
+        query_embedding: list[float],
         top_k: int = 10,
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """Find the most similar embeddings using cosine similarity.
 
         Args:
@@ -124,7 +124,7 @@ class EmbeddingStore:
         if not self._vectors:
             return []
 
-        results: List[SearchResult] = []
+        results: list[SearchResult] = []
         for id, vec in self._vectors.items():
             score = self._cosine_similarity(query_embedding, vec)
             results.append((id, score, dict(self._metadata[id])))
@@ -137,7 +137,7 @@ class EmbeddingStore:
     # Persistence
     # ------------------------------------------------------------------
 
-    def save(self, path: Optional[str] = None) -> str:
+    def save(self, path: str | None = None) -> str:
         """Persist the store to a JSON file.
 
         Args:
@@ -166,7 +166,7 @@ class EmbeddingStore:
 
     def _load(self, path: str) -> None:
         """Load the store from a JSON file."""
-        with open(path, "r", encoding="utf-8") as fh:
+        with open(path, encoding="utf-8") as fh:
             data = json.load(fh)
         self._vectors = data.get("vectors", {})
         self._metadata = data.get("metadata", {})
@@ -181,7 +181,7 @@ class EmbeddingStore:
                 logger.warning("Auto-persist failed: %s", exc)
 
     @staticmethod
-    def _cosine_similarity(a: List[float], b: List[float]) -> float:
+    def _cosine_similarity(a: list[float], b: list[float]) -> float:
         """Compute cosine similarity between two vectors."""
         if len(a) != len(b) or not a:
             return 0.0
