@@ -10,26 +10,30 @@ Assesses the quality of generated text across four dimensions:
 Each dimension produces a score in [0, 1] and an overall quality score.
 """
 
+from __future__ import annotations
+
 import math
 import re
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any
 
-from nexus_llm.evaluation.metrics import _tokenize, _normalize_text
+from nexus_llm.evaluation.metrics import _tokenize
 
 
 @dataclass
 class GenerationQualityResult:
     """Container for generation quality scores."""
+
     diversity: float
     coherence: float
     relevance: float
     fluency: float
     overall_quality: float
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "diversity": self.diversity,
             "coherence": self.coherence,
@@ -78,7 +82,7 @@ class GenerationEvaluator:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _distinct_ngrams(tokens: List[str], n: int) -> float:
+    def _distinct_ngrams(tokens: list[str], n: int) -> float:
         """Ratio of unique n-grams to total n-grams."""
         ngrams = [tuple(tokens[i : i + n]) for i in range(len(tokens) - n + 1)]
         if not ngrams:
@@ -86,7 +90,7 @@ class GenerationEvaluator:
         return len(set(ngrams)) / len(ngrams)
 
     @staticmethod
-    def _type_token_ratio(tokens: List[str]) -> float:
+    def _type_token_ratio(tokens: list[str]) -> float:
         """Type-Token Ratio: unique tokens / total tokens."""
         if not tokens:
             return 0.0
@@ -135,7 +139,7 @@ class GenerationEvaluator:
                 if union == 0:
                     continue
                 jaccard = len(si & sj) / union
-                total_dist += (1 - jaccard)
+                total_dist += 1 - jaccard
                 pairs += 1
 
         inter_text_diversity = total_dist / pairs if pairs > 0 else 0.0
@@ -148,9 +152,9 @@ class GenerationEvaluator:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _split_sentences(text: str) -> List[str]:
+    def _split_sentences(text: str) -> list[str]:
         """Split text into sentences."""
-        sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+        sentences = re.split(r"(?<=[.!?])\s+", text.strip())
         return [s.strip() for s in sentences if s.strip()]
 
     @staticmethod
@@ -257,7 +261,7 @@ class GenerationEvaluator:
         if not text.strip():
             return 0.0
 
-        sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+        sentences = re.split(r"(?<=[.!?])\s+", text.strip())
         sentences = [s.strip() for s in sentences if s.strip()]
         if not sentences:
             return 0.0
@@ -292,12 +296,7 @@ class GenerationEvaluator:
             repetition_score = 1.0
 
         # Weighted combination
-        fluency = (
-            0.25 * len_score
-            + 0.30 * complete
-            + 0.20 * punct_score
-            + 0.25 * repetition_score
-        )
+        fluency = 0.25 * len_score + 0.30 * complete + 0.20 * punct_score + 0.25 * repetition_score
         return max(0.0, min(1.0, fluency))
 
     # ------------------------------------------------------------------
@@ -307,7 +306,7 @@ class GenerationEvaluator:
     def evaluate(
         self,
         predictions: Sequence[str],
-        references: Optional[Sequence[str]] = None,
+        references: Sequence[str] | None = None,
     ) -> GenerationQualityResult:
         """
         Evaluate generation quality across all dimensions.
@@ -337,10 +336,7 @@ class GenerationEvaluator:
 
         # Relevance
         if references is not None:
-            rel_scores = [
-                self._score_relevance(p, r)
-                for p, r in zip(predictions, references)
-            ]
+            rel_scores = [self._score_relevance(p, r) for p, r in zip(predictions, references)]
             relevance = sum(rel_scores) / len(rel_scores)
         else:
             rel_scores = [self._score_relevance_self(p) for p in predictions]
@@ -385,7 +381,7 @@ class GenerationEvaluator:
     def evaluate_single(
         self,
         prediction: str,
-        reference: Optional[str] = None,
+        reference: str | None = None,
     ) -> GenerationQualityResult:
         """
         Evaluate a single generated text.
