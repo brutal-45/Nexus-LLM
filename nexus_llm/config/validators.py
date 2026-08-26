@@ -7,7 +7,6 @@ range validation, dependency validation, and cross-field consistency checks.
 
 from __future__ import annotations
 
-import os
 import re
 from dataclasses import dataclass
 from typing import Any
@@ -24,6 +23,7 @@ class ValidationError(Exception):
 @dataclass
 class ValidationRule:
     """A single validation rule for a configuration field."""
+
     field: str
     rule_type: str  # type, range, choice, regex, dependency, custom
     params: dict[str, Any] | None = None
@@ -35,74 +35,257 @@ class ValidationRule:
 VALIDATION_RULES: list[ValidationRule] = [
     # Model
     ValidationRule("model.name", "type", {"expected": "str"}, "Model name must be a string"),
-    ValidationRule("model.device", "choice", {"options": ["auto", "cpu", "cuda", "mps"]}, "Device must be auto, cpu, cuda, or mps"),
-    ValidationRule("model.dtype", "choice", {"options": ["float32", "float16", "bfloat16"]}, "dtype must be float32, float16, or bfloat16"),
-
+    ValidationRule(
+        "model.device",
+        "choice",
+        {"options": ["auto", "cpu", "cuda", "mps"]},
+        "Device must be auto, cpu, cuda, or mps",
+    ),
+    ValidationRule(
+        "model.dtype",
+        "choice",
+        {"options": ["float32", "float16", "bfloat16"]},
+        "dtype must be float32, float16, or bfloat16",
+    ),
     # Generation
-    ValidationRule("generation.temperature", "type", {"expected": "num"}, "Temperature must be a number"),
-    ValidationRule("generation.temperature", "range", {"min": 0.0, "max": 2.0}, "Temperature must be between 0.0 and 2.0"),
+    ValidationRule(
+        "generation.temperature", "type", {"expected": "num"}, "Temperature must be a number"
+    ),
+    ValidationRule(
+        "generation.temperature",
+        "range",
+        {"min": 0.0, "max": 2.0},
+        "Temperature must be between 0.0 and 2.0",
+    ),
     ValidationRule("generation.top_p", "type", {"expected": "num"}, "Top-p must be a number"),
-    ValidationRule("generation.top_p", "range", {"min": 0.0, "max": 1.0}, "Top-p must be between 0.0 and 1.0"),
+    ValidationRule(
+        "generation.top_p", "range", {"min": 0.0, "max": 1.0}, "Top-p must be between 0.0 and 1.0"
+    ),
     ValidationRule("generation.top_k", "type", {"expected": "int"}, "Top-k must be an integer"),
-    ValidationRule("generation.top_k", "range", {"min": 1, "max": 1000}, "Top-k must be between 1 and 1000"),
-    ValidationRule("generation.max_tokens", "type", {"expected": "int"}, "Max tokens must be an integer"),
-    ValidationRule("generation.max_tokens", "range", {"min": 1, "max": 32768}, "Max tokens must be between 1 and 32768"),
-    ValidationRule("generation.min_tokens", "type", {"expected": "int"}, "Min tokens must be an integer"),
-    ValidationRule("generation.min_tokens", "range", {"min": 0, "max": 32768}, "Min tokens must be between 0 and 32768"),
-    ValidationRule("generation.repetition_penalty", "type", {"expected": "num"}, "Repetition penalty must be a number"),
-    ValidationRule("generation.repetition_penalty", "range", {"min": 1.0, "max": 2.0}, "Repetition penalty must be between 1.0 and 2.0"),
-    ValidationRule("generation.frequency_penalty", "type", {"expected": "num"}, "Frequency penalty must be a number"),
-    ValidationRule("generation.frequency_penalty", "range", {"min": -2.0, "max": 2.0}, "Frequency penalty must be between -2.0 and 2.0"),
-    ValidationRule("generation.presence_penalty", "type", {"expected": "num"}, "Presence penalty must be a number"),
-    ValidationRule("generation.presence_penalty", "range", {"min": -2.0, "max": 2.0}, "Presence penalty must be between -2.0 and 2.0"),
-    ValidationRule("generation.num_beams", "type", {"expected": "int"}, "Num beams must be an integer"),
-    ValidationRule("generation.num_beams", "range", {"min": 1, "max": 32}, "Num beams must be between 1 and 32"),
-
+    ValidationRule(
+        "generation.top_k", "range", {"min": 1, "max": 1000}, "Top-k must be between 1 and 1000"
+    ),
+    ValidationRule(
+        "generation.max_tokens", "type", {"expected": "int"}, "Max tokens must be an integer"
+    ),
+    ValidationRule(
+        "generation.max_tokens",
+        "range",
+        {"min": 1, "max": 32768},
+        "Max tokens must be between 1 and 32768",
+    ),
+    ValidationRule(
+        "generation.min_tokens", "type", {"expected": "int"}, "Min tokens must be an integer"
+    ),
+    ValidationRule(
+        "generation.min_tokens",
+        "range",
+        {"min": 0, "max": 32768},
+        "Min tokens must be between 0 and 32768",
+    ),
+    ValidationRule(
+        "generation.repetition_penalty",
+        "type",
+        {"expected": "num"},
+        "Repetition penalty must be a number",
+    ),
+    ValidationRule(
+        "generation.repetition_penalty",
+        "range",
+        {"min": 1.0, "max": 2.0},
+        "Repetition penalty must be between 1.0 and 2.0",
+    ),
+    ValidationRule(
+        "generation.frequency_penalty",
+        "type",
+        {"expected": "num"},
+        "Frequency penalty must be a number",
+    ),
+    ValidationRule(
+        "generation.frequency_penalty",
+        "range",
+        {"min": -2.0, "max": 2.0},
+        "Frequency penalty must be between -2.0 and 2.0",
+    ),
+    ValidationRule(
+        "generation.presence_penalty",
+        "type",
+        {"expected": "num"},
+        "Presence penalty must be a number",
+    ),
+    ValidationRule(
+        "generation.presence_penalty",
+        "range",
+        {"min": -2.0, "max": 2.0},
+        "Presence penalty must be between -2.0 and 2.0",
+    ),
+    ValidationRule(
+        "generation.num_beams", "type", {"expected": "int"}, "Num beams must be an integer"
+    ),
+    ValidationRule(
+        "generation.num_beams", "range", {"min": 1, "max": 32}, "Num beams must be between 1 and 32"
+    ),
     # Quantization
-    ValidationRule("quantization.bits", "choice", {"options": [4, 8]}, "Quantization bits must be 4 or 8"),
-    ValidationRule("quantization.group_size", "type", {"expected": "int"}, "Group size must be an integer"),
-    ValidationRule("quantization.group_size", "range", {"min": 32, "max": 512}, "Group size must be between 32 and 512"),
-
+    ValidationRule(
+        "quantization.bits", "choice", {"options": [4, 8]}, "Quantization bits must be 4 or 8"
+    ),
+    ValidationRule(
+        "quantization.group_size", "type", {"expected": "int"}, "Group size must be an integer"
+    ),
+    ValidationRule(
+        "quantization.group_size",
+        "range",
+        {"min": 32, "max": 512},
+        "Group size must be between 32 and 512",
+    ),
     # Training
-    ValidationRule("training.num_train_epochs", "type", {"expected": "num"}, "Num epochs must be a number"),
-    ValidationRule("training.num_train_epochs", "range", {"min": 1, "max": 1000}, "Num epochs must be between 1 and 1000"),
-    ValidationRule("training.per_device_train_batch_size", "type", {"expected": "int"}, "Batch size must be an integer"),
-    ValidationRule("training.per_device_train_batch_size", "range", {"min": 1, "max": 256}, "Batch size must be between 1 and 256"),
-    ValidationRule("training.learning_rate", "type", {"expected": "num"}, "Learning rate must be a number"),
-    ValidationRule("training.learning_rate", "range", {"min": 1e-8, "max": 1.0}, "Learning rate must be between 1e-8 and 1.0"),
-    ValidationRule("training.weight_decay", "type", {"expected": "num"}, "Weight decay must be a number"),
-    ValidationRule("training.weight_decay", "range", {"min": 0.0, "max": 1.0}, "Weight decay must be between 0.0 and 1.0"),
-    ValidationRule("training.max_grad_norm", "type", {"expected": "num"}, "Max grad norm must be a number"),
-    ValidationRule("training.max_grad_norm", "range", {"min": 0.0, "max": 100.0}, "Max grad norm must be between 0.0 and 100.0"),
-    ValidationRule("training.lr_scheduler_type", "choice", {"options": ["linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"]}, "Invalid LR scheduler type"),
-    ValidationRule("training.optimizer", "choice", {"options": ["adamw_hf", "adamw_torch", "adamw_apex_fused", "adafactor"]}, "Invalid optimizer"),
-
+    ValidationRule(
+        "training.num_train_epochs", "type", {"expected": "num"}, "Num epochs must be a number"
+    ),
+    ValidationRule(
+        "training.num_train_epochs",
+        "range",
+        {"min": 1, "max": 1000},
+        "Num epochs must be between 1 and 1000",
+    ),
+    ValidationRule(
+        "training.per_device_train_batch_size",
+        "type",
+        {"expected": "int"},
+        "Batch size must be an integer",
+    ),
+    ValidationRule(
+        "training.per_device_train_batch_size",
+        "range",
+        {"min": 1, "max": 256},
+        "Batch size must be between 1 and 256",
+    ),
+    ValidationRule(
+        "training.learning_rate", "type", {"expected": "num"}, "Learning rate must be a number"
+    ),
+    ValidationRule(
+        "training.learning_rate",
+        "range",
+        {"min": 1e-8, "max": 1.0},
+        "Learning rate must be between 1e-8 and 1.0",
+    ),
+    ValidationRule(
+        "training.weight_decay", "type", {"expected": "num"}, "Weight decay must be a number"
+    ),
+    ValidationRule(
+        "training.weight_decay",
+        "range",
+        {"min": 0.0, "max": 1.0},
+        "Weight decay must be between 0.0 and 1.0",
+    ),
+    ValidationRule(
+        "training.max_grad_norm", "type", {"expected": "num"}, "Max grad norm must be a number"
+    ),
+    ValidationRule(
+        "training.max_grad_norm",
+        "range",
+        {"min": 0.0, "max": 100.0},
+        "Max grad norm must be between 0.0 and 100.0",
+    ),
+    ValidationRule(
+        "training.lr_scheduler_type",
+        "choice",
+        {
+            "options": [
+                "linear",
+                "cosine",
+                "cosine_with_restarts",
+                "polynomial",
+                "constant",
+                "constant_with_warmup",
+            ]
+        },
+        "Invalid LR scheduler type",
+    ),
+    ValidationRule(
+        "training.optimizer",
+        "choice",
+        {"options": ["adamw_hf", "adamw_torch", "adamw_apex_fused", "adafactor"]},
+        "Invalid optimizer",
+    ),
     # LoRA
     ValidationRule("lora.r", "type", {"expected": "int"}, "LoRA r must be an integer"),
     ValidationRule("lora.r", "range", {"min": 1, "max": 512}, "LoRA r must be between 1 and 512"),
     ValidationRule("lora.lora_alpha", "type", {"expected": "int"}, "LoRA alpha must be an integer"),
-    ValidationRule("lora.lora_alpha", "range", {"min": 1, "max": 1024}, "LoRA alpha must be between 1 and 1024"),
-    ValidationRule("lora.lora_dropout", "type", {"expected": "num"}, "LoRA dropout must be a number"),
-    ValidationRule("lora.lora_dropout", "range", {"min": 0.0, "max": 1.0}, "LoRA dropout must be between 0.0 and 1.0"),
-    ValidationRule("lora.bias", "choice", {"options": ["none", "all", "lora_only"]}, "LoRA bias must be none, all, or lora_only"),
-    ValidationRule("lora.task_type", "choice", {"options": ["CAUSAL_LM", "SEQ_2_SEQ_LM", "SEQ_CLS", "TOKEN_CLS", "QUESTION_ANS"]}, "Invalid LoRA task type"),
-
+    ValidationRule(
+        "lora.lora_alpha", "range", {"min": 1, "max": 1024}, "LoRA alpha must be between 1 and 1024"
+    ),
+    ValidationRule(
+        "lora.lora_dropout", "type", {"expected": "num"}, "LoRA dropout must be a number"
+    ),
+    ValidationRule(
+        "lora.lora_dropout",
+        "range",
+        {"min": 0.0, "max": 1.0},
+        "LoRA dropout must be between 0.0 and 1.0",
+    ),
+    ValidationRule(
+        "lora.bias",
+        "choice",
+        {"options": ["none", "all", "lora_only"]},
+        "LoRA bias must be none, all, or lora_only",
+    ),
+    ValidationRule(
+        "lora.task_type",
+        "choice",
+        {"options": ["CAUSAL_LM", "SEQ_2_SEQ_LM", "SEQ_CLS", "TOKEN_CLS", "QUESTION_ANS"]},
+        "Invalid LoRA task type",
+    ),
     # Server
     ValidationRule("server.port", "type", {"expected": "int"}, "Port must be an integer"),
-    ValidationRule("server.port", "range", {"min": 1, "max": 65535}, "Port must be between 1 and 65535"),
+    ValidationRule(
+        "server.port", "range", {"min": 1, "max": 65535}, "Port must be between 1 and 65535"
+    ),
     ValidationRule("server.workers", "type", {"expected": "int"}, "Workers must be an integer"),
-    ValidationRule("server.workers", "range", {"min": 1, "max": 64}, "Workers must be between 1 and 64"),
-    ValidationRule("server.max_request_size", "type", {"expected": "int"}, "Max request size must be an integer"),
-    ValidationRule("server.max_request_size", "range", {"min": 1024, "max": 1073741824}, "Max request size must be between 1KB and 1GB"),
-
+    ValidationRule(
+        "server.workers", "range", {"min": 1, "max": 64}, "Workers must be between 1 and 64"
+    ),
+    ValidationRule(
+        "server.max_request_size",
+        "type",
+        {"expected": "int"},
+        "Max request size must be an integer",
+    ),
+    ValidationRule(
+        "server.max_request_size",
+        "range",
+        {"min": 1024, "max": 1073741824},
+        "Max request size must be between 1KB and 1GB",
+    ),
     # Rate limiting
-    ValidationRule("rate_limiting.requests_per_minute", "type", {"expected": "int"}, "Requests per minute must be an integer"),
-    ValidationRule("rate_limiting.requests_per_minute", "range", {"min": 1, "max": 100000}, "Requests per minute must be between 1 and 100000"),
-
+    ValidationRule(
+        "rate_limiting.requests_per_minute",
+        "type",
+        {"expected": "int"},
+        "Requests per minute must be an integer",
+    ),
+    ValidationRule(
+        "rate_limiting.requests_per_minute",
+        "range",
+        {"min": 1, "max": 100000},
+        "Requests per minute must be between 1 and 100000",
+    ),
     # UI
-    ValidationRule("ui.theme", "choice", {"options": ["dark", "light", "monokai", "solarized", "dracula", "nord"]}, "Invalid theme name"),
-    ValidationRule("ui.input_mode", "choice", {"options": ["emacs", "vi"]}, "Input mode must be emacs or vi"),
-    ValidationRule("ui.panel_style", "choice", {"options": ["rounded", "heavy", "double", "minimal", "ascii"]}, "Invalid panel style"),
+    ValidationRule(
+        "ui.theme",
+        "choice",
+        {"options": ["dark", "light", "monokai", "solarized", "dracula", "nord"]},
+        "Invalid theme name",
+    ),
+    ValidationRule(
+        "ui.input_mode", "choice", {"options": ["emacs", "vi"]}, "Input mode must be emacs or vi"
+    ),
+    ValidationRule(
+        "ui.panel_style",
+        "choice",
+        {"options": ["rounded", "heavy", "double", "minimal", "ascii"]},
+        "Invalid panel style",
+    ),
 ]
 
 
@@ -208,7 +391,9 @@ class ConfigValidator:
         if errors:
             raise ValidationError("; ".join(errors))
 
-    def _validate_rule(self, rule: ValidationRule, value: Any, config: dict[str, Any]) -> str | None:
+    def _validate_rule(
+        self, rule: ValidationRule, value: Any, config: dict[str, Any]
+    ) -> str | None:
         """Validate a single rule against a value.
 
         Args:
@@ -250,9 +435,8 @@ class ConfigValidator:
         elif expected == "list":
             if not isinstance(value, list):
                 return rule.message or f"Expected list, got {type(value).__name__}"
-        elif expected == "dict":
-            if not isinstance(value, dict):
-                return rule.message or f"Expected dict, got {type(value).__name__}"
+        elif expected == "dict" and not isinstance(value, dict):
+            return rule.message or f"Expected dict, got {type(value).__name__}"
 
         return None
 
@@ -295,7 +479,9 @@ class ConfigValidator:
 
         return None
 
-    def _validate_dependency(self, rule: ValidationRule, value: Any, config: dict[str, Any]) -> str | None:
+    def _validate_dependency(
+        self, rule: ValidationRule, value: Any, config: dict[str, Any]
+    ) -> str | None:
         """Validate a dependency between fields."""
         params = rule.params or {}
         depends_on = params.get("depends_on", "")
@@ -322,10 +508,13 @@ class ConfigValidator:
         # min_tokens must be <= max_tokens
         min_tokens = self._get_value(config, "generation.min_tokens")
         max_tokens = self._get_value(config, "generation.max_tokens")
-        if (min_tokens is not None and max_tokens is not None
-                and isinstance(min_tokens, (int, float))
-                and isinstance(max_tokens, (int, float))
-                and min_tokens > max_tokens):
+        if (
+            min_tokens is not None
+            and max_tokens is not None
+            and isinstance(min_tokens, (int, float))
+            and isinstance(max_tokens, (int, float))
+            and min_tokens > max_tokens
+        ):
             errors.append("generation.min_tokens cannot exceed generation.max_tokens")
 
         # LoRA target modules required when LoRA is enabled
@@ -357,7 +546,9 @@ class ConfigValidator:
         eval_strategy = self._get_value(config, "training.evaluation_strategy")
         eval_steps = self._get_value(config, "training.eval_steps")
         if eval_strategy == "steps" and (not eval_steps or eval_steps <= 0):
-            errors.append("training.eval_steps must be positive when evaluation_strategy is 'steps'")
+            errors.append(
+                "training.eval_steps must be positive when evaluation_strategy is 'steps'"
+            )
 
         # Save steps must be positive when save strategy is 'steps'
         save_strategy = self._get_value(config, "training.save_strategy")
