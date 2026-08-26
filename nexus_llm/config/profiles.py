@@ -21,6 +21,7 @@ from nexus_llm.config.settings import _deep_merge
 @dataclass
 class Profile:
     """A named configuration profile with overrides."""
+
     name: str
     display_name: str = ""
     description: str = ""
@@ -439,7 +440,7 @@ class ProfileManager:
             if profile_file.endswith(".json"):
                 try:
                     filepath = os.path.join(profiles_path, profile_file)
-                    with open(filepath, "r", encoding="utf-8") as f:
+                    with open(filepath, encoding="utf-8") as f:
                         data = json.load(f)
                     profile = Profile.from_dict(data)
                     self._profiles[profile.name] = profile
