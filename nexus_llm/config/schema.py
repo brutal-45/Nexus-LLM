@@ -8,12 +8,13 @@ sections with type annotations, defaults, and documentation.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
 class GenerationSchema:
     """Schema for text generation parameters."""
+
     temperature: float = 0.7
     top_p: float = 0.9
     top_k: int = 50
@@ -30,7 +31,7 @@ class GenerationSchema:
     stop_sequences: list[str] = field(default_factory=lambda: ["\n\n\n"])
     bad_words_ids: list[list[int]] = field(default_factory=list)
     no_repeat_ngram_size: int = 0
-    seed: Optional[int] = None
+    seed: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
@@ -65,6 +66,7 @@ class GenerationSchema:
 @dataclass
 class ModelSchema:
     """Schema for model configuration."""
+
     name: str = "gpt2-medium"
     path: str = ""
     device: str = "auto"
@@ -104,6 +106,7 @@ class ModelSchema:
 @dataclass
 class LoraSchema:
     """Schema for LoRA (Low-Rank Adaptation) parameters."""
+
     enabled: bool = False
     r: int = 16
     lora_alpha: int = 32
@@ -113,8 +116,8 @@ class LoraSchema:
     task_type: str = "CAUSAL_LM"
     fan_in_fan_out: bool = False
     modules_to_save: list[str] = field(default_factory=list)
-    layers_to_transform: Optional[list[int]] = None
-    layers_pattern: Optional[str] = None
+    layers_to_transform: list[int] | None = None
+    layers_pattern: str | None = None
     rank_pattern: dict[str, int] = field(default_factory=dict)
     alpha_pattern: dict[str, int] = field(default_factory=dict)
 
@@ -147,6 +150,7 @@ class LoraSchema:
 @dataclass
 class OptimizerSchema:
     """Schema for optimizer configuration."""
+
     name: str = "adamw_torch"
     learning_rate: float = 5.0e-5
     weight_decay: float = 0.01
@@ -180,6 +184,7 @@ class OptimizerSchema:
 @dataclass
 class TrainingSchema:
     """Schema for training configuration."""
+
     output_dir: str = "./outputs"
     overwrite_output_dir: bool = False
     seed: int = 42
@@ -249,8 +254,9 @@ class TrainingSchema:
         """Deserialize from dictionary."""
         opt_data = data.pop("optimizer", {})
         lora_data = data.pop("lora", {})
-        known_keys = {f.name for f in cls.__dataclass_fields__.values()
-                      if f not in ("optimizer", "lora")}
+        known_keys = {
+            f.name for f in cls.__dataclass_fields__.values() if f not in ("optimizer", "lora")
+        }
         filtered = {k: v for k, v in data.items() if k in known_keys}
         instance = cls(**filtered)
         if opt_data:
@@ -263,9 +269,12 @@ class TrainingSchema:
 @dataclass
 class CorsSchema:
     """Schema for CORS configuration."""
+
     enabled: bool = True
     allow_origins: list[str] = field(default_factory=lambda: ["*"])
-    allow_methods: list[str] = field(default_factory=lambda: ["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+    allow_methods: list[str] = field(
+        default_factory=lambda: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    )
     allow_headers: list[str] = field(default_factory=lambda: ["*"])
     allow_credentials: bool = False
     max_age: int = 600
@@ -294,6 +303,7 @@ class CorsSchema:
 @dataclass
 class RateLimitSchema:
     """Schema for rate limiting configuration."""
+
     enabled: bool = True
     requests_per_minute: int = 60
     requests_per_hour: int = 1000
@@ -323,6 +333,7 @@ class RateLimitSchema:
 @dataclass
 class LoggingSchema:
     """Schema for logging configuration."""
+
     level: str = "info"
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     file: str = ""
@@ -354,6 +365,7 @@ class LoggingSchema:
 @dataclass
 class ServerSchema:
     """Schema for server configuration."""
+
     host: str = "0.0.0.0"
     port: int = 8000
     workers: int = 1
@@ -373,8 +385,8 @@ class ServerSchema:
     max_connections: int = 1000
     max_concurrent_requests: int = 100
     backlog: int = 2048
-    ssl_certfile: Optional[str] = None
-    ssl_keyfile: Optional[str] = None
+    ssl_certfile: str | None = None
+    ssl_keyfile: str | None = None
     cors: CorsSchema = field(default_factory=CorsSchema)
     rate_limiting: RateLimitSchema = field(default_factory=RateLimitSchema)
     logging: LoggingSchema = field(default_factory=LoggingSchema)
@@ -431,6 +443,7 @@ class ServerSchema:
 @dataclass
 class UISchema:
     """Schema for UI configuration."""
+
     theme: str = "dark"
     color_support: str = "auto"
     force_color: bool = False
