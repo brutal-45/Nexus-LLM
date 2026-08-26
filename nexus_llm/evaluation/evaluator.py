@@ -4,8 +4,10 @@ High-level API that orchestrates evaluation across generation and chat
 tasks, producing :class:`EvaluationReport` instances.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from nexus_llm.evaluation.metrics import MetricsCalculator
 from nexus_llm.evaluation.report import EvaluationReport
@@ -26,7 +28,7 @@ class Evaluator:
         print(report.summary())
     """
 
-    def __init__(self, calculator: Optional[MetricsCalculator] = None) -> None:
+    def __init__(self, calculator: MetricsCalculator | None = None) -> None:
         self._calculator = calculator or MetricsCalculator()
 
     # ------------------------------------------------------------------
@@ -36,7 +38,7 @@ class Evaluator:
     def evaluate(
         self,
         model: ModelLike,
-        dataset: Optional[List[Dict[str, Any]]] = None,
+        dataset: list[dict[str, Any]] | None = None,
         model_name: str = "",
     ) -> EvaluationReport:
         """Run a full evaluation of *model* against *dataset*.
@@ -59,8 +61,8 @@ class Evaluator:
         model_name = model_name or getattr(model, "name", "unknown")
         report = EvaluationReport(model_name=model_name, dataset_name="custom")
 
-        hypotheses: List[str] = []
-        references: List[str] = []
+        hypotheses: list[str] = []
+        references: list[str] = []
 
         for item in dataset:
             prompt = item["prompt"]
@@ -80,13 +82,11 @@ class Evaluator:
 
         # Reference-based metrics (if references available)
         if references and len(references) == len(hypotheses):
-            bleu_scores: List[float] = []
-            rouge1_scores: List[float] = []
+            bleu_scores: list[float] = []
+            rouge1_scores: list[float] = []
             for ref, hyp in zip(references, hypotheses):
                 bleu_scores.append(self._calculator.bleu_score(ref, hyp))
-                rouge1_scores.append(
-                    self._calculator.rouge_score(ref, hyp)["rouge1"]
-                )
+                rouge1_scores.append(self._calculator.rouge_score(ref, hyp)["rouge1"])
             report.add_metric(
                 "bleu",
                 sum(bleu_scores) / len(bleu_scores) if bleu_scores else 0.0,
@@ -110,10 +110,10 @@ class Evaluator:
     def evaluate_generation(
         self,
         model: ModelLike,
-        prompts: List[str],
-        references: Optional[List[str]] = None,
+        prompts: list[str],
+        references: list[str] | None = None,
         model_name: str = "",
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Evaluate text generation quality.
 
         Args:
@@ -125,7 +125,7 @@ class Evaluator:
         Returns:
             Dict of metric name → score.
         """
-        hypotheses: List[str] = []
+        hypotheses: list[str] = []
         for prompt in prompts:
             try:
                 output = model.generate(prompt) if hasattr(model, "generate") else ""
@@ -133,19 +133,15 @@ class Evaluator:
                 output = ""
             hypotheses.append(output)
 
-        scores: Dict[str, float] = {
+        scores: dict[str, float] = {
             "distinct_2": self._calculator.distinct_n(hypotheses, n=2),
             "avg_length": self._calculator.average_length(hypotheses),
         }
 
         if references and len(references) == len(hypotheses):
-            bleu_list = [
-                self._calculator.bleu_score(r, h)
-                for r, h in zip(references, hypotheses)
-            ]
+            bleu_list = [self._calculator.bleu_score(r, h) for r, h in zip(references, hypotheses)]
             rouge_list = [
-                self._calculator.rouge_score(r, h)["rouge1"]
-                for r, h in zip(references, hypotheses)
+                self._calculator.rouge_score(r, h)["rouge1"] for r, h in zip(references, hypotheses)
             ]
             scores["bleu"] = sum(bleu_list) / len(bleu_list)
             scores["rouge1"] = sum(rouge_list) / len(rouge_list)
@@ -155,10 +151,10 @@ class Evaluator:
     def evaluate_chat(
         self,
         model: ModelLike,
-        conversations: List[List[Dict[str, str]]],
-        references: Optional[List[str]] = None,
+        conversations: list[list[dict[str, str]]],
+        references: list[str] | None = None,
         model_name: str = "",
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Evaluate multi-turn chat quality.
 
         Args:
@@ -171,7 +167,7 @@ class Evaluator:
         Returns:
             Dict of metric name → score.
         """
-        hypotheses: List[str] = []
+        hypotheses: list[str] = []
         for conv in conversations:
             try:
                 output = model.chat(conv) if hasattr(model, "chat") else ""
@@ -179,16 +175,13 @@ class Evaluator:
                 output = ""
             hypotheses.append(output)
 
-        scores: Dict[str, float] = {
+        scores: dict[str, float] = {
             "distinct_2": self._calculator.distinct_n(hypotheses, n=2),
             "avg_length": self._calculator.average_length(hypotheses),
         }
 
         if references and len(references) == len(hypotheses):
-            bleu_list = [
-                self._calculator.bleu_score(r, h)
-                for r, h in zip(references, hypotheses)
-            ]
+            bleu_list = [self._calculator.bleu_score(r, h) for r, h in zip(references, hypotheses)]
             scores["bleu"] = sum(bleu_list) / len(bleu_list)
 
         return scores
@@ -198,10 +191,13 @@ class Evaluator:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _default_dataset() -> List[Dict[str, Any]]:
+    def _default_dataset() -> list[dict[str, Any]]:
         """Return a minimal placeholder dataset for quick smoke tests."""
         return [
             {"prompt": "What is the capital of France?", "reference": "Paris"},
-            {"prompt": "Explain quantum computing.", "reference": "A type of computing that uses quantum mechanics."},
+            {
+                "prompt": "Explain quantum computing.",
+                "reference": "A type of computing that uses quantum mechanics.",
+            },
             {"prompt": "Write a haiku about rain.", "reference": "Gentle drops fall down"},
         ]
