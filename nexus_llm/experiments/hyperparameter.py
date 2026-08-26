@@ -4,14 +4,16 @@ Supports grid search and random search over a defined parameter space,
 evaluating an objective function to find the best configuration.
 """
 
+from __future__ import annotations
+
 import itertools
 import logging
 import random
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
-ObjectiveFn = Callable[[Dict[str, Any]], float]
+ObjectiveFn = Callable[[dict[str, Any]], float]
 
 
 class HyperparameterSearch:
@@ -42,11 +44,9 @@ class HyperparameterSearch:
                        ``"minimize"`` to seek the lowest.
         """
         if direction not in ("maximize", "minimize"):
-            raise ValueError(
-                f"direction must be 'maximize' or 'minimize', got {direction!r}"
-            )
+            raise ValueError(f"direction must be 'maximize' or 'minimize', got {direction!r}")
         self._direction = direction
-        self._history: List[Dict[str, Any]] = []
+        self._history: list[dict[str, Any]] = []
 
     # ------------------------------------------------------------------
     # Public API
@@ -54,11 +54,11 @@ class HyperparameterSearch:
 
     def search(
         self,
-        search_space: Dict[str, List[Any]],
+        search_space: dict[str, list[Any]],
         objective: ObjectiveFn,
         n_trials: int = 10,
         method: str = "grid",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute a hyperparameter search.
 
         Args:
@@ -85,12 +85,10 @@ class HyperparameterSearch:
         elif method == "random":
             return self._random_search(search_space, objective, n_trials)
         else:
-            raise ValueError(
-                f"Unsupported method {method!r}; expected 'grid' or 'random'."
-            )
+            raise ValueError(f"Unsupported method {method!r}; expected 'grid' or 'random'.")
 
     @property
-    def history(self) -> List[Dict[str, Any]]:
+    def history(self) -> list[dict[str, Any]]:
         """Return a copy of the trial history.
 
         Each entry has ``"params"`` and ``"score"`` keys.
@@ -103,15 +101,15 @@ class HyperparameterSearch:
 
     def _grid_search(
         self,
-        search_space: Dict[str, List[Any]],
+        search_space: dict[str, list[Any]],
         objective: ObjectiveFn,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Exhaustively evaluate every combination in *search_space*."""
         keys = list(search_space.keys())
         value_lists = [search_space[k] for k in keys]
 
-        best_params: Dict[str, Any] = {}
-        best_score: Optional[float] = None
+        best_params: dict[str, Any] = {}
+        best_score: float | None = None
 
         for combo in itertools.product(*value_lists):
             params = dict(zip(keys, combo))
@@ -123,7 +121,9 @@ class HyperparameterSearch:
 
         logger.info(
             "Grid search complete: %d trials, best score=%.6f, params=%s",
-            len(self._history), best_score, best_params,
+            len(self._history),
+            best_score,
+            best_params,
         )
         return best_params
 
@@ -133,16 +133,16 @@ class HyperparameterSearch:
 
     def _random_search(
         self,
-        search_space: Dict[str, List[Any]],
+        search_space: dict[str, list[Any]],
         objective: ObjectiveFn,
         n_trials: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Sample *n_trials* random combinations from *search_space*."""
         keys = list(search_space.keys())
         value_lists = [search_space[k] for k in keys]
 
-        best_params: Dict[str, Any] = {}
-        best_score: Optional[float] = None
+        best_params: dict[str, Any] = {}
+        best_score: float | None = None
 
         for _ in range(n_trials):
             params = {k: random.choice(v) for k, v in zip(keys, value_lists)}
@@ -154,7 +154,9 @@ class HyperparameterSearch:
 
         logger.info(
             "Random search complete: %d trials, best score=%.6f, params=%s",
-            len(self._history), best_score, best_params,
+            len(self._history),
+            best_score,
+            best_params,
         )
         return best_params
 
@@ -162,9 +164,7 @@ class HyperparameterSearch:
     # Helpers
     # ------------------------------------------------------------------
 
-    def _evaluate(
-        self, params: Dict[str, Any], objective: ObjectiveFn
-    ) -> float:
+    def _evaluate(self, params: dict[str, Any], objective: ObjectiveFn) -> float:
         """Evaluate the objective and record the result."""
         try:
             score = objective(params)
