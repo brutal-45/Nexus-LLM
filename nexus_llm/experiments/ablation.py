@@ -15,24 +15,26 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
-
+from typing import Any, Callable
 
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class AblationType(str, Enum):
     """Type of ablation."""
-    REMOVE = "remove"           # Remove component entirely
-    REPLACE = "replace"         # Replace with default/zero
-    DISABLE = "disable"         # Disable (e.g., set dropout to 0)
-    SCALE = "scale"             # Scale a parameter value
-    ZERO_INIT = "zero_init"     # Zero-initialize weights
+
+    REMOVE = "remove"  # Remove component entirely
+    REPLACE = "replace"  # Replace with default/zero
+    DISABLE = "disable"  # Disable (e.g., set dropout to 0)
+    SCALE = "scale"  # Scale a parameter value
+    ZERO_INIT = "zero_init"  # Zero-initialize weights
 
 
 class AblationStatus(str, Enum):
     """Status of an ablation run."""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -44,16 +46,18 @@ class AblationStatus(str, Enum):
 # Data classes
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class AblationComponent:
     """Defines a component that can be ablated."""
+
     name: str
     description: str = ""
     component_type: str = "module"  # module, layer, parameter, feature
     default_value: Any = None
-    ablation_types: List[AblationType] = field(default_factory=lambda: [AblationType.REMOVE])
+    ablation_types: list[AblationType] = field(default_factory=lambda: [AblationType.REMOVE])
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "description": self.description,
@@ -66,18 +70,19 @@ class AblationComponent:
 @dataclass
 class AblationVariant:
     """A single ablation variant (one component modified)."""
+
     variant_id: str = ""
     component_name: str = ""
     ablation_type: AblationType = AblationType.REMOVE
     original_value: Any = None
     ablated_value: Any = None
-    params: Dict[str, Any] = field(default_factory=dict)
+    params: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.variant_id:
             self.variant_id = f"ablate-{str(uuid.uuid4())[:8]}"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "variant_id": self.variant_id,
             "component_name": self.component_name,
@@ -91,17 +96,18 @@ class AblationVariant:
 @dataclass
 class AblationResult:
     """Result from a single ablation run."""
+
     variant: AblationVariant
-    metrics: Dict[str, float] = field(default_factory=dict)
-    baseline_metrics: Dict[str, float] = field(default_factory=dict)
-    metric_deltas: Dict[str, float] = field(default_factory=dict)
+    metrics: dict[str, float] = field(default_factory=dict)
+    baseline_metrics: dict[str, float] = field(default_factory=dict)
+    metric_deltas: dict[str, float] = field(default_factory=dict)
     status: AblationStatus = AblationStatus.PENDING
-    error: Optional[str] = None
+    error: str | None = None
     duration_seconds: float = 0.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
-    def primary_delta(self) -> Optional[float]:
+    def primary_delta(self) -> float | None:
         """Delta of the primary metric (first metric)."""
         if self.metric_deltas:
             return next(iter(self.metric_deltas.values()))
@@ -121,7 +127,7 @@ class AblationResult:
             baseline = self.baseline_metrics.get(name, 0.0)
             self.metric_deltas[name] = value - baseline
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "variant": self.variant.to_dict(),
             "metrics": self.metrics,
@@ -138,6 +144,7 @@ class AblationResult:
 @dataclass
 class AblationStudyConfig:
     """Configuration for an ablation study."""
+
     name: str = "ablation_study"
     description: str = ""
     include_baseline: bool = True
@@ -146,7 +153,7 @@ class AblationStudyConfig:
     parallel: bool = False
     max_workers: int = 1
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "description": self.description,
@@ -161,6 +168,7 @@ class AblationStudyConfig:
 # ---------------------------------------------------------------------------
 # Ablation Study
 # ---------------------------------------------------------------------------
+
 
 class AblationStudy:
     """Structured ablation study for measuring component contributions.
@@ -198,12 +206,12 @@ class AblationStudy:
         impact = study.rank_by_impact("accuracy")
     """
 
-    def __init__(self, config: Optional[AblationStudyConfig] = None) -> None:
+    def __init__(self, config: AblationStudyConfig | None = None) -> None:
         self._config = config or AblationStudyConfig()
-        self._components: Dict[str, AblationComponent] = {}
-        self._results: List[AblationResult] = []
-        self._baseline_metrics: Dict[str, float] = {}
-        self._baseline_params: Dict[str, Any] = {}
+        self._components: dict[str, AblationComponent] = {}
+        self._results: list[AblationResult] = []
+        self._baseline_metrics: dict[str, float] = {}
+        self._baseline_params: dict[str, Any] = {}
         self._running = False
 
     @property
@@ -211,15 +219,15 @@ class AblationStudy:
         return self._config
 
     @property
-    def components(self) -> Dict[str, AblationComponent]:
+    def components(self) -> dict[str, AblationComponent]:
         return dict(self._components)
 
     @property
-    def results(self) -> List[AblationResult]:
+    def results(self) -> list[AblationResult]:
         return list(self._results)
 
     @property
-    def baseline_metrics(self) -> Dict[str, float]:
+    def baseline_metrics(self) -> dict[str, float]:
         return dict(self._baseline_metrics)
 
     # ------------------------------------------------------------------
@@ -234,7 +242,7 @@ class AblationStudy:
         """
         self._components[component.name] = component
 
-    def register_components(self, components: List[AblationComponent]) -> None:
+    def register_components(self, components: list[AblationComponent]) -> None:
         """Register multiple components.
 
         Args:
@@ -243,7 +251,7 @@ class AblationStudy:
         for comp in components:
             self.register_component(comp)
 
-    def set_baseline(self, metrics: Dict[str, float], params: Optional[Dict[str, Any]] = None) -> None:
+    def set_baseline(self, metrics: dict[str, float], params: dict[str, Any] | None = None) -> None:
         """Set the baseline (full model) metrics.
 
         Args:
@@ -257,13 +265,13 @@ class AblationStudy:
     # Generate variants
     # ------------------------------------------------------------------
 
-    def generate_variants(self) -> List[AblationVariant]:
+    def generate_variants(self) -> list[AblationVariant]:
         """Generate all ablation variants from registered components.
 
         Returns:
             List of AblationVariant objects.
         """
-        variants: List[AblationVariant] = []
+        variants: list[AblationVariant] = []
 
         for comp in self._components.values():
             for ablation_type in comp.ablation_types:
@@ -299,9 +307,9 @@ class AblationStudy:
 
     def run(
         self,
-        evaluate_fn: Callable[[Dict[str, Any]], Dict[str, float]],
-        baseline_params: Optional[Dict[str, Any]] = None,
-    ) -> List[AblationResult]:
+        evaluate_fn: Callable[[dict[str, Any]], dict[str, float]],
+        baseline_params: dict[str, Any] | None = None,
+    ) -> list[AblationResult]:
         """Execute the ablation study.
 
         Args:
@@ -369,7 +377,7 @@ class AblationStudy:
     # Analysis
     # ------------------------------------------------------------------
 
-    def rank_by_impact(self, metric_name: str) -> List[Tuple[str, float]]:
+    def rank_by_impact(self, metric_name: str) -> list[tuple[str, float]]:
         """Rank components by their impact on a metric.
 
         Args:
@@ -378,7 +386,7 @@ class AblationStudy:
         Returns:
             List of (component_name, absolute_delta) sorted by impact (descending).
         """
-        impacts: Dict[str, float] = {}
+        impacts: dict[str, float] = {}
         for result in self._results:
             if result.status != AblationStatus.COMPLETED:
                 continue
@@ -393,7 +401,7 @@ class AblationStudy:
         ranked = sorted(impacts.items(), key=lambda x: abs(x[1]), reverse=True)
         return ranked
 
-    def get_critical_components(self, metric_name: str, threshold: float = 0.05) -> List[str]:
+    def get_critical_components(self, metric_name: str, threshold: float = 0.05) -> list[str]:
         """Identify components whose ablation causes significant degradation.
 
         Args:
@@ -406,7 +414,7 @@ class AblationStudy:
         ranked = self.rank_by_impact(metric_name)
         return [name for name, delta in ranked if abs(delta) >= threshold]
 
-    def get_result_for_component(self, component_name: str) -> List[AblationResult]:
+    def get_result_for_component(self, component_name: str) -> list[AblationResult]:
         """Get all results for a specific component.
 
         Args:
@@ -431,22 +439,26 @@ class AblationStudy:
             Formatted report string.
         """
         if format == "json":
-            return json.dumps({
-                "config": self._config.to_dict(),
-                "baseline_metrics": self._baseline_metrics,
-                "results": [r.to_dict() for r in self._results],
-            }, indent=2, default=str)
+            return json.dumps(
+                {
+                    "config": self._config.to_dict(),
+                    "baseline_metrics": self._baseline_metrics,
+                    "results": [r.to_dict() for r in self._results],
+                },
+                indent=2,
+                default=str,
+            )
 
         if format == "markdown":
             return self._generate_markdown_report()
 
         # Text format
-        lines: List[str] = []
+        lines: list[str] = []
         lines.append("=" * 60)
         lines.append(f"ABLATION STUDY: {self._config.name}")
         lines.append("=" * 60)
 
-        lines.append(f"\nBaseline Metrics:")
+        lines.append("\nBaseline Metrics:")
         for name, val in self._baseline_metrics.items():
             lines.append(f"  {name}: {val:.4f}")
 
@@ -456,7 +468,9 @@ class AblationStudy:
         for result in self._results:
             variant = result.variant
             status_marker = "OK" if result.status == AblationStatus.COMPLETED else "FAIL"
-            lines.append(f"\n  [{status_marker}] {variant.component_name} ({variant.ablation_type.value})")
+            lines.append(
+                f"\n  [{status_marker}] {variant.component_name} ({variant.ablation_type.value})"
+            )
             if result.metrics:
                 for name, val in result.metrics.items():
                     delta = result.metric_deltas.get(name, 0.0)
@@ -477,7 +491,7 @@ class AblationStudy:
 
     def _generate_markdown_report(self) -> str:
         """Generate a Markdown ablation report."""
-        lines: List[str] = []
+        lines: list[str] = []
         lines.append(f"# Ablation Study: {self._config.name}\n")
 
         if self._config.description:
@@ -502,8 +516,11 @@ class AblationStudy:
                     continue
                 v = result.variant
                 vals = " | ".join(
-                    f"{result.metrics.get(n, 'N/A'):.4f} ({result.metric_deltas.get(n, 0):+.4f})"
-                    if n in result.metrics else "N/A"
+                    (
+                        f"{result.metrics.get(n, 'N/A'):.4f} ({result.metric_deltas.get(n, 0):+.4f})"
+                        if n in result.metrics
+                        else "N/A"
+                    )
                     for n in metric_names
                 )
                 lines.append(f"| {v.component_name} | {v.ablation_type.value} | {vals} |")
@@ -536,7 +553,7 @@ class AblationStudy:
         return path
 
     @classmethod
-    def load(cls, path: str) -> "AblationStudy":
+    def load(cls, path: str) -> AblationStudy:
         """Load an ablation study from a JSON file.
 
         Args:
@@ -545,7 +562,7 @@ class AblationStudy:
         Returns:
             Reconstructed AblationStudy.
         """
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
 
         config = AblationStudyConfig(
@@ -563,7 +580,9 @@ class AblationStudy:
                 description=comp_data.get("description", ""),
                 component_type=comp_data.get("component_type", "module"),
                 default_value=comp_data.get("default_value"),
-                ablation_types=[AblationType(t) for t in comp_data.get("ablation_types", ["remove"])],
+                ablation_types=[
+                    AblationType(t) for t in comp_data.get("ablation_types", ["remove"])
+                ],
             )
 
         study._baseline_metrics = data.get("baseline_metrics", {})
