@@ -10,7 +10,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +28,8 @@ class EvaluationReport:
 
     model_name: str = ""
     dataset_name: str = ""
-    scores: Dict[str, float] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    scores: dict[str, float] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if "timestamp" not in self.metadata:
@@ -52,7 +52,7 @@ class EvaluationReport:
     # Serialisation
     # ------------------------------------------------------------------
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Return a plain dict representation of the report."""
         return {
             "model_name": self.model_name,
@@ -62,7 +62,7 @@ class EvaluationReport:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "EvaluationReport":
+    def from_dict(cls, data: dict[str, Any]) -> "EvaluationReport":
         """Construct an EvaluationReport from a dict.
 
         Args:
@@ -127,7 +127,7 @@ class EvaluationReport:
             bleu              : 0.3421
             rouge1            : 0.5123
         """
-        lines: List[str] = [
+        lines: list[str] = [
             "Evaluation Report",
             "=" * 40,
             f"Model:    {self.model_name}",
