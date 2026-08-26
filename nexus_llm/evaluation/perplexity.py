@@ -9,21 +9,24 @@ Supports three modes of perplexity computation:
 Also provides batch computation and statistical summaries.
 """
 
+from __future__ import annotations
+
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 
 @dataclass
 class PerplexityResult:
     """Container for perplexity computation results."""
+
     perplexity: float
     total_log_prob: float
     num_tokens: int
-    per_token_perplexity: List[float] = field(default_factory=list)
-    per_token_log_prob: List[float] = field(default_factory=list)
-    window_perplexities: List[float] = field(default_factory=list)
-    metadata: Dict[str, Union[str, int, float]] = field(default_factory=dict)
+    per_token_perplexity: list[float] = field(default_factory=list)
+    per_token_log_prob: list[float] = field(default_factory=list)
+    window_perplexities: list[float] = field(default_factory=list)
+    metadata: dict[str, str | int | float] = field(default_factory=dict)
 
     @property
     def bits_per_token(self) -> float:
@@ -39,7 +42,7 @@ class PerplexityResult:
             return 0.0
         return -self.total_log_prob / self.num_tokens
 
-    def to_dict(self) -> Dict[str, Union[float, int, List[float], Dict]]:
+    def to_dict(self) -> dict[str, float | int | list[float] | dict]:
         return {
             "perplexity": self.perplexity,
             "total_log_prob": self.total_log_prob,
@@ -65,12 +68,16 @@ class PerplexityResult:
             min_ppl = min(self.per_token_perplexity)
             max_ppl = max(self.per_token_perplexity)
             avg_ppl = sum(self.per_token_perplexity) / len(self.per_token_perplexity)
-            lines.extend([
-                f"Token-level PPL — min: {min_ppl:.4f}, max: {max_ppl:.4f}, avg: {avg_ppl:.4f}",
-            ])
+            lines.extend(
+                [
+                    f"Token-level PPL — min: {min_ppl:.4f}, max: {max_ppl:.4f}, avg: {avg_ppl:.4f}",
+                ]
+            )
         if self.window_perplexities:
-            lines.append(f"Window PPL — count: {len(self.window_perplexities)}, "
-                         f"avg: {sum(self.window_perplexities)/len(self.window_perplexities):.4f}")
+            lines.append(
+                f"Window PPL — count: {len(self.window_perplexities)}, "
+                f"avg: {sum(self.window_perplexities)/len(self.window_perplexities):.4f}"
+            )
         return "\n".join(lines)
 
 
@@ -90,7 +97,7 @@ class PerplexityCalculator:
         self,
         base: float = math.e,
         ignore_padding: bool = True,
-        pad_token_id: Optional[int] = None,
+        pad_token_id: int | None = None,
     ):
         """
         Args:
@@ -105,7 +112,7 @@ class PerplexityCalculator:
     def compute(
         self,
         log_probs: Sequence[float],
-        token_ids: Optional[Sequence[int]] = None,
+        token_ids: Sequence[int] | None = None,
     ) -> PerplexityResult:
         """
         Compute sequence-level perplexity.
@@ -117,8 +124,8 @@ class PerplexityCalculator:
         Returns:
             PerplexityResult with aggregated and per-token details.
         """
-        filtered_log_probs: List[float] = []
-        filtered_token_ids: List[int] = []
+        filtered_log_probs: list[float] = []
+        filtered_token_ids: list[int] = []
 
         for i, lp in enumerate(log_probs):
             if self.ignore_padding and token_ids is not None and self.pad_token_id is not None:
@@ -161,7 +168,7 @@ class PerplexityCalculator:
     def compute_token_level(
         self,
         log_probs: Sequence[float],
-        token_ids: Optional[Sequence[int]] = None,
+        token_ids: Sequence[int] | None = None,
     ) -> PerplexityResult:
         """
         Compute token-level perplexity breakdown.
@@ -175,7 +182,7 @@ class PerplexityCalculator:
         log_probs: Sequence[float],
         window_size: int = 128,
         stride: int = 64,
-        token_ids: Optional[Sequence[int]] = None,
+        token_ids: Sequence[int] | None = None,
     ) -> PerplexityResult:
         """
         Compute perplexity using a sliding window approach.
@@ -203,8 +210,8 @@ class PerplexityCalculator:
         if stride <= 0:
             raise ValueError(f"stride must be positive, got {stride}")
 
-        window_perplexities: List[float] = []
-        all_window_log_probs: List[float] = []
+        window_perplexities: list[float] = []
+        all_window_log_probs: list[float] = []
 
         start = 0
         while start < len(log_probs):
@@ -214,7 +221,8 @@ class PerplexityCalculator:
             # Filter padding if needed
             if self.ignore_padding and token_ids is not None and self.pad_token_id is not None:
                 window_lps = [
-                    lp for i, lp in enumerate(window_lps)
+                    lp
+                    for i, lp in enumerate(window_lps)
                     if token_ids[start + i] != self.pad_token_id
                 ]
 
@@ -255,8 +263,8 @@ class PerplexityCalculator:
     def compute_batch(
         self,
         batch_log_probs: Sequence[Sequence[float]],
-        batch_token_ids: Optional[Sequence[Sequence[int]]] = None,
-    ) -> List[PerplexityResult]:
+        batch_token_ids: Sequence[Sequence[int]] | None = None,
+    ) -> list[PerplexityResult]:
         """
         Compute perplexity for a batch of sequences.
 
@@ -267,7 +275,7 @@ class PerplexityCalculator:
         Returns:
             List of PerplexityResult, one per sequence.
         """
-        results: List[PerplexityResult] = []
+        results: list[PerplexityResult] = []
         for i, lps in enumerate(batch_log_probs):
             tids = batch_token_ids[i] if batch_token_ids is not None else None
             results.append(self.compute(lps, tids))
@@ -276,8 +284,8 @@ class PerplexityCalculator:
     def compute_batch_summary(
         self,
         batch_log_probs: Sequence[Sequence[float]],
-        batch_token_ids: Optional[Sequence[Sequence[int]]] = None,
-    ) -> Dict[str, float]:
+        batch_token_ids: Sequence[Sequence[int]] | None = None,
+    ) -> dict[str, float]:
         """
         Compute aggregate statistics over a batch.
 
@@ -299,7 +307,11 @@ class PerplexityCalculator:
 
         sorted_ppls = sorted(ppls)
         n = len(sorted_ppls)
-        median = sorted_ppls[n // 2] if n % 2 == 1 else (sorted_ppls[n // 2 - 1] + sorted_ppls[n // 2]) / 2
+        median = (
+            sorted_ppls[n // 2]
+            if n % 2 == 1
+            else (sorted_ppls[n // 2 - 1] + sorted_ppls[n // 2]) / 2
+        )
 
         return {
             "mean_ppl": sum(ppls) / len(ppls),
