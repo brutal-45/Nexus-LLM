@@ -4,11 +4,13 @@ Represents a single experiment with lifecycle management (start, stop,
 pause, resume) and logging of metrics, parameters, and artifacts.
 """
 
+from __future__ import annotations
+
 import enum
 import logging
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -48,21 +50,21 @@ class Experiment:
     def __init__(
         self,
         name: str,
-        config: Optional[Dict[str, Any]] = None,
-        experiment_id: Optional[str] = None,
+        config: dict[str, Any] | None = None,
+        experiment_id: str | None = None,
     ) -> None:
         self.id: str = experiment_id or uuid.uuid4().hex[:12]
         self.name: str = name
-        self.config: Dict[str, Any] = config or {}
+        self.config: dict[str, Any] = config or {}
         self.state: ExperimentState = ExperimentState.CREATED
 
-        self._metrics: List[Dict[str, Any]] = []
-        self._parameters: Dict[str, Any] = {}
-        self._artifacts: List[str] = []
+        self._metrics: list[dict[str, Any]] = []
+        self._parameters: dict[str, Any] = {}
+        self._artifacts: list[str] = []
         self._created_at: float = time.time()
-        self._started_at: Optional[float] = None
-        self._stopped_at: Optional[float] = None
-        self._error_message: Optional[str] = None
+        self._started_at: float | None = None
+        self._stopped_at: float | None = None
+        self._error_message: str | None = None
 
     # ------------------------------------------------------------------
     # Lifecycle methods
@@ -91,8 +93,7 @@ class Experiment:
         """
         if self.state != ExperimentState.RUNNING:
             raise RuntimeError(
-                f"Cannot stop experiment in {self.state.value} state; "
-                f"expected RUNNING."
+                f"Cannot stop experiment in {self.state.value} state; " f"expected RUNNING."
             )
         self.state = ExperimentState.COMPLETED
         self._stopped_at = time.time()
@@ -106,8 +107,7 @@ class Experiment:
         """
         if self.state != ExperimentState.RUNNING:
             raise RuntimeError(
-                f"Cannot pause experiment in {self.state.value} state; "
-                f"expected RUNNING."
+                f"Cannot pause experiment in {self.state.value} state; " f"expected RUNNING."
             )
         self.state = ExperimentState.PAUSED
         logger.info("Experiment %s (%s) paused.", self.name, self.id)
@@ -120,8 +120,7 @@ class Experiment:
         """
         if self.state != ExperimentState.PAUSED:
             raise RuntimeError(
-                f"Cannot resume experiment in {self.state.value} state; "
-                f"expected PAUSED."
+                f"Cannot resume experiment in {self.state.value} state; " f"expected PAUSED."
             )
         self.state = ExperimentState.RUNNING
         logger.info("Experiment %s (%s) resumed.", self.name, self.id)
@@ -156,8 +155,7 @@ class Experiment:
         """
         if self.state != ExperimentState.RUNNING:
             raise RuntimeError(
-                f"Cannot log metrics when experiment is {self.state.value}; "
-                f"must be RUNNING."
+                f"Cannot log metrics when experiment is {self.state.value}; " f"must be RUNNING."
             )
         record = {
             "name": name,
@@ -168,7 +166,10 @@ class Experiment:
         self._metrics.append(record)
         logger.debug(
             "Experiment %s: metric %s=%s at step %d",
-            self.id, name, value, step,
+            self.id,
+            name,
+            value,
+            step,
         )
 
     def log_parameter(self, name: str, value: Any) -> None:
@@ -196,7 +197,7 @@ class Experiment:
     # Accessors
     # ------------------------------------------------------------------
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Return a status dictionary for this experiment.
 
         Returns:
@@ -204,7 +205,7 @@ class Experiment:
             num_metrics, num_artifacts, created_at, started_at,
             stopped_at, duration, error_message.
         """
-        duration: Optional[float] = None
+        duration: float | None = None
         if self._started_at is not None and self._stopped_at is not None:
             duration = self._stopped_at - self._started_at
         elif self._started_at is not None and self.state == ExperimentState.RUNNING:
@@ -226,17 +227,17 @@ class Experiment:
         }
 
     @property
-    def metrics(self) -> List[Dict[str, Any]]:
+    def metrics(self) -> list[dict[str, Any]]:
         """Return a copy of the metric records list."""
         return list(self._metrics)
 
     @property
-    def parameters(self) -> Dict[str, Any]:
+    def parameters(self) -> dict[str, Any]:
         """Return a copy of the parameters dict."""
         return dict(self._parameters)
 
     @property
-    def artifacts(self) -> List[str]:
+    def artifacts(self) -> list[str]:
         """Return a copy of the artifact paths list."""
         return list(self._artifacts)
 
@@ -245,7 +246,4 @@ class Experiment:
     # ------------------------------------------------------------------
 
     def __repr__(self) -> str:
-        return (
-            f"<Experiment id={self.id!r} name={self.name!r} "
-            f"state={self.state.value}>"
-        )
+        return f"<Experiment id={self.id!r} name={self.name!r} " f"state={self.state.value}>"
