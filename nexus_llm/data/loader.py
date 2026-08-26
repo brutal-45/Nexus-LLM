@@ -9,10 +9,10 @@ from __future__ import annotations
 import csv
 import json
 import logging
-import os
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Union
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +34,10 @@ class DatasetInfo:
     format: str = ""
     num_rows: int = 0
     num_columns: int = 0
-    columns: List[str] = field(default_factory=list)
+    columns: list[str] = field(default_factory=list)
     size_mb: float = 0.0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "format": self.format,
@@ -82,12 +82,12 @@ class DataLoader:
     def load(
         self,
         source: str,
-        format: Optional[str] = None,
-        split: Optional[str] = None,
-        columns: Optional[List[str]] = None,
-        limit: Optional[int] = None,
+        format: str | None = None,
+        split: str | None = None,
+        columns: list[str] | None = None,
+        limit: int | None = None,
         **kwargs: Any,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Load a dataset into memory as a list of dicts.
 
         Args:
@@ -106,7 +106,7 @@ class DataLoader:
             ValueError: If format cannot be detected.
         """
         fmt = format or self._detect_format(source)
-        rows: List[Dict[str, Any]] = []
+        rows: list[dict[str, Any]] = []
 
         if fmt == "jsonl":
             rows = self._load_jsonl(source, **kwargs)
@@ -132,12 +132,12 @@ class DataLoader:
     def stream(
         self,
         source: str,
-        format: Optional[str] = None,
-        split: Optional[str] = None,
-        columns: Optional[List[str]] = None,
+        format: str | None = None,
+        split: str | None = None,
+        columns: list[str] | None = None,
         batch_size: int = 1,
         **kwargs: Any,
-    ) -> Iterator[Dict[str, Any]]:
+    ) -> Iterator[dict[str, Any]]:
         """Stream dataset rows one at a time (memory-efficient).
 
         Args:
@@ -169,7 +169,7 @@ class DataLoader:
         else:
             raise ValueError(f"Cannot detect format for '{source}'.")
 
-        batch: List[Dict[str, Any]] = []
+        batch: list[dict[str, Any]] = []
         for row in iterator:
             if columns:
                 row = {k: v for k, v in row.items() if k in columns}
@@ -181,7 +181,7 @@ class DataLoader:
                     yield batch  # type: ignore[misc]
                     batch = []
 
-    def info(self, source: str, format: Optional[str] = None) -> DatasetInfo:
+    def info(self, source: str, format: str | None = None) -> DatasetInfo:
         """Get metadata about a dataset without fully loading it.
 
         Args:
@@ -228,9 +228,9 @@ class DataLoader:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _load_jsonl(path: str, **kwargs: Any) -> List[Dict[str, Any]]:
-        rows: List[Dict[str, Any]] = []
-        with open(path, "r", encoding="utf-8") as f:
+    def _load_jsonl(path: str, **kwargs: Any) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        with open(path, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:
@@ -238,34 +238,34 @@ class DataLoader:
         return rows
 
     @staticmethod
-    def _stream_jsonl(path: str, **kwargs: Any) -> Iterator[Dict[str, Any]]:
-        with open(path, "r", encoding="utf-8") as f:
+    def _stream_jsonl(path: str, **kwargs: Any) -> Iterator[dict[str, Any]]:
+        with open(path, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:
                     yield json.loads(line)
 
     @staticmethod
-    def _load_csv(path: str, delimiter: str = "", **kwargs: Any) -> List[Dict[str, Any]]:
+    def _load_csv(path: str, delimiter: str = "", **kwargs: Any) -> list[dict[str, Any]]:
         sep = delimiter or ("\t" if path.endswith(".tsv") else ",")
-        rows: List[Dict[str, Any]] = []
-        with open(path, "r", encoding="utf-8", newline="") as f:
+        rows: list[dict[str, Any]] = []
+        with open(path, encoding="utf-8", newline="") as f:
             reader = csv.DictReader(f, delimiter=sep)
             for row in reader:
                 rows.append(dict(row))
         return rows
 
     @staticmethod
-    def _stream_csv(path: str, delimiter: str = "", **kwargs: Any) -> Iterator[Dict[str, Any]]:
+    def _stream_csv(path: str, delimiter: str = "", **kwargs: Any) -> Iterator[dict[str, Any]]:
         sep = delimiter or ("\t" if path.endswith(".tsv") else ",")
-        with open(path, "r", encoding="utf-8", newline="") as f:
+        with open(path, encoding="utf-8", newline="") as f:
             reader = csv.DictReader(f, delimiter=sep)
             for row in reader:
                 yield dict(row)
 
     @staticmethod
-    def _load_json(path: str, **kwargs: Any) -> List[Dict[str, Any]]:
-        with open(path, "r", encoding="utf-8") as f:
+    def _load_json(path: str, **kwargs: Any) -> list[dict[str, Any]]:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
         if isinstance(data, list):
             return data
@@ -278,27 +278,26 @@ class DataLoader:
         return []
 
     @staticmethod
-    def _load_parquet(path: str, **kwargs: Any) -> List[Dict[str, Any]]:
+    def _load_parquet(path: str, **kwargs: Any) -> list[dict[str, Any]]:
         try:
             import pandas as pd
+
             df = pd.read_parquet(path)
             return df.to_dict(orient="records")
         except ImportError:
             try:
                 import pyarrow.parquet as pq
+
                 table = pq.read_table(path)
                 return table.to_pylist()
             except ImportError:
-                raise RuntimeError(
-                    "pandas or pyarrow required for Parquet loading."
-                )
+                raise RuntimeError("pandas or pyarrow required for Parquet loading.")
 
     @staticmethod
-    def _load_hf(
-        dataset_id: str, split: Optional[str] = None, **kwargs: Any
-    ) -> List[Dict[str, Any]]:
+    def _load_hf(dataset_id: str, split: str | None = None, **kwargs: Any) -> list[dict[str, Any]]:
         try:
             from datasets import load_dataset
+
             ds = load_dataset(dataset_id, split=split or "train")
             return [dict(row) for row in ds]
         except ImportError:
@@ -306,10 +305,11 @@ class DataLoader:
 
     @staticmethod
     def _stream_hf(
-        dataset_id: str, split: Optional[str] = None, **kwargs: Any
-    ) -> Iterator[Dict[str, Any]]:
+        dataset_id: str, split: str | None = None, **kwargs: Any
+    ) -> Iterator[dict[str, Any]]:
         try:
             from datasets import load_dataset
+
             ds = load_dataset(dataset_id, split=split or "train", streaming=True)
             for row in ds:
                 yield dict(row)
