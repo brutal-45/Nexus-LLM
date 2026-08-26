@@ -1,4 +1,4 @@
-# nexus_llm.experiments
+# nexus-llm.experiments
 
 Module: experiments
 
@@ -9,9 +9,9 @@ This module provides experiments functionality for Nexus-LLM.
 ## Usage
 
 ```python
-from nexus_llm.experiments import *
+from nexus-llm.experiments import *
 ```
 
 ## Classes
 
-See `__init__.py` for exported classes.
+See `__init__.py` for exported classes. 
