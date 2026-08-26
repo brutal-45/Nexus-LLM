@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import os
 import sys
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +22,6 @@ except ImportError:
 
 from nexus_llm.config.defaults import Defaults
 from nexus_llm.config.validators import ConfigValidator
-
 
 # Environment variable prefix
 ENV_PREFIX = "NEXUS_LLM_"
@@ -185,7 +183,6 @@ class Settings:
 
 class _Sentinel:
     """Sentinel value for 'key not found' detection."""
-    pass
 
 
 _SENTINEL = _Sentinel()
@@ -230,7 +227,7 @@ class SettingsLoader:
         if not file_path.exists():
             raise FileNotFoundError(f"Config file not found: {path}")
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
         if not isinstance(data, dict):
@@ -252,7 +249,7 @@ class SettingsLoader:
         result: dict[str, Any] = {}
         current_section = result
 
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             for line in f:
                 line = line.rstrip()
 
