@@ -4,9 +4,11 @@ Runs predefined benchmark suites against a model and collects
 EvaluationReports.
 """
 
+from __future__ import annotations
+
 import logging
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable
 
 from nexus_llm.evaluation.metrics import MetricsCalculator
 from nexus_llm.evaluation.report import EvaluationReport
@@ -21,11 +23,12 @@ ModelLike = Any  # Expected to have .generate(), .chat(), .compute_loss()
 # Built-in benchmark definitions
 # ------------------------------------------------------------------
 
+
 def _benchmark_perplexity(
     model: ModelLike,
     calculator: MetricsCalculator,
-    dataset: Optional[List[Dict[str, Any]]],
-) -> Dict[str, float]:
+    dataset: list[dict[str, Any]] | None,
+) -> dict[str, float]:
     """Compute perplexity on a small test set."""
     # In production the dataset would come from a real loader.
     # Here we return a placeholder that exercises the calculator.
@@ -36,7 +39,7 @@ def _benchmark_perplexity(
             {"logits": [[0.3, 0.3, 0.4], [0.1, 0.1, 0.8]], "labels": [2, 2]},
         ]
 
-    scores: List[float] = []
+    scores: list[float] = []
     for item in dataset:
         ppl = calculator.perplexity(item["logits"], item["labels"])
         scores.append(ppl)
@@ -48,8 +51,8 @@ def _benchmark_perplexity(
 def _benchmark_generation_quality(
     model: ModelLike,
     calculator: MetricsCalculator,
-    dataset: Optional[List[Dict[str, Any]]],
-) -> Dict[str, float]:
+    dataset: list[dict[str, Any]] | None,
+) -> dict[str, float]:
     """Evaluate generation quality using BLEU/ROUGE against references."""
     if dataset is None:
         dataset = [
@@ -57,8 +60,8 @@ def _benchmark_generation_quality(
             {"reference": "hello world", "hypothesis": "hello world"},
         ]
 
-    bleu_scores: List[float] = []
-    rouge1_scores: List[float] = []
+    bleu_scores: list[float] = []
+    rouge1_scores: list[float] = []
     for item in dataset:
         bleu = calculator.bleu_score(item["reference"], item["hypothesis"])
         rouge = calculator.rouge_score(item["reference"], item["hypothesis"])
@@ -74,8 +77,8 @@ def _benchmark_generation_quality(
 def _benchmark_safety(
     model: ModelLike,
     calculator: MetricsCalculator,
-    dataset: Optional[List[Dict[str, Any]]],
-) -> Dict[str, float]:
+    dataset: list[dict[str, Any]] | None,
+) -> dict[str, float]:
     """Run safety evaluation — measures refusal rate on adversarial prompts."""
     if dataset is None:
         dataset = [
@@ -98,12 +101,12 @@ def _benchmark_safety(
 def _benchmark_speed(
     model: ModelLike,
     calculator: MetricsCalculator,
-    dataset: Optional[List[Dict[str, Any]]],
-) -> Dict[str, float]:
+    dataset: list[dict[str, Any]] | None,
+) -> dict[str, float]:
     """Measure inference throughput and latency."""
     # Simulate speed measurement with a small number of generations
     num_samples = 5
-    latencies: List[float] = []
+    latencies: list[float] = []
 
     for _ in range(num_samples):
         start = time.perf_counter()
@@ -121,7 +124,7 @@ def _benchmark_speed(
 
 
 # Registry of built-in benchmarks
-_BUILTIN_BENCHMARKS: Dict[str, Callable[..., Dict[str, float]]] = {
+_BUILTIN_BENCHMARKS: dict[str, Callable[..., dict[str, float]]] = {
     "perplexity": _benchmark_perplexity,
     "generation_quality": _benchmark_generation_quality,
     "safety": _benchmark_safety,
@@ -139,21 +142,19 @@ class BenchmarkRunner:
         print(results.summary())
     """
 
-    def __init__(self, calculator: Optional[MetricsCalculator] = None) -> None:
+    def __init__(self, calculator: MetricsCalculator | None = None) -> None:
         self._calculator = calculator or MetricsCalculator()
-        self._custom_benchmarks: Dict[str, Callable[..., Dict[str, float]]] = {}
+        self._custom_benchmarks: dict[str, Callable[..., dict[str, float]]] = {}
 
     # ------------------------------------------------------------------
     # Benchmark management
     # ------------------------------------------------------------------
 
-    def list_benchmarks(self) -> List[str]:
+    def list_benchmarks(self) -> list[str]:
         """Return the names of all available benchmarks (built-in + custom)."""
         return sorted(set(_BUILTIN_BENCHMARKS) | set(self._custom_benchmarks))
 
-    def register_benchmark(
-        self, name: str, fn: Callable[..., Dict[str, float]]
-    ) -> None:
+    def register_benchmark(self, name: str, fn: Callable[..., dict[str, float]]) -> None:
         """Register a custom benchmark function.
 
         Args:
@@ -173,7 +174,7 @@ class BenchmarkRunner:
         self,
         model: ModelLike,
         benchmark_name: str,
-        dataset: Optional[List[Dict[str, Any]]] = None,
+        dataset: list[dict[str, Any]] | None = None,
         model_name: str = "",
     ) -> EvaluationReport:
         """Run a single benchmark and return an EvaluationReport.
@@ -191,13 +192,10 @@ class BenchmarkRunner:
         Raises:
             ValueError: If *benchmark_name* is not recognised.
         """
-        fn = _BUILTIN_BENCHMARKS.get(benchmark_name) or self._custom_benchmarks.get(
-            benchmark_name
-        )
+        fn = _BUILTIN_BENCHMARKS.get(benchmark_name) or self._custom_benchmarks.get(benchmark_name)
         if fn is None:
             raise ValueError(
-                f"Unknown benchmark {benchmark_name!r}. "
-                f"Available: {self.list_benchmarks()}"
+                f"Unknown benchmark {benchmark_name!r}. " f"Available: {self.list_benchmarks()}"
             )
 
         logger.info("Running benchmark %r …", benchmark_name)
@@ -223,14 +221,14 @@ class BenchmarkRunner:
         self,
         model: ModelLike,
         model_name: str = "",
-        dataset: Optional[List[Dict[str, Any]]] = None,
-    ) -> List[EvaluationReport]:
+        dataset: list[dict[str, Any]] | None = None,
+    ) -> list[EvaluationReport]:
         """Run every registered benchmark sequentially.
 
         Returns:
             A list of EvaluationReport objects, one per benchmark.
         """
-        reports: List[EvaluationReport] = []
+        reports: list[EvaluationReport] = []
         for name in self.list_benchmarks():
             try:
                 report = self.run(model, name, dataset=dataset, model_name=model_name)
