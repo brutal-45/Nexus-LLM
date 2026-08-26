@@ -25,9 +25,8 @@ Example::
 
 from __future__ import annotations
 
-import copy
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +42,7 @@ _SHAREGPT_KEYS = {"conversations"}
 _HF_CONVERSATION_KEYS = {"conversations", "id"}
 
 
-def detect_format(sample: Dict[str, Any]) -> str:
+def detect_format(sample: dict[str, Any]) -> str:
     """Auto-detect the data format of a single sample.
 
     Inspects the top-level keys and values to classify the sample.
@@ -79,11 +78,12 @@ def detect_format(sample: Dict[str, Any]) -> str:
 # Conversion functions
 # ---------------------------------------------------------------------------
 
+
 def alpaca_to_chatml(
-    sample: Dict[str, Any],
+    sample: dict[str, Any],
     system_prompt: str = "You are a helpful assistant.",
     include_input: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Convert an Alpaca-format sample to ChatML.
 
     Args:
@@ -110,7 +110,7 @@ def alpaca_to_chatml(
         {"role": "assistant", "content": output},
     ]
 
-    result: Dict[str, Any] = {"messages": messages}
+    result: dict[str, Any] = {"messages": messages}
     # Carry over any extra keys
     for key, value in sample.items():
         if key not in ("instruction", "input", "output"):
@@ -118,7 +118,7 @@ def alpaca_to_chatml(
     return result
 
 
-def chatml_to_alpaca(sample: Dict[str, Any]) -> Dict[str, Any]:
+def chatml_to_alpaca(sample: dict[str, Any]) -> dict[str, Any]:
     """Convert a ChatML-format sample to Alpaca.
 
     Extracts the first user message as ``instruction`` and the first
@@ -149,7 +149,7 @@ def chatml_to_alpaca(sample: Dict[str, Any]) -> Dict[str, Any]:
         elif role == "assistant" and not output:
             output = content
 
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "instruction": instruction,
         "input": extra_input,
         "output": output,
@@ -161,9 +161,9 @@ def chatml_to_alpaca(sample: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def sharegpt_to_hf(
-    sample: Dict[str, Any],
-    role_map: Optional[Dict[str, str]] = None,
-) -> Dict[str, Any]:
+    sample: dict[str, Any],
+    role_map: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """Convert a ShareGPT-format sample to HuggingFace conversation format.
 
     ShareGPT uses ``{from, value}`` pairs inside a ``conversations`` list.
@@ -190,7 +190,7 @@ def sharegpt_to_hf(
         hf_role = default_map.get(from_role, from_role)
         hf_conversations.append({"role": hf_role, "content": value})
 
-    result: Dict[str, Any] = {"conversations": hf_conversations}
+    result: dict[str, Any] = {"conversations": hf_conversations}
     for key, value in sample.items():
         if key != "conversations":
             result[key] = value
@@ -198,9 +198,9 @@ def sharegpt_to_hf(
 
 
 def hf_to_sharegpt(
-    sample: Dict[str, Any],
-    role_map: Optional[Dict[str, str]] = None,
-) -> Dict[str, Any]:
+    sample: dict[str, Any],
+    role_map: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """Convert HuggingFace conversation format to ShareGPT.
 
     Args:
@@ -223,7 +223,7 @@ def hf_to_sharegpt(
         from_role = default_map.get(role, role)
         sg_conversations.append({"from": from_role, "value": content})
 
-    result: Dict[str, Any] = {"conversations": sg_conversations}
+    result: dict[str, Any] = {"conversations": sg_conversations}
     for key, value in sample.items():
         if key != "conversations":
             result[key] = value
@@ -234,10 +234,11 @@ def hf_to_sharegpt(
 # Custom field mapping
 # ---------------------------------------------------------------------------
 
+
 def remap_fields(
-    sample: Dict[str, Any],
-    mapping: Dict[str, str],
-) -> Dict[str, Any]:
+    sample: dict[str, Any],
+    mapping: dict[str, str],
+) -> dict[str, Any]:
     """Rename fields in *sample* according to *mapping*.
 
     Args:
@@ -247,7 +248,7 @@ def remap_fields(
     Returns:
         New dict with renamed keys.  Unmapped keys are preserved.
     """
-    result: Dict[str, Any] = {}
+    result: dict[str, Any] = {}
     for key, value in sample.items():
         new_key = mapping.get(key, key)
         result[new_key] = value
@@ -255,9 +256,9 @@ def remap_fields(
 
 
 def remap_fields_batch(
-    data: List[Dict[str, Any]],
-    mapping: Dict[str, str],
-) -> List[Dict[str, Any]]:
+    data: list[dict[str, Any]],
+    mapping: dict[str, str],
+) -> list[dict[str, Any]]:
     """Apply :func:`remap_fields` to every row in *data*."""
     return [remap_fields(row, mapping) for row in data]
 
@@ -265,6 +266,7 @@ def remap_fields_batch(
 # ---------------------------------------------------------------------------
 # FormatConverter class
 # ---------------------------------------------------------------------------
+
 
 class FormatConverter:
     """High-level format conversion with auto-detection and chaining.
@@ -285,7 +287,7 @@ class FormatConverter:
     """
 
     # Registry of known conversions: (source, target) → callable
-    _CONVERSIONS: Dict[Tuple[str, str], Any] = {}
+    _CONVERSIONS: dict[tuple[str, str], Any] = {}
 
     def __init__(
         self,
@@ -305,7 +307,7 @@ class FormatConverter:
 
     # -- Delegating helpers -------------------------------------------------
 
-    def _alpaca_to_chatml_impl(self, sample: Dict[str, Any]) -> Dict[str, Any]:
+    def _alpaca_to_chatml_impl(self, sample: dict[str, Any]) -> dict[str, Any]:
         return alpaca_to_chatml(
             sample,
             system_prompt=self._system_prompt,
@@ -313,29 +315,29 @@ class FormatConverter:
         )
 
     @staticmethod
-    def _chatml_to_alpaca_impl(sample: Dict[str, Any]) -> Dict[str, Any]:
+    def _chatml_to_alpaca_impl(sample: dict[str, Any]) -> dict[str, Any]:
         return chatml_to_alpaca(sample)
 
     @staticmethod
-    def _sharegpt_to_hf_impl(sample: Dict[str, Any]) -> Dict[str, Any]:
+    def _sharegpt_to_hf_impl(sample: dict[str, Any]) -> dict[str, Any]:
         return sharegpt_to_hf(sample)
 
     @staticmethod
-    def _hf_to_sharegpt_impl(sample: Dict[str, Any]) -> Dict[str, Any]:
+    def _hf_to_sharegpt_impl(sample: dict[str, Any]) -> dict[str, Any]:
         return hf_to_sharegpt(sample)
 
     # -- Public API ---------------------------------------------------------
 
-    def detect_format(self, sample: Dict[str, Any]) -> str:
+    def detect_format(self, sample: dict[str, Any]) -> str:
         """Auto-detect the format of *sample*."""
         return detect_format(sample)
 
     def convert(
         self,
-        sample: Dict[str, Any],
+        sample: dict[str, Any],
         target: str = "chatml",
-        source: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        source: str | None = None,
+    ) -> dict[str, Any]:
         """Convert *sample* to *target* format.
 
         If *source* is ``None``, the format is auto-detected.
@@ -354,23 +356,19 @@ class FormatConverter:
         """
         src = source or self.detect_format(sample)
         if src == "unknown":
-            raise ValueError(
-                f"Cannot detect source format. Keys: {list(sample.keys())}"
-            )
+            raise ValueError(f"Cannot detect source format. Keys: {list(sample.keys())}")
         key = (src, target)
         converter = self._CONVERSIONS.get(key)
         if converter is None:
-            raise ValueError(
-                f"No converter registered for {src!r} → {target!r}"
-            )
+            raise ValueError(f"No converter registered for {src!r} → {target!r}")
         return converter(sample)
 
     def convert_batch(
         self,
-        data: List[Dict[str, Any]],
+        data: list[dict[str, Any]],
         target: str = "chatml",
-        source: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        source: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Convert a list of samples.
 
         The source format is detected from the first sample (or uses
@@ -381,9 +379,7 @@ class FormatConverter:
         src = source or self.detect_format(data[0])
         return [self.convert(row, target=target, source=src) for row in data]
 
-    def alpaca_to_chatml(
-        self, sample: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def alpaca_to_chatml(self, sample: dict[str, Any]) -> dict[str, Any]:
         """Convert Alpaca → ChatML."""
         return alpaca_to_chatml(
             sample,
@@ -391,44 +387,38 @@ class FormatConverter:
             include_input=self._alpaca_include_input,
         )
 
-    def chatml_to_alpaca(
-        self, sample: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def chatml_to_alpaca(self, sample: dict[str, Any]) -> dict[str, Any]:
         """Convert ChatML → Alpaca."""
         return chatml_to_alpaca(sample)
 
-    def sharegpt_to_hf(
-        self, sample: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def sharegpt_to_hf(self, sample: dict[str, Any]) -> dict[str, Any]:
         """Convert ShareGPT → HuggingFace."""
         return sharegpt_to_hf(sample)
 
-    def hf_to_sharegpt(
-        self, sample: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def hf_to_sharegpt(self, sample: dict[str, Any]) -> dict[str, Any]:
         """Convert HuggingFace → ShareGPT."""
         return hf_to_sharegpt(sample)
 
     def remap(
         self,
-        sample: Dict[str, Any],
-        mapping: Dict[str, str],
-    ) -> Dict[str, Any]:
+        sample: dict[str, Any],
+        mapping: dict[str, str],
+    ) -> dict[str, Any]:
         """Apply custom field mapping to a sample."""
         return remap_fields(sample, mapping)
 
     def remap_batch(
         self,
-        data: List[Dict[str, Any]],
-        mapping: Dict[str, str],
-    ) -> List[Dict[str, Any]]:
+        data: list[dict[str, Any]],
+        mapping: dict[str, str],
+    ) -> list[dict[str, Any]]:
         """Apply custom field mapping to a batch of samples."""
         return remap_fields_batch(data, mapping)
 
     # -- Introspection ------------------------------------------------------
 
     @classmethod
-    def supported_conversions(cls) -> List[Tuple[str, str]]:
+    def supported_conversions(cls) -> list[tuple[str, str]]:
         """Return a list of ``(source, target)`` conversion pairs."""
         return list(cls._CONVERSIONS.keys())
 
