@@ -5,8 +5,10 @@ calculating the distillation loss (KL-divergence between softened
 distributions), and combining it with the hard-label loss.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from nexus_llm.distillation.config import DistillationConfig
 
@@ -32,7 +34,7 @@ class Distiller:
         )
     """
 
-    def __init__(self, device: Optional[str] = None) -> None:
+    def __init__(self, device: str | None = None) -> None:
         """Initialise the Distiller.
 
         Args:
@@ -49,7 +51,7 @@ class Distiller:
         self,
         teacher_model: Any,
         student_model: Any,
-        dataset: List[Dict[str, Any]],
+        dataset: list[dict[str, Any]],
         config: DistillationConfig,
     ) -> Any:
         """Distill knowledge from *teacher_model* into *student_model*.
@@ -88,9 +90,7 @@ class Distiller:
         teacher_model.eval()
 
         # Optimiser for student only
-        optimizer = torch.optim.AdamW(
-            student_model.parameters(), lr=config.learning_rate
-        )
+        optimizer = torch.optim.AdamW(student_model.parameters(), lr=config.learning_rate)
 
         num_batches = max(1, len(dataset) // config.batch_size)
         global_step = 0
@@ -110,9 +110,7 @@ class Distiller:
                     [torch.as_tensor(s["input_ids"]) for s in batch],
                     batch_first=True,
                 ).to(device)
-                labels = torch.cat(
-                    [torch.as_tensor(s["labels"]) for s in batch]
-                ).to(device)
+                labels = torch.cat([torch.as_tensor(s["labels"]) for s in batch]).to(device)
                 attention_mask = (input_ids != 0).long()
 
                 # Teacher forward (no grad)
@@ -122,15 +120,15 @@ class Distiller:
                     )
 
                 # Student forward
-                student_outputs = student_model(
-                    input_ids=input_ids, attention_mask=attention_mask
+                student_outputs = student_model(input_ids=input_ids, attention_mask=attention_mask)
+                student_logits = (
+                    student_outputs.logits
+                    if hasattr(student_outputs, "logits")
+                    else student_outputs
                 )
-                student_logits = student_outputs.logits if hasattr(student_outputs, "logits") else student_outputs
 
                 # Compute combined loss
-                loss = self.distillation_loss(
-                    student_logits, teacher_logits, config.temperature
-                )
+                loss = self.distillation_loss(student_logits, teacher_logits, config.temperature)
 
                 # Add hard-label loss
                 hard_loss = F.cross_entropy(
@@ -167,7 +165,7 @@ class Distiller:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def compute_teacher_logits(teacher: Any, inputs: Dict[str, Any]) -> Any:
+    def compute_teacher_logits(teacher: Any, inputs: dict[str, Any]) -> Any:
         """Compute teacher logits without updating teacher weights.
 
         Args:
@@ -219,7 +217,6 @@ class Distiller:
         Returns:
             Scalar loss tensor.
         """
-        import torch
         import torch.nn.functional as F
 
         if student_logits.shape != teacher_logits.shape:
@@ -239,7 +236,7 @@ class Distiller:
         )
 
         # Scale by T^2 to keep gradient magnitudes consistent
-        loss = (temperature ** 2) * kl
+        loss = (temperature**2) * kl
         return loss
 
     # ------------------------------------------------------------------
@@ -251,7 +248,6 @@ class Distiller:
         if self._device is not None:
             return self._device
         try:
-            import torch
             return str(next(model.parameters()).device)
         except Exception:
             return "cpu"
