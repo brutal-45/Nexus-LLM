@@ -4,10 +4,12 @@ LRU cache for text-to-embedding mappings with hit/miss statistics
 and configurable capacity.
 """
 
+from __future__ import annotations
+
 import hashlib
 import logging
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +45,7 @@ class EmbeddingCache:
         if capacity < 1:
             raise ValueError(f"Cache capacity must be >= 1, got {capacity}")
         self._capacity = capacity
-        self._cache: OrderedDict[str, List[float]] = OrderedDict()
+        self._cache: OrderedDict[str, list[float]] = OrderedDict()
         self._hits = 0
         self._misses = 0
 
@@ -51,7 +53,7 @@ class EmbeddingCache:
     # Core operations
     # ------------------------------------------------------------------
 
-    def get(self, text: str) -> Optional[List[float]]:
+    def get(self, text: str) -> list[float] | None:
         """Look up an embedding by text.
 
         Args:
@@ -72,7 +74,7 @@ class EmbeddingCache:
         logger.debug("Cache miss for text (key=%s…)", key[:12])
         return None
 
-    def put(self, text: str, embedding: List[float]) -> None:
+    def put(self, text: str, embedding: list[float]) -> None:
         """Store an embedding in the cache.
 
         If the text is already cached its value is updated and it is
@@ -107,7 +109,7 @@ class EmbeddingCache:
     # Statistics
     # ------------------------------------------------------------------
 
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Return cache statistics.
 
         Returns:
