@@ -2,38 +2,38 @@
 
 import pytest
 from datetime import datetime
-from nexus_llm.tools.datetime_tool import DatetimeTool
+from nexus_llm.tools.datetime_tool import DateTimeTool
 
 
-class TestDatetimeTool:
-    """Tests for the DatetimeTool class."""
+class TestDateTimeTool:
+    """Tests for the DateTimeTool class."""
 
     def test_init(self):
-        tool = DatetimeTool()
+        tool = DateTimeTool()
         assert tool.name == "datetime"
 
     def test_now(self):
-        tool = DatetimeTool()
+        tool = DateTimeTool()
         result = tool.run(operation="now")
         assert result.success is True
         assert isinstance(result.output, str)
 
     def test_format(self):
-        tool = DatetimeTool()
+        tool = DateTimeTool()
         result = tool.run(operation="format", format_str="%Y-%m-%d")
         assert result.success is True
 
     def test_parse(self):
-        tool = DatetimeTool()
+        tool = DateTimeTool()
         result = tool.run(operation="parse", date_string="2024-01-15", format_str="%Y-%m-%d")
         assert result.success is True
 
     def test_add_days(self):
-        tool = DatetimeTool()
+        tool = DateTimeTool()
         result = tool.run(operation="add", days=7)
         assert result.success is True
 
     def test_unknown_operation(self):
-        tool = DatetimeTool()
+        tool = DateTimeTool()
         result = tool.run(operation="unknown")
         assert result.success is False

@@ -15,7 +15,7 @@ from nexus_llm.api import (
     setup_middleware,
     CORSConfig,
     ConnectionManager,
-    create_app,
+    WebSocketMessageHandler,
 )
 
 
@@ -48,15 +48,19 @@ class TestAPIModuleImports:
         assert ConnectionManager is not None
 
 
-class TestCreateApp:
-    """Test create_app factory."""
+class TestModelServer:
+    """The package exposes the server as nexus_llm.serving.ModelServer."""
 
-    def test_create_app_returns_none_without_fastapi(self):
-        # This will fail if fastapi not installed, but should not crash on import
-        try:
-            app = create_app()
-        except ImportError:
-            pytest.skip("FastAPI not installed")
+    def test_server_starts_without_an_app(self):
+        from nexus_llm.serving.server import ModelServer
+
+        server = ModelServer()
+        assert server.app is None
+
+    def test_server_status_starts_stopped(self):
+        from nexus_llm.serving.server import ModelServer
+
+        assert ModelServer()._status == "stopped"
 
 
 class TestSchemasIntegration:
