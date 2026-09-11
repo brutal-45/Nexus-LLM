@@ -1,63 +1,96 @@
-"""Tests for evaluation integration."""
+"""Integration tests for the evaluation package's public surface."""
+
+from __future__ import annotations
+
 import pytest
 
+import nexus_llm.evaluation as evaluation
 from nexus_llm.evaluation import (
-    Evaluator,
-    EvaluationResult,
-    ModelComparison,
     BenchmarkRunner,
-    BenchmarkConfig,
-    BenchmarkResult,
-    MetricRegistry,
-    PerplexityCalculator,
-    PerplexityResult,
+    ComparisonEngine,
+    Evaluator,
     GenerationEvaluator,
-    GenerationQualityResult,
-    ReportGenerator,
-    ReportFormat,
+    MetricsCalculator,
+    PerplexityCalculator,
+    tokenize,
 )
 
 
-class TestEvaluationModuleImports:
-    """Test that all evaluation module components can be imported."""
+class TestPublicSurface:
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "BenchmarkRunner",
+            "ComparisonEngine",
+            "ComparisonResult",
+            "EvaluationReport",
+            "Evaluator",
+            "GenerationEvaluator",
+            "MetricsCalculator",
+            "PerplexityCalculator",
+            "tokenize",
+        ],
+    )
+    def test_package_exports(self, name):
+        assert getattr(evaluation, name, None) is not None
 
-    def test_evaluator_imports(self):
-        assert Evaluator is not None
-        assert EvaluationResult is not None
-        assert ModelComparison is not None
-
-    def test_benchmark_imports(self):
-        assert BenchmarkRunner is not None
-        assert BenchmarkConfig is not None
-        assert BenchmarkResult is not None
-
-    def test_metrics_import(self):
-        assert MetricRegistry is not None
-
-    def test_perplexity_imports(self):
-        assert PerplexityCalculator is not None
-        assert PerplexityResult is not None
-
-    def test_generation_eval_imports(self):
-        assert GenerationEvaluator is not None
-        assert GenerationQualityResult is not None
-
-    def test_report_imports(self):
-        assert ReportGenerator is not None
-        assert ReportFormat is not None
+    def test_all_names_resolve(self):
+        for name in evaluation.__all__:
+            assert hasattr(evaluation, name), f"__all__ lists missing name {name}"
 
 
-class TestEvaluatorIntegration:
-    """Test Evaluator creation."""
+class TestTokenize:
+    def test_lowercases_and_drops_punctuation(self):
+        assert tokenize("Hello, World!") == ["hello", "world"]
 
-    def test_create_evaluator(self):
-        evaluator = Evaluator()
-        assert evaluator is not None
+    def test_empty_input(self):
+        assert tokenize("") == []
+
+    def test_keeps_inner_apostrophes(self):
+        assert tokenize("don't stop") == ["don't", "stop"]
 
 
-class TestMetricRegistryIntegration:
-    """Test MetricRegistry."""
+class TestMetricsCalculator:
+    @pytest.fixture
+    def calc(self):
+        return MetricsCalculator()
 
-    def test_create_registry(self):
-        registry = MetricRegistry()
-        assert registry is not None
+    def test_bleu_is_one_for_identical_text(self, calc):
+        assert calc.bleu_score("the cat sat on the mat", "the cat sat on the mat") == pytest.approx(1.0)
+
+    def test_bleu_is_zero_without_overlap(self, calc):
+        assert calc.bleu_score("aaa bbb ccc", "ddd eee fff") == 0.0
+
+    def test_rouge_within_unit_interval(self, calc):
+        score = calc.rouge_score("the quick brown fox", "the quick fox")
+        assert 0.0 <= score <= 1.0
+
+    def test_distinct_n_penalises_repetition(self, calc):
+        repetitive = calc.distinct_n(["yes yes yes yes"], n=1)
+        varied = calc.distinct_n(["one two three four"], n=1)
+        assert repetitive < varied
+
+    def test_perplexity_rejects_mismatched_shapes(self, calc):
+        with pytest.raises(ValueError):
+            calc.perplexity([[1.0, 2.0]], [0])
+
+    def test_average_length(self, calc):
+        assert calc.average_length(["a b c", "a b c"]) == 3.0
+
+
+class TestEvaluatorSurface:
+    """Constructors take optional config, so they must work with no arguments."""
+
+    @pytest.mark.parametrize("factory", [Evaluator, GenerationEvaluator, ComparisonEngine, PerplexityCalculator])
+    def test_constructible(self, factory):
+        assert factory() is not None
+
+    def test_benchmark_runner_is_a_class(self):
+        assert isinstance(BenchmarkRunner, type)
+
+    def test_result_types_are_dataclasses(self):
+        import dataclasses
+
+        from nexus_llm.evaluation.perplexity import PerplexityResult
+
+        assert dataclasses.is_dataclass(PerplexityResult)
