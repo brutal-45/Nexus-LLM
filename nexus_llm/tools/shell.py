@@ -8,7 +8,7 @@ import logging
 import os
 import subprocess
 import tempfile
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from nexus_llm.tools.base_tool import BaseTool, ToolParameter, ToolResult, ParameterType
 
