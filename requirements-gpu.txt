@@ -1,20 +1,33 @@
-# PyTorch with CUDA support
---extra-index-url https://download.pytorch.org/whl/cu121
-torch>=2.0.0+cu121
-torchvision>=0.15.0+cu121
-torchaudio>=2.0.0+cu121
+# Nexus-LLM GPU / CUDA dependencies
+# =================================
+# IMPORTANT: PyTorch CUDA wheels are not on the plain PyPI index, and their
+# local version labels (e.g. +cu121) must match the CUDA runtime you have.
+# Install the torch stack FIRST from the matching index, then the rest:
+#
+#   # CUDA 12.1
+#   pip install torch --index-url https://download.pytorch.org/whl/cu121
+#   # CUDA 12.4
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
+#   # ROCm (AMD)
+#   pip install torch --index-url https://download.pytorch.org/whl/rocm6.1
+#
+#   pip install -r requirements-gpu.txt
+#   pip install -e ".[gpu]"        # or the project's own extras
+#
+# flash-attn is intentionally NOT listed here: it compiles CUDA kernels at
+# install time and must be built against the already-installed torch, e.g.
+#   pip install flash-attn --no-build-isolation
 
-# Attention optimizations
+# Attention optimisations (need a matching torch/CUDA pair)
 xformers>=0.0.22
-flash-attn>=2.3.0
 
-# Quantization support
+# Quantisation for low-VRAM inference
 bitsandbytes>=0.41.0
-auto-gptq>=0.6.0
+accelerate>=0.24.0
 optimum>=1.14.0
 
 # Distributed training
 deepspeed>=0.12.0
 
-# Triton for CUDA kernels
+# Triton ships with torch >= 2.1 on Linux; pin a floor for custom kernels.
 triton>=2.1.0

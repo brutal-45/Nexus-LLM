@@ -1,6 +1,43 @@
+# Source distribution contents. Everything the package needs at runtime is
+# declared as package-data in pyproject.toml; this adds the repo-level files
+# required to build, test and document a released sdist.
 include README.md
 include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+include CODE_OF_CONDUCT.md
+include VERSION
+include pyproject.toml
+include tox.ini
+include Makefile
+include Dockerfile
+include docker-compose.yml
+include docker-compose.gpu.yml
 include requirements.txt
+include requirements-dev.txt
+include requirements-gpu.txt
+include .flake8
+
+# Runtime configuration shipped alongside the repo (the package also has its
+# own copies under nexus_llm/, which setuptools includes as package data).
 recursive-include config *.yaml *.json
-recursive-include data *.json *.jsonl
-recursive-include docs *.md
+recursive-include docs *.md *.rst *.py
+recursive-include examples *.py *.md
+recursive-include scripts *.py *.sh
+recursive-include tests *.py
+
+# Data fixtures used by the test suite and the benchmark scripts.
+recursive-include data *.jsonl
+recursive-include data *.json
+recursive-include data *.yaml
+
+# Never ship build noise, caches or model weights.
+global-exclude __pycache__ *.py[cod] *.egg-info .git .gitignore
+global-exclude .coverage coverage.xml
+global-exclude *.safetensors *.bin *.pt *.gguf
+prune .venv
+prune build
+prune dist
+prune models
+prune logs
+prune site
