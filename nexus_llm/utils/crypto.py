@@ -1,5 +1,7 @@
 """Crypto: hash computation (MD5, SHA256), file integrity verification."""
 
+from __future__ import annotations
+
 import hashlib
 import logging
 from typing import Optional
