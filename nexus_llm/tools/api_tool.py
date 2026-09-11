@@ -6,7 +6,7 @@ with support for various HTTP methods, headers, and body formats.
 
 import json
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 

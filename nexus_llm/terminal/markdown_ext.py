@@ -97,7 +97,9 @@ class MarkdownRenderer:
     def _split_blocks(self, text: str) -> list[str]:
         """Split text into block-level elements.
 
-        Handles code blocks (which may contain blank lines) as single blocks.
+        Blocks are separated by blank lines; fenced code blocks are kept intact
+        even though they contain blank lines, and a heading never swallows the
+        paragraphs that follow it.
 
         Args:
             text: Pre-processed markdown text.
@@ -105,32 +107,50 @@ class MarkdownRenderer:
         Returns:
             List of block strings.
         """
-        blocks = []
+        blocks: list[str] = []
         current_lines: list[str] = []
         in_code_block = False
+
+        def flush() -> None:
+            if current_lines:
+                blocks.append("\n".join(current_lines))
+                current_lines.clear()
 
         for line in text.split("\n"):
             if line.strip().startswith("```"):
                 if in_code_block:
                     # End of code block
                     current_lines.append(line)
-                    blocks.append("\n".join(current_lines))
-                    current_lines = []
+                    flush()
                     in_code_block = False
                 else:
                     # Start of code block - flush current block
-                    if current_lines:
-                        blocks.append("\n".join(current_lines))
-                        current_lines = []
+                    flush()
                     current_lines.append(line)
                     in_code_block = True
-            else:
+                continue
+
+            if in_code_block:
                 current_lines.append(line)
+                continue
 
-        if current_lines:
-            blocks.append("\n".join(current_lines))
+            # A blank line ends the current block.
+            if not line.strip():
+                flush()
+                continue
 
+            # A heading always starts its own block so that the text after it
+            # is rendered instead of being discarded with the heading.
+            if re.match(r"^ {0,3}#{1,6}\s+\S", line):
+                flush()
+                blocks.append(line.strip())
+                continue
+
+            current_lines.append(line)
+
+        flush()
         return blocks
+
 
     def _render_block(self, block: str) -> str:
         """Render a single block-level element.
@@ -151,10 +171,19 @@ class MarkdownRenderer:
 
         # Heading
         heading_match = re.match(r"^(#{1,6})\s+(.+)$", stripped, re.MULTILINE)
-        if heading_match:
+        if heading_match and stripped == heading_match.group(0):
             level = len(heading_match.group(1))
             content = heading_match.group(2)
             return self._render_heading(content, level)
+        if heading_match:
+            # A block that mixes a heading with trailing content (e.g. a
+            # heading directly above a paragraph): render both instead of
+            # keeping the heading and silently dropping the rest.
+            tail = stripped[heading_match.end() :].strip()
+            rendered = self._render_heading(heading_match.group(2), len(heading_match.group(1)))
+            if tail:
+                rendered += "\n\n" + self._render_block(tail)
+            return rendered
 
         # Table
         if "|" in stripped and re.search(r"^\|.+\|$", stripped, re.MULTILINE):
@@ -207,7 +236,9 @@ class MarkdownRenderer:
             return block
 
         language = match.group(1) or "text"
-        code = match.group(2)
+        # The closing fence leaves a trailing newline, which would otherwise be
+        # rendered as an extra empty numbered line under the snippet.
+        code = match.group(2).rstrip("\n")
 
         highlighted = self._highlighter.highlight(code, language, line_numbers=True)
         return highlighted

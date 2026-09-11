@@ -54,7 +54,9 @@ def _get_param_groups(
     """
     if not separate_decay_groups:
         params = [p for p in model.parameters() if p.requires_grad]
-        group = {"params": params}
+        # weight_decay must be set explicitly: omitting it lets the optimizer's
+        # own default silently override the configured value.
+        group = {"params": params, "weight_decay": weight_decay}
         if lr is not None:
             group["lr"] = lr
         return [group]

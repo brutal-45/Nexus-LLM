@@ -7,6 +7,7 @@ name, and listing templates by category.
 import logging
 from typing import Any, Dict, List, Optional
 
+from nexus_llm.prompts.library import PromptLibrary
 from nexus_llm.prompts.template import PromptTemplate, TemplateType
 
 logger = logging.getLogger(__name__)
@@ -138,7 +139,7 @@ class PromptManager:
     # Bulk operations
     # ------------------------------------------------------------------
 
-    def load_library(self, library: "PromptLibrary") -> None:
+    def load_library(self, library: PromptLibrary) -> None:
         """Load all templates from a PromptLibrary into this manager.
 
         Args:

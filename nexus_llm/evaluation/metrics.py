@@ -6,9 +6,35 @@ and simple statistics.
 
 import logging
 import math
+import re
 from collections import Counter
 
 logger = logging.getLogger(__name__)
+
+_WORD_RE = re.compile(r"[\w']+")
+
+
+def tokenize(text: str) -> list[str]:
+    """Split *text* into lower-cased word tokens, ignoring punctuation.
+
+    Every metric in this module shares this tokenizer so BLEU, ROUGE and
+    distinct-n all count the same units.  Keeping it module-level (rather than
+    a private helper) lets sibling evaluators reuse identical semantics.
+
+    Args:
+        text: Any string; ``""`` yields an empty list.
+
+    Returns:
+        A list of lower-cased word tokens.
+
+    Example::
+
+        >>> tokenize("Hello, world!")
+        ['hello', 'world']
+    """
+    if not text:
+        return []
+    return _WORD_RE.findall(text.lower())
 
 
 class MetricsCalculator:
@@ -89,8 +115,8 @@ class MetricsCalculator:
         Returns:
             BLEU score in [0, 1].
         """
-        ref_tokens = reference.split()
-        hyp_tokens = hypothesis.split()
+        ref_tokens = tokenize(reference)
+        hyp_tokens = tokenize(hypothesis)
 
         if not hyp_tokens:
             return 0.0
@@ -136,8 +162,8 @@ class MetricsCalculator:
         Returns:
             Dict with keys ``rouge1``, ``rouge2``, ``rougeL``.
         """
-        ref_tokens = reference.split()
-        hyp_tokens = hypothesis.split()
+        ref_tokens = tokenize(reference)
+        hyp_tokens = tokenize(hypothesis)
 
         rouge1 = self._rouge_n(ref_tokens, hyp_tokens, n=1)
         rouge2 = self._rouge_n(ref_tokens, hyp_tokens, n=2)
@@ -168,7 +194,7 @@ class MetricsCalculator:
         """
         all_ngrams: list[tuple[str, ...]] = []
         for text in texts:
-            tokens = text.split()
+            tokens = tokenize(text)
             for i in range(len(tokens) - n + 1):
                 all_ngrams.append(tuple(tokens[i : i + n]))
 
@@ -192,7 +218,7 @@ class MetricsCalculator:
         """
         if not texts:
             return 0.0
-        return sum(len(t.split()) for t in texts) / len(texts)
+        return sum(len(tokenize(t)) for t in texts) / len(texts)
 
     # ------------------------------------------------------------------
     # Internal helpers

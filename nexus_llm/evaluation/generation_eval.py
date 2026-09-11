@@ -19,7 +19,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from nexus_llm.evaluation.metrics import _tokenize
+from nexus_llm.evaluation.metrics import tokenize as _tokenize
 
 
 @dataclass

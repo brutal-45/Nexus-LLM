@@ -1,73 +1,79 @@
-"""Tests for RAG module integration."""
+"""Integration tests for the RAG package's public surface and chunking."""
+
+from __future__ import annotations
+
 import pytest
 
-from nexus_llm.rag import (
-    FixedSizeChunker,
-    ParagraphChunker,
-    SentenceChunker,
-    TextChunker,
-    RAGPipeline,
-    RAGConfig,
-    VectorStore,
-    DocumentIndexer,
-)
+import nexus_llm.rag as rag
+from nexus_llm.rag import Chunker, DocumentStore, Indexer, RAGEngine, RAGPipeline, Retriever
 
 
-class TestRAGModuleImports:
-    """Test that all RAG module components can be imported."""
+class TestPublicSurface:
+    @pytest.mark.parametrize("name", ["RAGEngine", "DocumentStore", "Retriever", "Indexer", "Chunker", "RAGPipeline"])
+    def test_package_exports(self, name):
+        assert getattr(rag, name, None) is not None
 
-    def test_chunker_imports(self):
-        assert FixedSizeChunker is not None
-        assert ParagraphChunker is not None
-        assert SentenceChunker is not None
-        assert TextChunker is not None
+    def test_all_names_resolve(self):
+        for name in rag.__all__:
+            assert hasattr(rag, name), f"__all__ lists missing name {name}"
 
-    def test_pipeline_imports(self):
-        assert RAGPipeline is not None
-        assert RAGConfig is not None
+    def test_chunk_and_document_types_are_reachable(self):
+        from nexus_llm.rag.chunker import Chunk, ChunkStrategy
+        from nexus_llm.rag.document_store import Document
 
-    def test_vector_store_import(self):
-        assert VectorStore is not None
-
-    def test_indexer_import(self):
-        assert DocumentIndexer is not None
+        assert {s.value for s in ChunkStrategy} >= {"fixed_size", "sentence", "paragraph"}
+        assert Chunk(content="x", index=0, start_char=0, end_char=1) is not None
+        assert Document is not None
 
 
-class TestRAGChunkerIntegration:
-    """Test chunker components."""
+class TestChunker:
+    TEXT = (
+        "Retrieval augmented generation grounds a model in external documents. "
+        "The indexer stores chunks. The retriever scores them. "
+        "Finally the generator writes an answer with citations."
+    )
 
-    def test_fixed_size_chunker(self):
-        chunker = FixedSizeChunker(chunk_size=100, overlap=20)
-        assert chunker is not None
-        result = chunker.chunk("Hello world. This is a test. " * 50)
-        assert isinstance(result, list)
+    def test_fixed_size_chunks_respect_the_size_cap(self):
+        chunks = Chunker(strategy="fixed_size", chunk_size=80, overlap=0).chunk(self.TEXT)
+        assert len(chunks) >= 2
+        assert all(len(c.content) <= 80 for c in chunks)
 
-    def test_sentence_chunker(self):
-        chunker = SentenceChunker()
-        assert chunker is not None
+    def test_chunks_are_numbered_and_span_the_source(self):
+        chunks = Chunker(strategy="fixed_size", chunk_size=100, overlap=0).chunk(self.TEXT)
+        assert [c.index for c in chunks] == list(range(len(chunks)))
+        assert chunks[0].start_char == 0
+        assert chunks[-1].end_char <= len(self.TEXT)
 
-    def test_paragraph_chunker(self):
-        chunker = ParagraphChunker()
-        assert chunker is not None
+    def test_str(self):
+        chunk = Chunker(strategy="fixed_size", chunk_size=40).chunk("abcdefghij" * 3)[0]
+        assert str(chunk) == chunk.content
 
-    def test_text_chunker_is_abstract(self):
-        """TextChunker is abstract and cannot be instantiated directly."""
-        with pytest.raises(TypeError):
-            TextChunker()
+    def test_sentence_strategy_produces_multiple_chunks(self):
+        chunks = Chunker(strategy="sentence").chunk(self.TEXT)
+        assert len(chunks) > 1
+
+    def test_paragraph_strategy_groups_blank_line_blocks(self):
+        text = "first paragraph line\n\nsecond paragraph line\n\nthird paragraph line"
+        chunks = Chunker(strategy="paragraph").chunk(text)
+        assert len(chunks) >= 2
+
+    def test_strategy_can_be_overridden_per_call(self):
+        chunker = Chunker(strategy="fixed_size", chunk_size=50)
+        assert chunker.chunk(self.TEXT, strategy="paragraph")
+
+    def test_all_strategies_return_dataclasses(self):
+        import dataclasses
+
+        from nexus_llm.rag.chunker import Chunk
+
+        for strategy in ("fixed_size", "sentence", "paragraph", "semantic"):
+            for chunk in Chunker(strategy=strategy).chunk(self.TEXT):
+                assert dataclasses.is_dataclass(chunk) and isinstance(chunk, Chunk)
 
 
-class TestRAGPipelineIntegration:
-    """Test RAG pipeline creation."""
+class TestStoreSurface:
+    """Constructors must work with no arguments for the default wiring."""
 
-    def test_create_rag_config(self):
-        config = RAGConfig()
-        assert config is not None
-
-
-class TestDocumentIndexerIntegration:
-    """Test document indexer."""
-
-    def test_indexer_requires_args(self):
-        """DocumentIndexer requires chunker, embedding_model, and vector_store."""
-        with pytest.raises(TypeError):
-            DocumentIndexer()
+    @pytest.mark.parametrize("factory", [DocumentStore, Indexer, Retriever, RAGEngine, RAGPipeline])
+    def test_constructible(self, factory):
+        assert factory() is not None

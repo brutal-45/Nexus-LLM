@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Callable
 
 from nexus_llm.utils.logger import get_logger
 
@@ -213,4 +213,190 @@ class Planner:
                 )
             )
 
+        return steps
+
+
+# ---------------------------------------------------------------------------
+# Strategy-driven planning
+# ---------------------------------------------------------------------------
+
+
+#: Steps used per strategy.  Each entry is ``(description_template, tool)`` and
+#: ``{task}`` is substituted into the description.
+_STRATEGY_STEPS: dict[str, list[tuple[str, str | None]]] = {
+    "research": [
+        ("Search for an overview of {task}", "search"),
+        ("Identify open questions from the initial results", None),
+        ("Search for details on each open question", "search"),
+        ("Cross-check conflicting findings", "search"),
+        ("Synthesize findings into a cited report", None),
+    ],
+    "code": [
+        ("Clarify the requirements of {task}", None),
+        ("Draft an implementation", "code_run"),
+        ("Run tests on the implementation", "code_run"),
+        ("Fix failures and re-run", "code_run"),
+    ],
+    "analysis": [
+        ("Collect the data needed for {task}", "search"),
+        ("Compute the relevant metrics", "calculator"),
+        ("Interpret the results", None),
+    ],
+    "generic": [
+        ("Understand {task}", None),
+        ("Gather what is needed", "search"),
+        ("Produce the answer", None),
+    ],
+}
+
+DEFAULT_STRATEGY = "generic"
+
+
+class TaskPlanner(Planner):
+    """Strategy-aware planner used by the research and code agents.
+
+    Where :class:`Planner` decomposes a task purely from its wording,
+    :class:`TaskPlanner` first picks a *strategy* (a research workflow, a
+    code-fix loop, ...) and produces the step sequence that strategy implies.
+    When an ``llm_fn`` is supplied the model is asked to decompose the task and
+    its answer is validated; anything unusable falls back to the built-in
+    templates so planning never fails.
+
+    Args:
+        llm_fn: Optional callable ``(prompt: str) -> str`` backed by a model.
+        available_tools: Tool names the planner already knows about; used for
+            validation hints only (see :meth:`_usable_tool`).
+        default_strategy: Strategy used when none is given.
+
+    Example::
+
+        planner = TaskPlanner()
+        plan = planner.create_plan("why do tides happen", strategy="research")
+        assert [s.tool for s in plan.steps][:2] == ["search", None]
+    """
+
+    def __init__(
+        self,
+        llm_fn: Callable[[str], str] | None = None,
+        available_tools: list[str] | None = None,
+        default_strategy: str = DEFAULT_STRATEGY,
+    ) -> None:
+        super().__init__(available_tools=available_tools)
+        self.llm_fn = llm_fn
+        self.default_strategy = default_strategy if default_strategy in _STRATEGY_STEPS else DEFAULT_STRATEGY
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def strategies() -> list[str]:
+        """Return the names of the built-in planning strategies."""
+        return sorted(_STRATEGY_STEPS)
+
+    def create_plan(self, task: str, strategy: str | None = None, **kwargs: Any) -> Plan:
+        """Build a :class:`Plan` for *task* using *strategy*.
+
+        Args:
+            task: The task to plan for.
+            strategy: One of :meth:`strategies`; unknown or missing values fall
+                back to the default strategy.
+            **kwargs: Extra context forwarded to the LLM prompt (e.g. ``depth``).
+
+        Returns:
+            A :class:`Plan` with at least one step.
+        """
+        if not task or not str(task).strip():
+            raise ValueError("create_plan requires a non-empty task description")
+
+        name = (strategy or self.default_strategy).strip().lower()
+        if name not in _STRATEGY_STEPS:
+            logger.debug("Unknown strategy %r; using %r", name, self.default_strategy)
+            name = self.default_strategy
+
+        steps = self._llm_steps(str(task).strip(), name, kwargs) or self._template_steps(
+            str(task).strip(), name
+        )
+        return Plan(task=str(task).strip(), steps=steps)
+
+    def plan(self, task: str, strategy: str | None = None, **kwargs: Any) -> Plan:
+        """Alias for :meth:`create_plan` (keeps the :class:`Planner` API working)."""
+        return self.create_plan(task, strategy=strategy, **kwargs)
+
+    # ------------------------------------------------------------------
+    # Internals
+    # ------------------------------------------------------------------
+
+    def _template_steps(self, task: str, strategy: str) -> list[Step]:
+        """Expand the strategy template into concrete steps."""
+        steps: list[Step] = []
+        for index, (description, tool) in enumerate(_STRATEGY_STEPS[strategy], start=1):
+            steps.append(
+                Step(
+                    id=index,
+                    description=description.format(task=task),
+                    tool=self._usable_tool(tool),
+                    parameters={"query": task} if tool == "search" else {},
+                    depends_on=[index - 1] if index > 1 else [],
+                )
+            )
+        return steps
+
+    def _usable_tool(self, tool: str | None) -> str | None:
+        """Validate *tool* against the planner's known tools.
+
+        Unknown names are *kept* rather than dropped: agents register their
+        tools after construction, so the planner must not silently downgrade a
+        step to pure reasoning just because it has not seen the tool yet.
+        """
+        if tool is None:
+            return None
+        allowed = getattr(self, "available_tools", None)
+        if allowed and tool not in allowed:
+            logger.debug("Tool %r is not among the planner's known tools", tool)
+        return tool
+
+    def _llm_steps(self, task: str, strategy: str, context: dict[str, Any]) -> list[Step]:
+        """Ask the model for a decomposition, returning ``[]`` when unusable."""
+        if self.llm_fn is None:
+            return []
+        prompt = (
+            "Break the task into short ordered steps, one per line, optionally"
+            " suffixing a tool in brackets.\n"
+            f"Strategy: {strategy}\n"
+            f"Context: {context or 'none'}\n"
+            f"Task: {task}\n"
+        )
+        try:
+            raw = self.llm_fn(prompt)
+        except Exception as exc:  # noqa: BLE001 - the model may fail for any reason
+            logger.warning("LLM planning failed (%s); using template strategy", exc)
+            return []
+        if not isinstance(raw, str) or not raw.strip():
+            return []
+        return self._parse_llm_steps(raw)
+
+    def _parse_llm_steps(self, raw: str) -> list[Step]:
+        """Parse ``"do thing [tool]"`` lines into validated steps."""
+        steps: list[Step] = []
+        for line in raw.splitlines():
+            text = line.strip().lstrip("-*0123456789.) ").strip()
+            if not text:
+                continue
+            tool: str | None = None
+            match = re.search(r"\[([a-zA-Z0-9_-]+)\]\s*$", text)
+            if match:
+                tool = self._usable_tool(match.group(1))
+                text = text[: match.start()].strip()
+            if not text:
+                continue
+            steps.append(
+                Step(
+                    id=len(steps) + 1,
+                    description=text,
+                    tool=tool,
+                    parameters={},
+                    depends_on=[len(steps)] if steps else [],
+                )
+            )
         return steps

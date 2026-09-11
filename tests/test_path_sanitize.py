@@ -5,7 +5,7 @@ import re
 
 def test_path_sanitize_removes_traversal():
     path = "../../../etc/passwd"
-    sanitized = path.replace("../", "").replace("..\", "")
+    sanitized = path.replace("../", "").replace("..\\", "")
     assert "../" not in sanitized
 
 def test_path_sanitize_removes_null_bytes():

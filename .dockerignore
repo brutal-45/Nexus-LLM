@@ -1,6 +1,48 @@
-__pycache__
-*.pyc
-*.egg-info
+# Version control & CI
 .git
+.gitignore
+.github
+.editorconfig
+.pre-commit-config.yaml
+.tox
+.codecov.yml
+codecov.yml
+
+# Python artefacts
+__pycache__
+*.py[cod]
+*.egg-info
+*.egg
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+coverage.xml
+htmlcov/
+
+# Local state, model weights and data (mount these instead)
 models/
+*.gguf
+*.safetensors
+*.bin
+*.pt
 logs/
+data/
+notebooks/
+presets/
+
+# Docs & tests are not needed in the runtime image
+docs/
+tests/
+*.md
+!README.md
+!CHANGELOG.md
+
+# Secrets
+.env
+.env.*

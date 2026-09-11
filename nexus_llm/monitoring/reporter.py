@@ -11,7 +11,7 @@ import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -220,7 +220,7 @@ class StatusReporter:
         # Database status
         db_status = ComponentStatus(name="database")
         try:
-            from nexus_llm.storage.database import DatabaseManager
+            from nexus_llm.storage.database import DatabaseConfig, DatabaseManager
             db = DatabaseManager(DatabaseConfig(db_path="nexus_llm.db"))
             db.initialize()
             health = db.health_check()

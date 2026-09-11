@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from nexus_llm.agents.planner import Plan, Step
+from nexus_llm.agents.tools import ToolResult
 from nexus_llm.agents.tool_registry import ToolRegistry
 from nexus_llm.utils.logger import get_logger
 
@@ -258,3 +259,189 @@ class Executor:
             if dep_id in step_outputs:
                 params[f"prev_output_{dep_id}"] = step_outputs[dep_id]
         return params
+
+
+# ---------------------------------------------------------------------------
+# Action executor
+# ---------------------------------------------------------------------------
+
+
+class UnknownActionError(KeyError):
+    """Raised when an action references a tool that is not registered."""
+
+
+class ActionExecutor:
+    """Execute single named tool actions, with retries and argument checking.
+
+    While :class:`Executor` runs a whole :class:`~nexus_llm.agents.planner.Plan`
+    of interdependent steps, :class:`ActionExecutor` serves the ReAct-style
+    loop used by the agents: the model emits *one* tool call, the executor runs
+    it and hands the :class:`~nexus_llm.agents.tools.ToolResult` back so the
+    agent can observe and decide the next step.
+
+    Args:
+        tools: Mapping of tool name to :class:`~nexus_llm.agents.tools.Tool`.
+            The agent's own ``tools`` dict can be passed straight through; the
+            executor will share it so tools registered later are visible.
+        retry_attempts: How many times a failing tool call is retried.
+        retry_delay: Seconds to wait between retries.
+        registry: Optional fallback :class:`ToolRegistry` consulted when a
+            name is not present in *tools*.
+
+    Example::
+
+        executor = ActionExecutor(tools={"calculator": CalculatorTool()})
+        result = executor.execute("calculator", expression="2 + 2")
+        assert result.success and result.output == "4"
+    """
+
+    def __init__(
+        self,
+        tools: dict[str, Any] | None = None,
+        retry_attempts: int = 2,
+        retry_delay: float = 0.5,
+        registry: ToolRegistry | None = None,
+    ) -> None:
+        self.tools: dict[str, Any] = tools if tools is not None else {}
+        self.retry_attempts = max(1, int(retry_attempts))
+        self.retry_delay = retry_delay
+        self.registry = registry
+        logger.debug(
+            "ActionExecutor initialised with %d tool(s), retries=%d",
+            len(self.tools),
+            self.retry_attempts,
+        )
+
+    # ------------------------------------------------------------------
+    # Registration
+    # ------------------------------------------------------------------
+
+    def register_tool(self, tool: Any, name: str | None = None) -> None:
+        """Register a tool instance under *name* (defaults to ``tool.name``)."""
+        key = name or getattr(tool, "name", None)
+        if not key:
+            raise ValueError("Tool must have a 'name' attribute or an explicit name must be given")
+        self.tools[key] = tool
+        logger.debug("ActionExecutor: registered tool '%s'", key)
+
+    def unregister_tool(self, name: str) -> bool:
+        """Remove a tool by name.  Returns ``True`` when it was present."""
+        return self.tools.pop(name, None) is not None
+
+    def has_tool(self, name: str) -> bool:
+        """Return whether *name* can be executed."""
+        return name in self.tools or (self.registry is not None and self.registry.has_tool(name))
+
+    def list_tools(self) -> list[str]:
+        """Return every executable tool name."""
+        names = set(self.tools)
+        if self.registry is not None:
+            names.update(info.name for info in self.registry.list_tools())
+        return sorted(names)
+
+    # ------------------------------------------------------------------
+    # Execution
+    # ------------------------------------------------------------------
+
+    def execute(self, tool_name: str, **kwargs: Any) -> Any:
+        """Run the tool registered as *tool_name*.
+
+        Args:
+            tool_name: Name of the tool to call.
+            **kwargs: Arguments forwarded to the tool.
+
+        Returns:
+            A :class:`~nexus_llm.agents.tools.ToolResult`.  Failures never
+            raise: an unknown tool or a tool that blows up is reported as an
+            unsuccessful result so the agent can recover and try again.
+        """
+        tool = self.tools.get(tool_name)
+        if tool is None:
+            if self.registry is not None and self.registry.has_tool(tool_name):
+                return self._execute_via_registry(tool_name, kwargs)
+            return ToolResult(
+                success=False,
+                error=f"No tool registered under '{tool_name}'. Available: {self.list_tools()}",
+            )
+
+        validate = getattr(tool, "validate_args", None)
+        if callable(validate) and not validate(**kwargs):
+            return ToolResult(
+                success=False,
+                error=f"Invalid arguments for tool '{tool_name}': {sorted(kwargs)}",
+            )
+
+        last_error = "unknown error"
+        for attempt in range(1, self.retry_attempts + 1):
+            started = time.perf_counter()
+            try:
+                result = tool.execute(**kwargs)
+            except Exception as exc:  # noqa: BLE001 - tools may raise anything
+                last_error = f"{type(exc).__name__}: {exc}"
+                logger.warning(
+                    "Tool '%s' failed (attempt %d/%d): %s",
+                    tool_name,
+                    attempt,
+                    self.retry_attempts,
+                    last_error,
+                )
+                if attempt < self.retry_attempts:
+                    time.sleep(self.retry_delay)
+                continue
+
+            result = self._normalise(result)
+            if result.execution_time == 0.0:
+                result.execution_time = time.perf_counter() - started
+            if result.success:
+                return result
+
+            last_error = result.error or "tool reported failure"
+            if attempt < self.retry_attempts:
+                time.sleep(self.retry_delay)
+
+        return ToolResult(success=False, error=f"Tool '{tool_name}' failed: {last_error}")
+
+    def __call__(self, tool_name: str, **kwargs: Any) -> Any:
+        """Allow the executor to be used directly as a callable tool runner."""
+        return self.execute(tool_name, **kwargs)
+
+    def __contains__(self, tool_name: object) -> bool:
+        return isinstance(tool_name, str) and self.has_tool(tool_name)
+
+    def __len__(self) -> int:
+        return len(self.list_tools())
+
+    def __repr__(self) -> str:
+        return f"ActionExecutor(tools={self.list_tools()!r})"
+
+    # ------------------------------------------------------------------
+    # Internals
+    # ------------------------------------------------------------------
+
+    def _execute_via_registry(self, tool_name: str, kwargs: dict[str, Any]) -> Any:
+        """Execute through the fallback :class:`ToolRegistry`."""
+        assert self.registry is not None
+        started = time.perf_counter()
+        try:
+            output = self.registry.execute(tool_name, **kwargs)
+        except Exception as exc:  # noqa: BLE001
+            return ToolResult(success=False, error=f"{type(exc).__name__}: {exc}")
+        return ToolResult(success=True, output=str(output), execution_time=time.perf_counter() - started)
+
+    @staticmethod
+    def _normalise(result: Any) -> Any:
+        """Coerce a tool's return value into a ``ToolResult``."""
+        if isinstance(result, ToolResult):
+            return result
+        if isinstance(result, str):
+            return ToolResult(success=True, output=result)
+        if result is None:
+            return ToolResult(success=True, output="")
+        if isinstance(result, dict) and "success" in result:
+            return ToolResult(
+                success=bool(result.get("success")),
+                output=str(result.get("output", "")),
+                error=str(result.get("error", "") or ""),
+                data=result.get("data"),
+            )
+        return ToolResult(success=True, output=str(result))

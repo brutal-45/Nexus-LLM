@@ -21,7 +21,7 @@ try:
 except ImportError:
     HAS_PROMPT_TOOLKIT = False
 
-from nexus_llm.terminal.commands import CommandRegistry
+from nexus_llm.terminal.commands import CommandHandler
 
 
 @dataclass
@@ -178,13 +178,13 @@ class CommandCompleter:
     """Completer for slash commands.
 
     Provides completion suggestions for command names and their arguments,
-    based on the registered commands in a CommandRegistry.
+    based on the commands registered on a :class:`CommandHandler`.
     """
 
-    def __init__(self, registry: CommandRegistry | None = None) -> None:
+    def __init__(self, registry: CommandHandler | None = None) -> None:
         self._registry = registry
 
-    def set_registry(self, registry: CommandRegistry) -> None:
+    def set_registry(self, registry: CommandHandler) -> None:
         """Set the command registry.
 
         Args:

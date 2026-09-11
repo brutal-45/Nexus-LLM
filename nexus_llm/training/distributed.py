@@ -2,6 +2,7 @@
 
 import os
 import logging
+from datetime import timedelta
 from typing import Optional, Dict, Any, List
 
 import torch
@@ -70,7 +71,7 @@ class DistributedManager:
         if self.backend is None:
             self.backend = self._detect_backend()
 
-        timeout_td = datetime.timedelta(minutes=self.timeout_minutes) if hasattr(datetime, 'timedelta') else None
+        timeout_td = timedelta(minutes=self.timeout_minutes)
 
         init_kwargs = {
             "backend": self.backend,

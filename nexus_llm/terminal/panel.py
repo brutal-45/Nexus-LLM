@@ -142,7 +142,22 @@ class PanelRenderer:
         box = box_map.get(style.border_style, ROUNDED)
 
         from io import StringIO
-        console = Console(file=StringIO(), force_terminal=True, width=width)
+
+        # A Panel with expand=False shrinks to its content, which truncates any
+        # title/subtitle longer than the body. When no width was requested, size
+        # the render surface to the widest of content/title/subtitle and let the
+        # panel fill it, so footers survive while borders stay tight.
+        longest_line = max(
+            (len(line) for line in content.splitlines() or [content]),
+            default=len(content),
+        )
+        fit_width = max(longest_line, len(title or ""), len(subtitle or "")) + 8
+        auto_width = width is None
+        console = Console(
+            file=StringIO(),
+            force_terminal=True,
+            width=width or fit_width,
+        )
         panel = RichPanel(
             content,
             title=title,
@@ -151,10 +166,11 @@ class PanelRenderer:
             border_style=style.border_color,
             box=box,
             padding=style.padding,
-            expand=style.expand,
+            expand=style.expand or auto_width,
         )
         console.print(panel)
-        return console.file.getvalue() if hasattr(console.file, 'getvalue') else ""
+        value = console.file.getvalue() if hasattr(console.file, "getvalue") else ""
+        return value.rstrip("\n") if auto_width else value
 
     def _render_plain(
         self,

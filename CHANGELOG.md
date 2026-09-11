@@ -5,6 +5,89 @@ All notable changes to the Nexus-LLM project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-09-11
+
+### Fixed
+- **Package import failures**: 10 modules raised on import (`agents.code_agent`,
+  `agents.research_agent`, `agents.tool_agent`, `api.websocket`,
+  `backend.pipeline`, `chains`, `evaluation.generation_eval`,
+  `safety.moderation`, `safety.policies`, `terminal.autocomplete`) because they
+  referenced symbols that did not exist. All 411 modules now import cleanly and
+  CI enforces it with `scripts/dev/check_imports.py`.
+- **Undefined names at import time** (silenced by the `F821` ignore in the ruff
+  config): missing `Optional`/`Tuple`/`Callable`/`sys`/`datetime` imports in
+  `tools/shell.py`, `tools/api_tool.py`, `rag/retriever.py`,
+  `terminal/status.py`, `monitoring/*`, `training/distributed.py`; plus a broken
+  `Event(...) if False else None` expression in `app.py`.
+- `nexus_llm/cli_ext/output.py` was two copies of a module concatenated into one
+  file and did not parse.
+- **Streaming produced no output**: `TextIteratorStreamer`, `CallbackStreamer`
+  and `AsyncStreamer` discarded the first `put()` and then sliced every payload
+  by a prompt length that kept growing, so `model.generate(streamer=...)`
+  yielded nothing. They now share an HF-compatible decoder and stream correctly
+  for both per-step and full-sequence callers.
+- **Chat markdown rendering dropped text after a heading**: `_split_blocks`
+  never split on blank lines, so a heading block swallowed the rest of the
+  response. Blocks now split on blank lines and headings get their own block.
+- Panel subtitles longer than the body were truncated by Rich; the renderer
+  sizes the surface to fit content, title and subtitle.
+- `MetricsRegistry.to_dict()` called `Gauge.get_all()`, which did not exist, so
+  `/metrics` raised `AttributeError`.
+- `DataCollator(pad_to_multiple_of=...)` was ignored for list-based (JSONL)
+  batches, and `OptimizerConfig(separate_decay_groups=False)` dropped the
+  configured `weight_decay`, letting the optimizer default win silently.
+- `list_checkpoints()` returns checkpoints ordered by training step.
+- The chat converter emitted a corrupt marker (`<|assistant|)`); it is now
+  `<|assistant|>`.
+- `DatasetLoader` rejected plain `{"text": ...}` corpora; a `text` format was
+  added so language-model datasets load without naming a format.
+- Two rival `NexusLLMError` bases meant the CLI could not catch errors raised by
+  library modules; `nexus_llm.core.exceptions` now shares the canonical root.
+- `utils/crypto.py` used PEP 604 unions without the future import, breaking
+  Python 3.9 (the declared floor).
+- `nexus_llm/nexus/*` classes are re-exported under their `Nexus*` names;
+  `safety`, `agents`, `evaluation` and `rag` export their public API.
+- Added the missing `ActionExecutor` used by every agent, a `TokenizerWrapper`
+  used by the inference pipeline, and `ConditionalChain`, which `chains`
+  exported but never defined.
+
+### Changed
+- **Packaging**: `pyproject.toml` is the single source of truth (duplicate
+  `setup.cfg` metadata removed), version is read dynamically from
+  `nexus_llm/__version__.py`, and `VERSION`/`__init__.py` no longer drift.
+  `license-files`, `project.urls`, and `train`/`quantization`/`gpu`/`rag`/
+  `docs`/`all` extras are declared; PEP 639 license expression replaces the
+  superseded license classifier.
+- **Package data**: i18n catalogs, bundled presets, prompt templates and
+  `py.typed` are installed with the wheel (previously lost by a non-editable
+  install).
+- Config no longer resolves `config/default_config.yaml` relative to
+  `site-packages`, so `nexus-llm config` works after `pip install`.
+- `requirements*.txt` match the package dependencies; GPU pins no longer
+  combine `>=` with local `+cu121` versions that pip cannot satisfy.
+- **CI workflows**: consolidated into `ci.yml` (lint, import check, test matrix
+  3.9-3.12, wheel install smoke test, docker build, coverage), `docs.yml` and
+  `release.yml`; duplicated `lint.yml`, `test.yml` and `python-publish.yml` were
+  removed. Triggers now include `master` (the default branch) so jobs actually
+  run, GPU tests are gated on a repository variable instead of queueing forever
+  for a runner that may not exist, coverage combining no longer feeds XML to
+  `coverage combine`, and the docs job no longer generates a broken heredoc.
+- Dockerfile builds an image from the package (non-editable), runs as a
+  non-root user, health-checks `/health`, and exposes a `CUDA_VERSION` build
+  arg; compose splits GPU settings into `docker-compose.gpu.yml`.
+- Makefile targets match CI (`make check`, `make install-dev`, lint/format,
+  import and version checks) and point at the real script paths.
+
+### Tests
+- `tests/conftest.py` provides the `tmp_dir` fixture used by 57 test modules and
+  a per-test event loop; `tox.ini`'s malformed `[tox] =` header (which broke
+  pytest collection for the whole suite) is fixed.
+- 30 test modules importing a non-existent `nexus.*` package were replaced by
+  `tests/test_terminal_ansi.py`, `tests/test_terminal_ui.py`,
+  `tests/test_backend_inference.py`, `tests/test_training_pipeline.py` and
+  `tests/test_inference_e2e.py`, which exercise the real implementations
+  (including generation and streaming against a tiny local GPT-2).
+
 ## [0.1.0] - 2024-01-15
 
 ### Added

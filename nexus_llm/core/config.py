@@ -8,9 +8,51 @@ from pathlib import Path
 
 import yaml
 
-# Project root directory
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config" / "default_config.yaml"
+#: Directory that holds the package itself (``site-packages/nexus_llm``).
+PACKAGE_DIR = Path(__file__).resolve().parent.parent
+
+#: Repository root when running from a source checkout.
+PROJECT_ROOT = PACKAGE_DIR.parent
+
+
+def _user_config_dir() -> Path:
+    """Return the per-user config directory, honouring ``XDG_CONFIG_HOME``."""
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    base = Path(xdg).expanduser() if xdg else Path.home() / ".config"
+    return base / "nexus-llm"
+
+
+def _resolve_default_config_path() -> Path:
+    """Locate ``default_config.yaml`` for both checkouts and installed wheels.
+
+    ``pip install nexus-llm`` has no ``config/`` directory next to the package,
+    so probing several locations keeps ``nexus-llm config`` meaningful in either
+    layout instead of pointing at a path that can never exist.
+
+    Resolution order: ``NEXUS_CONFIG``, the checkout's ``config/``, the user
+    config directory, then the checkout path as the place to create one.
+    """
+    override = os.environ.get("NEXUS_CONFIG")
+    if override:
+        return Path(override).expanduser()
+
+    candidates = (
+        PROJECT_ROOT / "config" / "default_config.yaml",
+        _user_config_dir() / "config.yaml",
+    )
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return candidates[0]
+
+
+#: Path of the config file used when none is supplied explicitly.
+DEFAULT_CONFIG_PATH = _resolve_default_config_path()
+
+#: Directory used for cached models, created on demand.
+DEFAULT_CACHE_DIR = Path(
+    os.environ.get("NEXUS_CACHE_DIR") or Path.home() / ".cache" / "nexus-llm"
+)
 
 
 @dataclass
@@ -27,7 +69,7 @@ class ModelSettings:
     repetition_penalty: float = 1.1
     num_beams: int = 1
     do_sample: bool = True
-    cache_dir: str = str(PROJECT_ROOT / "models")
+    cache_dir: str = str(DEFAULT_CACHE_DIR / "models")
 
 
 @dataclass
@@ -121,9 +163,12 @@ class Settings:
         import dataclasses
 
         data = dataclasses.asdict(self)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w") as f:
+        destination = Path(path).expanduser()
+        if destination.parent and not destination.parent.exists():
+            destination.parent.mkdir(parents=True, exist_ok=True)
+        with open(destination, "w") as f:
             yaml.dump(data, f, default_flow_style=False)
+        return str(destination)
 
 
 _settings_instance: Settings | None = None

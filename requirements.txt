@@ -1,37 +1,38 @@
-# Nexus-LLM Dependencies
-# ======================
-# Install with:  pip install -r requirements.txt
-# Or use:        pip install -e .  (recommended, uses pyproject.toml)
+# Nexus-LLM runtime dependencies
+# ===============================
+# Kept in sync with [project.dependencies] in pyproject.toml.
+# Prefer:  pip install -e .        (uses pyproject.toml, also installs the CLI)
+# This file exists for containers and environments that only want the deps.
 
-# Core ML / Inference
+# Core ML / inference
 torch>=2.0.0
 transformers>=4.35.0
+tokenizers>=0.14.0
 accelerate>=0.24.0
 datasets>=2.14.0
 peft>=0.6.0
-bitsandbytes>=0.41.0
+safetensors>=0.4.0
+huggingface_hub>=0.19.0
 
-# API Server
+# API server
 fastapi>=0.104.0
-uvicorn>=0.24.0
+uvicorn[standard]>=0.24.0
 websockets>=12.0
+aiohttp>=3.9.0
+aiofiles>=23.0.0
+requests>=2.31.0
 
 # Terminal UI
 rich>=13.7.0
 prompt_toolkit>=3.0.43
-
-# Configuration & CLI
-pyyaml>=6.0.1
-python-dotenv>=1.0.0
-click>=8.1.7
-
-# Markdown & Syntax Highlighting
 markdown-it-py>=3.0.0
 pygments>=2.17.0
 
-# System & Utilities
-psutil>=5.9.0
+# Configuration, CLI and utilities
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+click>=8.1.7
 pydantic>=2.0.0
-huggingface_hub>=0.19.0
-aiohttp>=3.9.0
-aiofiles>=23.0.0
+psutil>=5.9.0
+numpy>=1.24.0
+tqdm>=4.66.0

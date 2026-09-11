@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 from enum import Enum
+from typing import Any, Sequence
 
 from transformers import AutoTokenizer
 
@@ -228,6 +229,26 @@ class TokenizerManager:
         return formatter(messages)
 
     # -- Individual template formatters --------------------------------
+
+    @staticmethod
+    def render_plain(
+        messages: Sequence[dict[str, str]],
+        add_generation_prompt: bool = True,
+    ) -> str:
+        """Render *messages* without a chat template.
+
+        Used as the fallback when the wrapped tokenizer has no
+        ``chat_template`` (typical for base models such as ``gpt2``), and by
+        :meth:`TokenizerWrapper.apply_chat_template`.
+        """
+        lines: list[str] = []
+        for message in messages:
+            role = str(message.get("role", "user"))
+            content = str(message.get("content", ""))
+            lines.append(f"{role}: {content}")
+        if add_generation_prompt:
+            lines.append("assistant:")
+        return "\n".join(lines) + ("\n" if add_generation_prompt else "")
 
     @staticmethod
     def _format_gpt2(messages: list[dict[str, str]]) -> str:
@@ -493,3 +514,248 @@ class TokenizerManager:
             "pad_token": self.pad_token,
             "is_loaded": self.is_loaded,
         }
+
+
+class TokenizerWrapper:
+    """Adapt a HuggingFace tokenizer to the interface Nexus pipelines expect.
+
+    :class:`TokenizerManager` *loads* tokenizers and formats conversations;
+    this class is the thin, stateless adapter the pipelines use at inference
+    time.  It guarantees the small set of methods every pipeline relies on
+    (:meth:`encode`, :meth:`encode_with_padding`, :meth:`decode`,
+    :meth:`batch_decode`, :meth:`apply_chat_template`) regardless of whether
+    the wrapped object is a fast or slow tokenizer, and it never loses the
+    underlying object: attribute access falls through to it.
+
+    Args:
+        tokenizer: A HuggingFace tokenizer (fast or slow), or an existing
+            :class:`TokenizerWrapper` (in which case it is reused as-is).
+        pad_to_multiple_of: Optional padding multiple for batch encoding.
+
+    Example::
+
+        wrapper = TokenizerWrapper(AutoTokenizer.from_pretrained("gpt2"))
+        batch = wrapper.encode_with_padding(["hello", "hello world"], return_tensors="pt")
+        assert batch["input_ids"].shape[0] == 2
+    """
+
+    def __init__(self, tokenizer: Any, pad_to_multiple_of: int | None = None) -> None:
+        if isinstance(tokenizer, TokenizerWrapper):
+            tokenizer = tokenizer.tokenizer
+        if tokenizer is None:
+            raise ValueError("TokenizerWrapper requires a tokenizer instance")
+        self._tokenizer = tokenizer
+        self._pad_to_multiple_of = pad_to_multiple_of
+
+    # ------------------------------------------------------------------
+    # Introspection
+    # ------------------------------------------------------------------
+
+    @property
+    def tokenizer(self) -> Any:
+        """The wrapped HuggingFace tokenizer."""
+        return self._tokenizer
+
+    @property
+    def name(self) -> str:
+        """Class name of the wrapped tokenizer."""
+        return type(self._tokenizer).__name__
+
+    @property
+    def vocab_size(self) -> int:
+        """Size of the tokenizer vocabulary."""
+        try:
+            return len(self._tokenizer)
+        except TypeError:  # pragma: no cover - exotic tokenizers
+            return int(self._tokenizer.vocab_size)
+
+    @property
+    def pad_token(self) -> Any:
+        """The padding token string."""
+        return getattr(self._tokenizer, "pad_token", None)
+
+    @pad_token.setter
+    def pad_token(self, value: Any) -> None:
+        self._tokenizer.pad_token = value
+
+    @property
+    def pad_token_id(self) -> int | None:
+        """The padding token id, falling back to ``eos_token_id``."""
+        token_id = getattr(self._tokenizer, "pad_token_id", None)
+        if token_id is None:
+            token_id = getattr(self._tokenizer, "eos_token_id", None)
+        return token_id
+
+    @property
+    def eos_token(self) -> Any:
+        """The end-of-sequence token string."""
+        return getattr(self._tokenizer, "eos_token", None)
+
+    @property
+    def eos_token_id(self) -> int | None:
+        """The end-of-sequence token id."""
+        return getattr(self._tokenizer, "eos_token_id", None)
+
+    # ------------------------------------------------------------------
+    # Encoding
+    # ------------------------------------------------------------------
+
+    def encode(self, text: str, return_tensors: str | None = None, **kwargs: Any) -> Any:
+        """Tokenize a single string.
+
+        Args:
+            text: Input text.
+            return_tensors: ``"pt"`` for a torch tensor, ``"np"`` for numpy,
+                or ``None`` for a plain list of ids.
+            **kwargs: Forwarded to the tokenizer (e.g. ``add_special_tokens``).
+
+        Returns:
+            Token ids in the requested container.
+        """
+        encoded = self._tokenizer(text, return_tensors=return_tensors, **kwargs)
+        # Fast tokenizers return a BatchEncoding; callers of encode() want ids.
+        if isinstance(encoded, dict) and "input_ids" in encoded:
+            return encoded["input_ids"]
+        return encoded
+
+    def encode_with_padding(
+        self,
+        texts: Sequence[str],
+        return_tensors: str | None = "pt",
+        padding: bool | str = True,
+        truncation: bool = False,
+        max_length: int | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Tokenize a batch with padding and an attention mask.
+
+        Args:
+            texts: The batch of strings.
+            return_tensors: Framework for the returned tensors.
+            padding: Padding strategy (``True`` pads to the longest row).
+            truncation: Whether to truncate to ``max_length``.
+            max_length: Optional maximum sequence length.
+            **kwargs: Forwarded to the tokenizer.
+
+        Returns:
+            A plain ``dict`` (never a ``BatchEncoding``) containing at least
+            ``input_ids`` and ``attention_mask``.
+        """
+        if isinstance(texts, str):
+            texts = [texts]
+        kwargs.setdefault("padding", padding)
+        if max_length is not None:
+            kwargs.setdefault("max_length", max_length)
+            kwargs.setdefault("truncation", True)
+        elif truncation:
+            kwargs.setdefault("truncation", True)
+        if self._pad_to_multiple_of is not None:
+            kwargs.setdefault("pad_to_multiple_of", self._pad_to_multiple_of)
+
+        encoded = self._tokenizer(list(texts), return_tensors=return_tensors, **kwargs)
+        if not isinstance(encoded, dict):  # very old / custom tokenizers
+            encoded = {"input_ids": encoded}
+        result = dict(encoded)
+        if "attention_mask" not in result:
+            result["attention_mask"] = self._build_attention_mask(result["input_ids"], return_tensors)
+        return result
+
+    def _build_attention_mask(self, input_ids: Any, return_tensors: str | None) -> Any:
+        """Create an attention mask from padded ``input_ids``."""
+        pad_id = self.pad_token_id
+        if return_tensors == "pt" and pad_id is not None:
+            import torch
+
+            return (input_ids != pad_id).to(torch.long)
+        if pad_id is None:
+            pad_id = 0
+        if return_tensors == "np":
+            import numpy as np
+
+            return np.array(input_ids != pad_id, dtype=np.int64)
+        return [[1 if token != pad_id else 0 for token in row] for row in input_ids]
+
+    # ------------------------------------------------------------------
+    # Decoding
+    # ------------------------------------------------------------------
+
+    def decode(self, token_ids: Any, skip_special_tokens: bool = True, **kwargs: Any) -> str:
+        """Decode a single sequence of ids into text."""
+        return self._tokenizer.decode(token_ids, skip_special_tokens=skip_special_tokens, **kwargs)
+
+    def batch_decode(
+        self,
+        sequences: Any,
+        skip_special_tokens: bool = True,
+        **kwargs: Any,
+    ) -> list[str]:
+        """Decode a batch of id sequences into a list of strings."""
+        decoded = self._tokenizer.batch_decode(
+            sequences, skip_special_tokens=skip_special_tokens, **kwargs
+        )
+        return list(decoded)
+
+    def convert_tokens_to_ids(self, tokens: Any) -> Any:
+        """Map token strings to their ids."""
+        return self._tokenizer.convert_tokens_to_ids(tokens)
+
+    def convert_ids_to_tokens(self, ids: Any) -> Any:
+        """Map ids back to token strings."""
+        return self._tokenizer.convert_ids_to_tokens(ids)
+
+    # ------------------------------------------------------------------
+    # Chat templates
+    # ------------------------------------------------------------------
+
+    def apply_chat_template(
+        self,
+        messages: Sequence[dict[str, str]],
+        tokenize: bool = False,
+        add_generation_prompt: bool = True,
+        **kwargs: Any,
+    ) -> Any:
+        """Render ``messages`` using the tokenizer's chat template.
+
+        Falls back to a plain ``role: content`` rendering when the tokenizer
+        ships no template (e.g. a base model such as ``gpt2``), so chat
+        features degrade gracefully instead of raising.
+        """
+        messages = list(messages)
+        method = getattr(self._tokenizer, "apply_chat_template", None)
+        if method is not None and getattr(self._tokenizer, "chat_template", None):
+            try:
+                return method(
+                    messages,
+                    tokenize=tokenize,
+                    add_generation_prompt=add_generation_prompt,
+                    **kwargs,
+                )
+            except (ValueError, TypeError) as exc:
+                logger.warning("apply_chat_template failed (%s); using fallback", exc)
+
+        rendered = TokenizerManager.render_plain(messages, add_generation_prompt=add_generation_prompt)
+        if not tokenize:
+            return rendered
+        return self.encode(rendered, tokenize=False)
+
+    # ------------------------------------------------------------------
+    # Dunders
+    # ------------------------------------------------------------------
+
+    def __call__(self, text: Any, return_tensors: str | None = None, **kwargs: Any) -> Any:
+        """Tokenize like the wrapped HF tokenizer would.
+
+        ``model.generate()`` callers and pipeline code frequently treat a
+        tokenizer as callable, so the wrapper has to forward that too (special
+        methods are resolved on the class, never through ``__getattr__``).
+        """
+        return self._tokenizer(text, return_tensors=return_tensors, **kwargs)
+
+    def __getattr__(self, item: str) -> Any:
+        """Fall through to the wrapped tokenizer for anything not wrapped."""
+        if item.startswith("_"):
+            raise AttributeError(item)
+        return getattr(self._tokenizer, item)
+
+    def __repr__(self) -> str:
+        return f"TokenizerWrapper({self.name}, vocab_size={self.vocab_size})"
