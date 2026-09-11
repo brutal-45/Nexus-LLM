@@ -11,7 +11,7 @@ from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from nexus_llm.models.base import GenerationConfig
+from nexus_llm.backend.generation import GenerationConfig
 
 logger = logging.getLogger("nexus_llm.api.websocket")
 
