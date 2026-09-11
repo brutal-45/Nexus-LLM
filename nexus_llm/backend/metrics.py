@@ -109,6 +109,16 @@ class Gauge:
         with self._lock:
             return self._values.get(key, 0.0)
 
+    def get_all(self) -> dict[tuple[str, ...], float]:
+        """Get all labeled values.
+
+        ``MetricsRegistry.to_dict()`` relies on this, so the gauge must expose
+        the same accessor as :class:`Counter` or the ``/metrics`` endpoint
+        raises :class:`AttributeError`.
+        """
+        with self._lock:
+            return dict(self._values)
+
     def _labels_to_key(self, labels: dict[str, str] | None) -> tuple[str, ...]:
         if labels is None:
             return ()
