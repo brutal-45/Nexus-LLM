@@ -11,7 +11,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from nexus_llm.rag.document_store import Document
 from nexus_llm.utils.logger import get_logger
