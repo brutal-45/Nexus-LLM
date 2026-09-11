@@ -73,37 +73,67 @@ class CommandHandler:
     # Registration helpers
     # ------------------------------------------------------------------
 
-    def _register(self, name: str, description: str, handler: Callable) -> None:
-        self._commands[name] = {"description": description, "handler": handler}
+    def _register(
+        self,
+        name: str,
+        description: str,
+        handler: Callable,
+        usage: str = "",
+    ) -> None:
+        self._commands[name] = {
+            "description": description,
+            "handler": handler,
+            "usage": usage or name,
+        }
+
+    def get_commands(self) -> Dict[str, Dict[str, Any]]:
+        """Return the registered slash-commands and their metadata.
+
+        Returns:
+            Mapping of command name (including the leading ``/``) to a dict
+            with ``description``, ``usage`` and ``handler`` keys.  The mapping
+            is a copy, so callers cannot mutate the registry.
+        """
+        return {
+            name: {k: v for k, v in entry.items() if k != "handler"}
+            for name, entry in self._commands.items()
+        }
+
+    def get_command(self, name: str) -> Optional[Dict[str, Any]]:
+        """Return metadata for a single command, or ``None`` if unregistered."""
+        entry = self._commands.get(name)
+        if entry is None:
+            return None
+        return {k: v for k, v in entry.items() if k != "handler"}
 
     def _register_all(self) -> None:
         """Register all built-in commands."""
         self._register("/help", "Show available commands", self._cmd_help)
-        self._register("/model", "Switch to a different model", self._cmd_model)
+        self._register("/model", "Switch to a different model", self._cmd_model, usage="/model <name>")
         self._register("/models", "List available models", self._cmd_models)
-        self._register("/load", "Load a model", self._cmd_load)
+        self._register("/load", "Load a model", self._cmd_load, usage="/load <path-or-name>")
         self._register("/unload", "Unload current model", self._cmd_unload)
         self._register("/info", "Show current model info", self._cmd_info)
-        self._register("/config", "View or set configuration", self._cmd_config)
-        self._register("/system", "Set system prompt", self._cmd_system)
+        self._register("/config", "View or set configuration", self._cmd_config, usage="/config [key] [value]")
+        self._register("/system", "Set system prompt", self._cmd_system, usage="/system <prompt>")
         self._register("/clear", "Clear conversation", self._cmd_clear)
         self._register("/history", "Show chat history", self._cmd_history)
-        self._register("/save", "Save conversation", self._cmd_save)
-        self._register("/load-chat", "Load a saved conversation", self._cmd_load_chat)
-        self._register("/export", "Export conversation as Markdown", self._cmd_export)
-        self._register("/theme", "Change terminal theme", self._cmd_theme)
+        self._register("/save", "Save conversation", self._cmd_save, usage="/save <path>")
+        self._register("/load-chat", "Load a saved conversation", self._cmd_load_chat, usage="/load-chat <path>")
+        self._register("/export", "Export conversation as Markdown", self._cmd_export, usage="/export [path]")
+        self._register("/theme", "Change terminal theme", self._cmd_theme, usage="/theme <name>")
         self._register("/themes", "List available themes", self._cmd_themes)
-        self._register("/stream", "Toggle streaming (on/off)", self._cmd_stream)
-        self._register("/temp", "Set temperature", self._cmd_temp)
-        self._register("/topp", "Set top_p", self._cmd_topp)
-        self._register("/topk", "Set top_k", self._cmd_topk)
-        self._register("/maxlen", "Set max generation length", self._cmd_maxlen)
-        self._register("/seed", "Set random seed", self._cmd_seed)
+        self._register("/stream", "Toggle streaming (on/off)", self._cmd_stream, usage="/stream [on|off]")
+        self._register("/temp", "Set temperature", self._cmd_temp, usage="/temp <0.0-2.0>")
+        self._register("/topp", "Set top_p", self._cmd_topp, usage="/topp <0.0-1.0>")
+        self._register("/topk", "Set top_k", self._cmd_topk, usage="/topk <int>")
+        self._register("/maxlen", "Set max generation length", self._cmd_maxlen, usage="/maxlen <tokens>")
+        self._register("/seed", "Set random seed", self._cmd_seed, usage="/seed <int>")
         self._register("/reset", "Reset all settings to defaults", self._cmd_reset)
         self._register("/stats", "Show generation statistics", self._cmd_stats)
-        self._register("/train", "Start training on a dataset", self._cmd_train)
-        self._register("/server", "Manage server (start/stop)", self._cmd_server)
-        self._register("/download", "Download a model", self._cmd_download)
+        self._register("/train", "Start training on a dataset", self._cmd_train, usage="/train <dataset>")
+        self._register("/server", "Manage server (start/stop)", self._cmd_server, usage="/server [start|stop|status]")
+        self._register("/download", "Download a model", self._cmd_download, usage="/download <model>")
         self._register("/quit", "Exit Nexus-LLM", self._cmd_quit)
 
     # ------------------------------------------------------------------

@@ -113,6 +113,20 @@ STYLE_CODES: dict[str, str] = {
 }
 
 # Extended 256-color support
+def _clamp_channel(value: int, name: str = "color") -> int:
+    """Clamp an ANSI colour component into the valid ``0-255`` range.
+
+    Terminals ignore or mis-render escape sequences with out-of-range
+    parameters (``\033[38;5;-1m`` is not a colour at all), so bad values are
+    snapped to the nearest legal one rather than passed through.
+    """
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(255, number))
+
+
 def color256(index: int) -> str:
     """Generate an ANSI 256-color foreground escape code.
 
@@ -122,7 +136,7 @@ def color256(index: int) -> str:
     Returns:
         ANSI escape code string.
     """
-    return f"\033[38;5;{index}m"
+    return f"\033[38;5;{_clamp_channel(index)}m"
 
 
 def bg_color256(index: int) -> str:
@@ -134,7 +148,7 @@ def bg_color256(index: int) -> str:
     Returns:
         ANSI escape code string.
     """
-    return f"\033[48;5;{index}m"
+    return f"\033[48;5;{_clamp_channel(index)}m"
 
 
 # 24-bit true color support
@@ -149,7 +163,9 @@ def rgb(r: int, g: int, b: int) -> str:
     Returns:
         ANSI escape code string.
     """
-    return f"\033[38;2;{r};{g};{b}m"
+    return (
+        f"\033[38;2;{_clamp_channel(r, 'red')};{_clamp_channel(g, 'green')};{_clamp_channel(b, 'blue')}m"
+    )
 
 
 def bg_rgb(r: int, g: int, b: int) -> str:
@@ -163,7 +179,9 @@ def bg_rgb(r: int, g: int, b: int) -> str:
     Returns:
         ANSI escape code string.
     """
-    return f"\033[48;2;{r};{g};{b}m"
+    return (
+        f"\033[48;2;{_clamp_channel(r, 'red')};{_clamp_channel(g, 'green')};{_clamp_channel(b, 'blue')}m"
+    )
 
 
 class AnsiFormatter:
