@@ -10,6 +10,7 @@ Run as:
 
 import platform
 import sys
+import warnings
 
 import click
 from rich import box
@@ -965,11 +966,28 @@ def info(ctx):
         "yaml",
     ):
         try:
-            mod = __import__(pkg.replace("-", "_"))
-            ver = getattr(mod, "__version__", "installed")
-            lib_table.add_row(pkg, ver)
+            __import__(pkg.replace("-", "_"))
         except ImportError:
             lib_table.add_row(pkg, "[dim]not installed[/dim]")
+            continue
+        # importlib.metadata is the supported way to read a distribution's
+        # version; package-level __version__ attributes are being phased out
+        # (click deprecates its own and emits a DeprecationWarning).
+        ver = "installed"
+        try:
+            from importlib.metadata import PackageNotFoundError, version
+
+            try:
+                ver = version(pkg)
+            except PackageNotFoundError:
+                dist = {"pyyaml": "PyYAML", "prompt_toolkit": "prompt-toolkit"}.get(pkg, pkg)
+                ver = version(dist)
+        except Exception:  # noqa: BLE001 - version lookup must never break `info`
+            mod = __import__(pkg.replace("-", "_"))
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                ver = str(getattr(mod, "__version__", ver))
+        lib_table.add_row(pkg, ver)
 
     console.print(lib_table)
 

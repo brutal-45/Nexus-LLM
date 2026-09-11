@@ -23,7 +23,7 @@ from nexus_llm.constants import (
     LOG_LEVEL,
 )
 from nexus_llm.enums import ChatRole, DeviceType
-from nexus_llm.events import get_event_bus
+from nexus_llm.events import ModelLoadedEvent, get_event_bus
 from nexus_llm.exceptions import (
     ChatError,
     ServerError,
@@ -155,13 +155,12 @@ class NexusLLMApp:
         model.eval()
 
         self._event_bus.publish(
-            Event(
+            ModelLoadedEvent(
                 event_type="model.loaded",
                 data={"model_name": model_name, "device": resolved_device},
                 source="NexusLLMApp",
+                model_name=model_name,
             )
-            if False
-            else None
         )
 
         return model, tokenizer
