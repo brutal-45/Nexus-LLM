@@ -1,8 +1,29 @@
-"""Custom exceptions for Nexus-LLM."""
+"""Custom exceptions for Nexus-LLM (simple-message variants).
 
+This module intentionally keeps a *minimal* constructor: the many call sites
+across ``nexus_llm.backend``, ``nexus_llm.training``, ``nexus_llm.api.client``
+and the CLI raise these errors with a single human-readable message, e.g.
+``raise InferenceError("Generation failed: ...")``.
 
-class NexusLLMError(Exception):
-    """Base exception for Nexus-LLM."""
+The richer variants in :mod:`nexus_llm.exceptions` attach structured fields
+(``error_code``, ``details``, ``to_dict()``).  Both families now share the same
+root class so that a single ``except NexusLLMError`` — as used by the CLI's
+error handler — catches errors regardless of which module raised them.
+"""
+
+from __future__ import annotations
+
+from nexus_llm.exceptions import NexusLLMError
+
+__all__ = [
+    "ConfigurationError",
+    "InferenceError",
+    "ModelLoadError",
+    "ModelNotFoundError",
+    "NexusLLMError",
+    "ServerError",
+    "TrainingError",
+]
 
 
 class ModelNotFoundError(NexusLLMError):
