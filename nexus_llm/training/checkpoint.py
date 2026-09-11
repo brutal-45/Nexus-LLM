@@ -212,15 +212,23 @@ class CheckpointManager:
         return state
 
     def list_checkpoints(self) -> List[Dict[str, Any]]:
-        """List all available checkpoints with their metadata."""
+        """List all available checkpoints with their metadata.
+
+        Ordered by training step (checkpoints without a step sort last, then by
+        directory name) so callers can treat this as a resume timeline without
+        re-sorting it themselves.
+        """
         result = []
         for checkpoint_dir in self.checkpoints:
             meta_path = os.path.join(checkpoint_dir, "metadata.json")
             if os.path.exists(meta_path):
                 with open(meta_path, "r") as f:
-                    result.append(json.load(f))
+                    entry = json.load(f)
             else:
-                result.append({"path": checkpoint_dir})
+                entry = {}
+            entry["path"] = checkpoint_dir
+            result.append(entry)
+        result.sort(key=lambda item: (item.get("step", float("inf")), item["path"]))
         return result
 
     def get_checkpoint_count(self) -> int:

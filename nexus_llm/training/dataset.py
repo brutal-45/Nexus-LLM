@@ -24,6 +24,7 @@ class DataFormat(str, Enum):
     ALPACA = "alpaca"
     CHAT = "chat"
     INSTRUCTION = "instruction"
+    TEXT = "text"
     AUTO = "auto"
 
 
@@ -32,6 +33,7 @@ class DataFormat(str, Enum):
 # ---------------------------------------------------------------------------
 
 _ALPACA_KEYS = {"instruction", "input", "output"}
+_TEXT_KEYS = ("text", "raw_text", "document")
 _CHAT_KEYS = {"messages", "role", "content"}
 _INSTRUCTION_KEYS = {"prompt", "response", "question", "answer"}
 
@@ -48,6 +50,13 @@ def _detect_format(sample: Dict[str, Any]) -> DataFormat:
 
     if keys & _INSTRUCTION_KEYS:
         return DataFormat.INSTRUCTION
+
+    # Plain-language-model corpora: a single text field per row. Without this the
+    # most common pretraining layout ("{"text": ...}") was rejected outright.
+    if any(key in keys for key in _TEXT_KEYS) and isinstance(
+        sample.get(next(k for k in _TEXT_KEYS if k in keys)), str
+    ):
+        return DataFormat.TEXT
 
     # Fallback: try to match by heuristic on the first nested entry
     for v in sample.values():
@@ -104,7 +113,7 @@ def _convert_chat(sample: Dict[str, Any]) -> Dict[str, str]:
             # Use the last assistant message as completion
             completion = content
 
-    prompt = "".join(prompt_parts) + "<|assistant|)\n"
+    prompt = "".join(prompt_parts) + "<|assistant|>\n"
     return {"prompt": prompt, "completion": completion}
 
 
@@ -115,10 +124,26 @@ def _convert_instruction(sample: Dict[str, Any]) -> Dict[str, str]:
     return {"prompt": prompt, "completion": completion}
 
 
+def _convert_text(sample: Dict[str, Any]) -> Dict[str, str]:
+    """Convert a plain-text sample to an empty-prompt/completion pair.
+
+    Language-modelling objectives train on the completion only, so the prompt
+    stays empty and every token contributes to the loss.
+    """
+    for key in _TEXT_KEYS:
+        value = sample.get(key)
+        if isinstance(value, str) and value.strip():
+            return {"prompt": "", "completion": value}
+    raise TrainingError(
+        f"Plain-text sample has no non-empty {'/'.join(_TEXT_KEYS)} field: {sorted(sample)}"
+    )
+
+
 _CONVERTERS = {
     DataFormat.ALPACA: _convert_alpaca,
     DataFormat.CHAT: _convert_chat,
     DataFormat.INSTRUCTION: _convert_instruction,
+    DataFormat.TEXT: _convert_text,
 }
 
 

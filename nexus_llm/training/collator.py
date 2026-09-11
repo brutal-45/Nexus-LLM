@@ -122,6 +122,12 @@ class DataCollator:
                 max_len = max(len(v) for v in values)
                 if self.max_length:
                     max_len = min(max_len, self.max_length)
+                # Mirror _collate_tensor_batches: list batches must honour
+                # pad_to_multiple_of too, otherwise the option is silently
+                # ignored for the (common) JSONL/dict datasets.
+                if self.padding and self.pad_to_multiple_of is not None:
+                    multiple = self.pad_to_multiple_of
+                    max_len = -(-max_len // multiple) * multiple
 
                 pad_token_id = 0
                 if self.tokenizer and hasattr(self.tokenizer, "pad_token_id") and self.tokenizer.pad_token_id is not None:
