@@ -6,7 +6,7 @@
 
 Instead, please report them privately via:
 
-- **Email**: security@nexus-llm.dev
+- **Email**: creatorsports81@gmail.com
 - **GitHub Security Advisory**: Use the [Security Advisories](https://github.com/nexus-llm/Nexus-LLM/security/advisories) page
 
 We aim to acknowledge vulnerability reports within 24 hours and provide an initial assessment within 72 hours.
