@@ -1,0 +1,4 @@
+# Training config: distillation
+method: distillation
+temperature: 2.0
+alpha: 0.5

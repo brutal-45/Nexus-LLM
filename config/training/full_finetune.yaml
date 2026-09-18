@@ -1,0 +1,5 @@
+# Training config: full_finetune
+method: full
+epochs: 3
+lr: 5e-05
+batch_size: 2

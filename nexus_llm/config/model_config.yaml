@@ -1,0 +1,49 @@
+# Nexus-LLM Model Configuration
+# Default model settings and generation parameters
+
+model:
+  name: "gpt2-medium"
+  path: ""                          # Local model path (overrides name if set)
+  device: "auto"                    # auto, cpu, cuda, mps
+  dtype: "float32"                  # float32, float16, bfloat16
+  trust_remote_code: false
+  use_auth_token: false
+  revision: "main"
+  mirror: ""
+
+generation:
+  temperature: 0.7
+  top_p: 0.9
+  top_k: 50
+  max_tokens: 512
+  min_tokens: 1
+  repetition_penalty: 1.1
+  frequency_penalty: 0.0
+  presence_penalty: 0.0
+  do_sample: true
+  num_beams: 1
+  num_return_sequences: 1
+  length_penalty: 1.0
+  early_stopping: false
+  stop_sequences:
+    - "\n\n\n"
+  bad_words_ids: []
+  no_repeat_ngram_size: 0
+  seed: null
+
+quantization:
+  enabled: false
+  bits: 4                           # 4 or 8
+  group_size: 128
+  quant_method: "gptq"              # gptq, awq, bitsandbytes
+
+cache:
+  enabled: true
+  max_size: 1000
+  ttl: 3600                         # seconds
+
+tokenizer:
+  padding_side: "left"
+  truncation: true
+  max_length: 1024
+  add_special_tokens: true

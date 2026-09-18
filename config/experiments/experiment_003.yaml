@@ -1,0 +1,7 @@
+# Experiment 3
+name: experiment_3
+temperature: 0.6000000000000001
+top_p: 0.9
+max_length: 512
+epochs: 4
+learning_rate: 0.0001

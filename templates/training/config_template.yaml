@@ -1,0 +1,21 @@
+# Training Configuration Template
+model:
+  name: {model_name}
+  precision: fp32
+
+tokenizer:
+  max_length: 512
+
+training:
+  output_dir: ./models/fine-tuned
+  num_epochs: 3
+  batch_size: 4
+  learning_rate: 0.0002
+  warmup_steps: 100
+  save_steps: 500
+
+lora:
+  r: 8
+  alpha: 16
+  dropout: 0.05
+  target_modules: [q_proj, v_proj]

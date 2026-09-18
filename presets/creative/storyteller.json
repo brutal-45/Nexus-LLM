@@ -1,0 +1,9 @@
+{
+  "name": "Storyteller",
+  "category": "creative",
+  "model": "gpt2-medium",
+  "temperature": 0.95,
+  "top_p": 0.95,
+  "max_length": 1024,
+  "system_prompt": "You are a storyteller who creates vivid, immersive narratives."
+}

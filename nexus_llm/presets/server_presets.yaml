@@ -1,0 +1,125 @@
+# Nexus-LLM Server Presets
+# Pre-configured server settings for different deployment environments.
+# Covers API server, model loading, concurrency, and resource allocation.
+
+development:
+  description: "Development server with verbose logging and relaxed limits. Optimized for local testing and debugging."
+  server:
+    host: "127.0.0.1"
+    port: 8000
+    workers: 1
+    timeout_keep_alive: 30
+    log_level: "debug"
+    access_log: true
+    reload: true
+    reload_dirs: ["nexus_llm"]
+    cors_origins: ["*"]
+    api_prefix: "/api/v1"
+    docs_url: "/docs"
+    openapi_url: "/openapi.json"
+  model:
+    device: "auto"
+    dtype: "float32"
+    max_model_len: 2048
+    gpu_memory_utilization: 0.8
+    enforce_eager: true
+    swap_space: 4
+    max_num_batched_tokens: 2048
+    max_num_seqs: 16
+    block_size: 16
+    enable_prefix_caching: false
+  rate_limit:
+    enabled: false
+    requests_per_minute: null
+    tokens_per_minute: null
+  concurrency:
+    max_concurrent_requests: 10
+    max_queue_size: 50
+    request_timeout: 120
+  auth:
+    enabled: false
+    api_key: null
+  notes: "Not suitable for production. Uses eager mode for debugging and no rate limiting."
+
+production:
+  description: "Production server with security, rate limiting, and optimized resource usage. Recommended for public deployments."
+  server:
+    host: "0.0.0.0"
+    port: 8000
+    workers: 4
+    timeout_keep_alive: 60
+    log_level: "info"
+    access_log: true
+    reload: false
+    reload_dirs: []
+    cors_origins: ["https://your-domain.com"]
+    api_prefix: "/api/v1"
+    docs_url: null
+    openapi_url: null
+  model:
+    device: "auto"
+    dtype: "float16"
+    max_model_len: 4096
+    gpu_memory_utilization: 0.9
+    enforce_eager: false
+    swap_space: 8
+    max_num_batched_tokens: 8192
+    max_num_seqs: 64
+    block_size: 16
+    enable_prefix_caching: true
+  rate_limit:
+    enabled: true
+    requests_per_minute: 60
+    tokens_per_minute: 100000
+  concurrency:
+    max_concurrent_requests: 100
+    max_queue_size: 200
+    request_timeout: 300
+  auth:
+    enabled: true
+    api_key: "${NEXUS_API_KEY}"
+  notes: "Secure production configuration. Set NEXUS_API_KEY environment variable for authentication."
+
+high_performance:
+  description: "High-performance server with maximum throughput. Requires significant GPU and system resources."
+  server:
+    host: "0.0.0.0"
+    port: 8000
+    workers: 8
+    timeout_keep_alive: 120
+    log_level: "warning"
+    access_log: false
+    reload: false
+    reload_dirs: []
+    cors_origins: ["https://your-domain.com"]
+    api_prefix: "/api/v1"
+    docs_url: null
+    openapi_url: null
+  model:
+    device: "auto"
+    dtype: "float16"
+    max_model_len: 8192
+    gpu_memory_utilization: 0.95
+    enforce_eager: false
+    swap_space: 16
+    max_num_batched_tokens: 32768
+    max_num_seqs: 256
+    block_size: 16
+    enable_prefix_caching: true
+  rate_limit:
+    enabled: true
+    requests_per_minute: 300
+    tokens_per_minute: 500000
+  concurrency:
+    max_concurrent_requests: 500
+    max_queue_size: 1000
+    request_timeout: 600
+  auth:
+    enabled: true
+    api_key: "${NEXUS_API_KEY}"
+  performance:
+    tensor_parallel_size: 2
+    pipeline_parallel_size: 1
+    disable_log_stats: true
+    disable_log_requests: true
+  notes: "Requires multi-GPU setup. Ensure adequate VRAM (40GB+) and system RAM (64GB+)."

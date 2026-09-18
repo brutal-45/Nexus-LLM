@@ -1,0 +1,34 @@
+# Development/production compose file for the Nexus-LLM API server.
+#   docker compose up -d --build         # CPU
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build   # GPU
+services:
+  nexus-llm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Empty selects the CPU wheels; set to e.g. 12.1 for CUDA.
+        CUDA_VERSION: ${CUDA_VERSION:-}
+    image: nexus-llm:latest
+    restart: unless-stopped
+    ports:
+      - "${NEXUS_PORT:-8000}:8000"
+    environment:
+      NEXUS_HOME: /var/lib/nexus-llm
+      NEXUS_CACHE_DIR: /var/cache/nexus-llm
+      HF_HOME: /var/cache/nexus-llm/huggingface
+      # Set in your shell or a .env file; never commit it.
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - ./config:/app/config:ro
+      - nexus-models:/var/lib/nexus-llm
+      - nexus-cache:/var/cache/nexus-llm
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+volumes:
+  nexus-models:
+  nexus-cache:

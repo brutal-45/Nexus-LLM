@@ -1,0 +1,334 @@
+# Nexus-LLM Evaluation Presets
+# Pre-configured evaluation settings for different depth levels.
+# Each preset provides sensible defaults for benchmarks, metrics, and reporting.
+
+quick:
+  description: "Fast evaluation for quick validation during development. Runs a minimal set of benchmarks with fewer samples."
+  benchmarks:
+    enabled: true
+    datasets:
+      - name: "mmlu"
+        subset: "auxiliary_train"
+        num_samples: 50
+        split: "test"
+      - name: "hellaswag"
+        num_samples: 50
+        split: "validation"
+      - name: "perplexity"
+        dataset: "wikitext"
+        subset: "wikitext-2-raw-v1"
+        split: "test"
+    timeout_per_sample: 30         # seconds
+
+  metrics:
+    - accuracy
+    - perplexity
+    - latency_p50
+    - tokens_per_second
+
+  generation:
+    max_tokens: 256
+    temperature: 0.0               # Deterministic for evaluation
+    top_p: 1.0
+    do_sample: false
+    num_beams: 1
+
+  reporting:
+    format: ["json", "table"]
+    include_examples: false
+    include_confidence_intervals: false
+    output_dir: "eval_results/quick"
+
+  notes: "Use for rapid iteration during development. Not suitable for model comparison or publication."
+
+standard:
+  description: "Standard evaluation with a comprehensive benchmark suite and moderate sample sizes. Good for model selection and comparison."
+  benchmarks:
+    enabled: true
+    datasets:
+      - name: "mmlu"
+        num_samples: 500
+        split: "test"
+        subjects: []               # Empty = all subjects
+      - name: "hellaswag"
+        num_samples: 500
+        split: "validation"
+      - name: "arc_challenge"
+        num_samples: 500
+        split: "test"
+      - name: "arc_easy"
+        num_samples: 500
+        split: "test"
+      - name: "winogrande"
+        num_samples: 500
+        split: "validation"
+      - name: "truthfulqa"
+        num_samples: 200
+        split: "validation"
+      - name: "perplexity"
+        dataset: "wikitext"
+        subset: "wikitext-2-raw-v1"
+        split: "test"
+      - name: "gsm8k"
+        num_samples: 200
+        split: "test"
+    timeout_per_sample: 60
+
+  metrics:
+    - accuracy
+    - perplexity
+    - f1_score
+    - exact_match
+    - latency_p50
+    - latency_p95
+    - tokens_per_second
+    - time_to_first_token
+
+  generation:
+    max_tokens: 512
+    temperature: 0.0
+    top_p: 1.0
+    do_sample: false
+    num_beams: 1
+    seed: 42
+
+  evaluation:
+    # Per-category evaluation
+    category_breakdown: true
+    # Few-shot settings
+    few_shot:
+      enabled: true
+      num_shots: 5
+    # Chain-of-thought evaluation
+    cot:
+      enabled: false
+
+  reporting:
+    format: ["json", "table", "html"]
+    include_examples: true
+    max_examples_per_category: 5
+    include_confidence_intervals: true
+    include_statistical_tests: true
+    output_dir: "eval_results/standard"
+
+  notes: "Recommended for most model evaluation scenarios. Balances thoroughness with compute cost."
+
+thorough:
+  description: "Exhaustive evaluation with full benchmark datasets, statistical analysis, and detailed reporting. For publication-quality results."
+  benchmarks:
+    enabled: true
+    datasets:
+      - name: "mmlu"
+        num_samples: -1            # -1 = all samples
+        split: "test"
+        subjects: []
+      - name: "hellaswag"
+        num_samples: -1
+        split: "validation"
+      - name: "arc_challenge"
+        num_samples: -1
+        split: "test"
+      - name: "arc_easy"
+        num_samples: -1
+        split: "test"
+      - name: "winogrande"
+        num_samples: -1
+        split: "validation"
+      - name: "truthfulqa"
+        num_samples: -1
+        split: "validation"
+      - name: "gsm8k"
+        num_samples: -1
+        split: "test"
+      - name: "humaneval"
+        num_samples: -1
+        split: "test"
+        languages: ["python"]
+      - name: "mbpp"
+        num_samples: -1
+        split: "test"
+      - name: "perplexity"
+        dataset: "wikitext"
+        subset: "wikitext-2-raw-v1"
+        split: "test"
+      - name: "perplexity"
+        dataset: "pg19"
+        split: "test"
+      - name: "bbh"
+        num_samples: -1
+        split: "test"
+      - name: "mt_bench"
+        num_samples: -1
+      - name: "alpaca_eval"
+        num_samples: -1
+    timeout_per_sample: 120
+
+  metrics:
+    - accuracy
+    - perplexity
+    - f1_score
+    - exact_match
+    - bleu
+    - rouge
+    - bertscore
+    - latency_p50
+    - latency_p95
+    - latency_p99
+    - tokens_per_second
+    - time_to_first_token
+    - throughput
+
+  generation:
+    max_tokens: 2048
+    temperature: 0.0
+    top_p: 1.0
+    do_sample: false
+    num_beams: 1
+    seed: 42
+    # Also run with sampling for comparison
+    sampling_comparison:
+      enabled: true
+      temperatures: [0.0, 0.3, 0.7, 1.0]
+      num_samples_per_temperature: 5
+
+  evaluation:
+    category_breakdown: true
+    few_shot:
+      enabled: true
+      num_shots: 5
+      # Also test with different shot counts
+      ablation_shots: [0, 1, 3, 5, 10]
+    cot:
+      enabled: true
+    # Cross-evaluation with multiple prompts
+    prompt_variations:
+      enabled: true
+      num_variations: 3
+    # Statistical analysis
+    statistics:
+      confidence_level: 0.95
+      bootstrap_samples: 1000
+      significance_tests:
+        - "t_test"
+        - "wilcoxon"
+    # Fairness evaluation
+    fairness:
+      enabled: false
+      demographic_categories: []
+
+  reporting:
+    format: ["json", "table", "html", "pdf"]
+    include_examples: true
+    max_examples_per_category: 10
+    include_confidence_intervals: true
+    include_statistical_tests: true
+    include_latency_breakdown: true
+    include_per_category_analysis: true
+    include_comparison_table: true
+    include_raw_results: true
+    output_dir: "eval_results/thorough"
+
+  notes: "For publication-quality evaluation. Requires significant compute (hours on a single GPU). Results are statistically rigorous."
+
+# ─── Domain-Specific Presets ──────────────────────────────────────
+
+code:
+  description: "Evaluation focused on code generation and understanding capabilities."
+  benchmarks:
+    enabled: true
+    datasets:
+      - name: "humaneval"
+        num_samples: -1
+        split: "test"
+        languages: ["python"]
+      - name: "mbpp"
+        num_samples: -1
+        split: "test"
+      - name: "apps"
+        num_samples: 200
+        split: "test"
+      - name: "ds1000"
+        num_samples: -1
+        split: "test"
+    timeout_per_sample: 120
+
+  metrics:
+    - pass_at_1
+    - pass_at_10
+    - pass_at_100
+    - exact_match
+    - code_bleu
+    - latency_p50
+    - tokens_per_second
+
+  generation:
+    max_tokens: 1024
+    temperature: 0.0
+    top_p: 1.0
+    do_sample: false
+    num_beams: 1
+    seed: 42
+
+  evaluation:
+    code_execution:
+      enabled: true
+      timeout: 30
+      sandbox: true
+    pass_at_k:
+      enabled: true
+      k_values: [1, 10, 100]
+      num_samples: 200
+
+  reporting:
+    format: ["json", "table", "html"]
+    include_examples: true
+    include_code_execution_results: true
+    output_dir: "eval_results/code"
+
+chat:
+  description: "Evaluation for chat and instruction-following models using MT-Bench and Alpaca Eval."
+  benchmarks:
+    enabled: true
+    datasets:
+      - name: "mt_bench"
+        num_samples: -1
+      - name: "alpaca_eval"
+        num_samples: -1
+      - name: "ifeval"
+        num_samples: -1
+        split: "test"
+      - name: "truthfulqa"
+        num_samples: -1
+        split: "validation"
+    timeout_per_sample: 120
+
+  metrics:
+    - mt_bench_score
+    - alpaca_eval_win_rate
+    - instruction_following_rate
+    - truthfulness
+    - latency_p50
+    - tokens_per_second
+
+  generation:
+    max_tokens: 2048
+    temperature: 0.7
+    top_p: 0.9
+    do_sample: true
+    seed: 42
+
+  evaluation:
+    # LLM-as-judge configuration
+    llm_judge:
+      enabled: true
+      model: "gpt-4"              # Judge model
+      temperature: 0.0
+    multi_turn:
+      enabled: true
+      max_turns: 3
+
+  reporting:
+    format: ["json", "table", "html"]
+    include_examples: true
+    include_judge_reasoning: true
+    output_dir: "eval_results/chat"

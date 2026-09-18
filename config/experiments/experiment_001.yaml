@@ -1,0 +1,7 @@
+# Experiment 1
+name: experiment_1
+temperature: 0.4
+top_p: 0.9
+max_length: 256
+epochs: 2
+learning_rate: 0.0002

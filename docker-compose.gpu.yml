@@ -1,0 +1,19 @@
+# GPU overrides for Nexus-LLM.
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+#
+# Requires the NVIDIA Container Toolkit on the host. Kept separate from the
+# base file so that CPU-only hosts can still `docker compose up`.
+services:
+  nexus-llm:
+    build:
+      args:
+        CUDA_VERSION: "12.1"
+    environment:
+      NEXUS_DEVICE: cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

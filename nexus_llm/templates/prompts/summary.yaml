@@ -1,0 +1,89 @@
+# Summary Prompt Templates
+# Templates for extractive, abstractive, and bullet-point summarization
+
+system: "You are an expert summarizer. Create clear, accurate, and concise summaries that capture the key information."
+
+templates:
+  abstractive:
+    description: "Generate an abstractive summary in natural language"
+    user: |
+      Summarize the following text in {length} words or fewer:
+
+      {text}
+    assistant: ""
+
+  extractive:
+    description: "Extract key sentences from the text"
+    user: |
+      Extract the {num_points} most important sentences from the following text:
+
+      {text}
+    assistant: ""
+
+  bullet_points:
+    description: "Summarize as bullet points"
+    user: |
+      Summarize the following text as {num_points} bullet points:
+
+      {text}
+    assistant: ""
+
+  executive:
+    description: "Executive summary for business context"
+    system: "You are a business analyst. Write executive summaries that highlight key findings, implications, and recommendations."
+    user: |
+      Write an executive summary of the following document:
+
+      {text}
+
+      Include:
+      - Key findings
+      - Implications
+      - Recommendations
+    assistant: ""
+
+  key_takeaways:
+    description: "Extract key takeaways"
+    user: |
+      What are the key takeaways from this text?
+
+      {text}
+    assistant: ""
+
+  tldr:
+    description: "Very short TL;DR summary"
+    system: "You are a summarizer. Keep it extremely brief — one or two sentences maximum."
+    user: |
+      TL;DR:
+
+      {text}
+    assistant: ""
+
+  meeting_notes:
+    description: "Summarize meeting transcript into notes"
+    system: "You are a meeting facilitator. Create well-organized meeting notes."
+    user: |
+      Convert the following meeting transcript into organized notes:
+
+      {text}
+
+      Include:
+      - Attendees (if mentioned)
+      - Key discussion points
+      - Decisions made
+      - Action items with owners
+    assistant: ""
+
+parameters:
+  length:
+    description: "Target summary length in words"
+    default: 100
+    type: int
+  num_points:
+    description: "Number of bullet points or key sentences"
+    default: 5
+    type: int
+
+examples:
+  - text: "Artificial intelligence has transformed many industries. Healthcare uses AI for diagnostics and drug discovery. Finance employs AI for fraud detection and algorithmic trading. Education leverages AI for personalized learning experiences."
+    summary: "AI has transformed healthcare (diagnostics, drug discovery), finance (fraud detection, trading), and education (personalized learning)."

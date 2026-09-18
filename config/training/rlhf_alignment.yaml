@@ -1,0 +1,4 @@
+# Training config: rlhf_alignment
+method: rlhf
+epochs: 2
+lr: 1e-05

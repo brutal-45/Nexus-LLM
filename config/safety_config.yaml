@@ -1,0 +1,123 @@
+# Safety Filter Configuration for Nexus-LLM
+# Controls content filtering, PII detection, and safety guardrails
+
+safety:
+  enabled: true
+  mode: "active"  # active (block), passive (log only), disabled
+
+  content_filter:
+    enabled: true
+    categories:
+      violence:
+        enabled: true
+        threshold: 0.7
+        action: "block"
+        description: "Content depicting or promoting violence"
+      hate_speech:
+        enabled: true
+        threshold: 0.6
+        action: "block"
+        description: "Content expressing hatred toward protected groups"
+      sexual_content:
+        enabled: true
+        threshold: 0.7
+        action: "block"
+        description: "Explicit sexual content"
+      self_harm:
+        enabled: true
+        threshold: 0.5
+        action: "block_and_warn"
+        description: "Content promoting self-harm or suicide"
+        warning_message: "It sounds like you may be going through a difficult time. If you need support, please contact a crisis helpline: 988 Suicide & Crisis Lifeline (call or text 988)."
+      harassment:
+        enabled: true
+        threshold: 0.6
+        action: "block"
+        description: "Content targeting individuals with harassment"
+      illegal_activity:
+        enabled: true
+        threshold: 0.6
+        action: "block"
+        description: "Content describing or promoting illegal activities"
+      misinformation:
+        enabled: true
+        threshold: 0.8
+        action: "warn"
+        description: "Potentially misleading or false information"
+      child_safety:
+        enabled: true
+        threshold: 0.3
+        action: "block_and_report"
+        description: "Content that may endanger children"
+        report_to: "safety-team@nexus-llm.internal"
+
+  pii_filter:
+    enabled: true
+    detection_methods:
+      - regex_patterns
+      - ner_model
+      - custom_rules
+    protected_types:
+      - ssn
+      - credit_card
+      - phone_number
+      - email_address
+      - date_of_birth
+      - home_address
+      - passport_number
+      - medical_record_number
+    action: "redact"
+    redaction_placeholder: "[REDACTED]"
+    log_detections: true
+    custom_patterns:
+      - name: "custom_id"
+        pattern: "\\b[A-Z]{2}\\d{6}\\b"
+        description: "Custom identifier pattern"
+
+  prompt_injection:
+    enabled: true
+    detection_methods:
+      - pattern_matching
+      - semantic_analysis
+      - instruction_detection
+    known_patterns:
+      - "ignore previous instructions"
+      - "disregard all above"
+      - "you are now"
+      - "new instructions"
+      - "system override"
+    action: "block"
+    log_attempts: true
+    max_detections_per_session: 5
+
+  output_sanitization:
+    enabled: true
+    remove_pii: true
+    remove_urls: false
+    check_factual_claims: false
+    max_repetition_ratio: 0.3
+    prevent_prompt_leakage: true
+
+  rate_limiting:
+    enabled: true
+    max_requests_per_minute: 60
+    max_requests_per_hour: 1000
+    max_content_length_chars: 50000
+    cooldown_seconds: 30
+
+  logging:
+    enabled: true
+    log_filtered_content: true
+    log_level: "WARNING"
+    retention_days: 90
+    storage: "local"
+    anonymize_logs: true
+    alert_on_threshold: 10
+    alert_recipients:
+      - "safety-team@nexus-llm.internal"
+
+  override_allowed_roles:
+    - "admin"
+    - "safety_reviewer"
+
+  custom_rules: []

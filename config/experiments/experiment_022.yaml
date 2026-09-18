@@ -1,0 +1,7 @@
+# Experiment 22
+name: experiment_22
+temperature: 0.4
+top_p: 0.9
+max_length: 896
+epochs: 3
+learning_rate: 0.0002

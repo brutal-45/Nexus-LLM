@@ -1,0 +1,114 @@
+{
+  "few_shot_example_sets": [
+    {
+      "id": "sentiment_classification",
+      "name": "Sentiment Analysis Examples",
+      "task": "Classify the sentiment of movie reviews as positive, negative, or neutral",
+      "examples": [
+        {"input": "This film was an absolute masterpiece — the cinematography was breathtaking and the performances were unforgettable.", "output": "Positive"},
+        {"input": "I fell asleep halfway through. The plot was nonexistent and the dialogue was painfully wooden.", "output": "Negative"},
+        {"input": "It was okay. Some good scenes but overall nothing special. I wouldn't watch it again but I don't regret seeing it.", "output": "Neutral"},
+        {"input": "The acting was superb and the story kept me on the edge of my seat the entire time!", "output": "Positive"},
+        {"input": "A complete waste of two hours. The ending made no sense and the characters were one-dimensional.", "output": "Negative"}
+      ]
+    },
+    {
+      "id": "text_summarization",
+      "name": "Text Summarization Examples",
+      "task": "Summarize the given text in one concise sentence",
+      "examples": [
+        {"input": "Tesla reported record deliveries of 484,507 vehicles in the fourth quarter of 2023, exceeding analyst expectations of 473,000. The company produced 495,000 vehicles during the same period. For the full year, Tesla delivered 1.81 million vehicles, representing a 38% increase from 2022, though falling short of its initial 50% growth target.", "output": "Tesla delivered a record 484,507 vehicles in Q4 2023, beating expectations, and achieved 1.81 million annual deliveries with 38% growth, though missing its 50% target."},
+        {"input": "Researchers at MIT have developed a new battery technology that uses common, inexpensive materials instead of lithium. The aluminum-sulfur battery can charge in less than a minute and operates safely at temperatures up to 200°C. The team believes this technology could significantly reduce the cost of grid-scale energy storage.", "output": "MIT researchers created an affordable aluminum-sulfur battery that charges in under a minute and could slash grid-scale energy storage costs."},
+        {"input": "The European Parliament has passed the AI Act, the world's first comprehensive regulatory framework for artificial intelligence. The legislation categorizes AI systems by risk level, with strict requirements for high-risk applications in healthcare, law enforcement, and critical infrastructure. Companies deploying prohibited AI practices face fines up to 35 million euros or 7% of global revenue.", "output": "The EU passed the AI Act, the first comprehensive AI regulation, classifying systems by risk level with fines up to 7% of global revenue for violations."}
+      ]
+    },
+    {
+      "id": "code_explanation",
+      "name": "Code Explanation Examples",
+      "task": "Explain what the given code does in plain English",
+      "examples": [
+        {"input": "def mystery(lst):\n    result = []\n    seen = set()\n    for item in lst:\n        if item not in seen:\n            seen.add(item)\n            result.append(item)\n    return result", "output": "This function removes duplicate items from a list while preserving the original order. It uses a set to track seen items for O(1) lookups and builds a new list with only the first occurrence of each element."},
+        {"input": "const result = arr.reduce((acc, val) => ({...acc, [val.id]: val}), {});", "output": "This JavaScript code converts an array of objects into a dictionary (object) keyed by each object's 'id' property, using reduce and spread syntax."},
+        {"input": "SELECT department, AVG(salary) as avg_salary\nFROM employees\nWHERE hire_date >= '2020-01-01'\nGROUP BY department\nHAVING AVG(salary) > 75000\nORDER BY avg_salary DESC;", "output": "This SQL query calculates the average salary per department for employees hired since 2020, returns only departments where the average exceeds $75,000, and sorts results from highest to lowest average salary."}
+      ]
+    },
+    {
+      "id": "grammar_correction",
+      "name": "Grammar Correction Examples",
+      "task": "Fix grammatical errors in the given sentences",
+      "examples": [
+        {"input": "Me and my friend went to the store yesterday.", "output": "My friend and I went to the store yesterday."},
+        {"input": "The team are going to win the championship this year.", "output": "The team is going to win the championship this year."},
+        {"input": "Its important that everyone bring their laptop to the meeting.", "output": "It's important that everyone bring their laptop to the meeting."},
+        {"input": "She don't know what time the train leaves.", "output": "She doesn't know what time the train leaves."},
+        {"input": "Between you and I, I think the project will fail.", "output": "Between you and me, I think the project will fail."}
+      ]
+    },
+    {
+      "id": "intent_classification",
+      "name": "User Intent Classification Examples",
+      "task": "Classify the user's intent from their message",
+      "examples": [
+        {"input": "Can you reset my password? I can't log in.", "output": "account_recovery"},
+        {"input": "How much does the Pro plan cost per month?", "output": "pricing_inquiry"},
+        {"input": "This app keeps crashing when I try to upload photos.", "output": "bug_report"},
+        {"input": "Do you offer integration with Salesforce?", "output": "feature_inquiry"},
+        {"input": "I'd like to cancel my subscription before the next billing cycle.", "output": "cancellation_request"}
+      ]
+    },
+    {
+      "id": "translation_en_es",
+      "name": "English to Spanish Translation Examples",
+      "task": "Translate English text to Spanish",
+      "examples": [
+        {"input": "The meeting has been rescheduled to next Wednesday.", "output": "La reunión ha sido reprogramada para el próximo miércoles."},
+        {"input": "Please submit your report by Friday afternoon.", "output": "Por favor, envíe su informe antes del viernes por la tarde."},
+        {"input": "The new office is located downtown near the subway station.", "output": "La nueva oficina está ubicada en el centro cerca de la estación de metro."}
+      ]
+    },
+    {
+      "id": "question_type",
+      "name": "Question Type Classification Examples",
+      "task": "Classify the type of question being asked",
+      "examples": [
+        {"input": "What is the boiling point of water at sea level?", "output": "factual"},
+        {"input": "How does photosynthesis convert sunlight into energy?", "output": "explanatory"},
+        {"input": "Should I use React or Vue for my next project?", "output": "advisory"},
+        {"input": "Can you compare PostgreSQL and MongoDB for a real-time analytics use case?", "output": "comparative"},
+        {"input": "Write a Python function to calculate the Fibonacci sequence.", "output": "generative"}
+      ]
+    },
+    {
+      "id": "entity_extraction",
+      "name": "Named Entity Extraction Examples",
+      "task": "Extract named entities (person, organization, location, date) from text",
+      "examples": [
+        {"input": "Tim Cook announced that Apple will open a new headquarters in London by March 2025.", "output": "Person: Tim Cook | Organization: Apple | Location: London | Date: March 2025"},
+        {"input": "The United Nations held a climate summit in Geneva on September 15th, with Secretary-General Guterres calling for immediate action.", "output": "Organization: United Nations | Location: Geneva | Date: September 15th | Person: Guterres"},
+        {"input": "SpaceX, founded by Elon Musk, successfully launched its Falcon Heavy rocket from Cape Canaveral last Tuesday.", "output": "Organization: SpaceX | Person: Elon Musk | Artifact: Falcon Heavy | Location: Cape Canaveral | Date: last Tuesday"}
+      ]
+    },
+    {
+      "id": "sql_generation",
+      "name": "Natural Language to SQL Examples",
+      "task": "Convert natural language questions to SQL queries",
+      "examples": [
+        {"input": "Show me all customers who placed more than 5 orders last month.", "output": "SELECT c.customer_id, c.name, COUNT(o.order_id) AS order_count FROM customers c JOIN orders o ON c.customer_id = o.customer_id WHERE o.order_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AND o.order_date < DATE_TRUNC('month', CURRENT_DATE) GROUP BY c.customer_id, c.name HAVING COUNT(o.order_id) > 5;"},
+        {"input": "What is the average salary by department, sorted from highest to lowest?", "output": "SELECT department, AVG(salary) AS avg_salary FROM employees GROUP BY department ORDER BY avg_salary DESC;"},
+        {"input": "Find products that have never been ordered.", "output": "SELECT p.product_id, p.product_name FROM products p LEFT JOIN order_items oi ON p.product_id = oi.product_id WHERE oi.product_id IS NULL;"}
+      ]
+    },
+    {
+      "id": "topic_categorization",
+      "name": "Article Topic Categorization Examples",
+      "task": "Categorize news articles into predefined topics",
+      "examples": [
+        {"input": "The Federal Reserve raised interest rates by 0.25% amid concerns about persistent inflation in the housing market.", "output": "economics"},
+        {"input": "NASA's James Webb Space Telescope captured new images of an exoplanet atmosphere showing evidence of water vapor.", "output": "science"},
+        {"input": "The championship game went into overtime after a controversial penalty call in the final seconds of regulation.", "output": "sports"},
+        {"input": "A critical vulnerability in OpenSSL affects millions of web servers, prompting emergency patches from major cloud providers.", "output": "technology"},
+        {"input": "The Senate passed a bipartisan bill increasing funding for national parks and wildlife conservation programs.", "output": "politics"}
+      ]
+    }
+  ]
+}

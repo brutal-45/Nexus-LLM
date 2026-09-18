@@ -1,0 +1,4 @@
+# Custom preset 71
+temperature: 0.4
+top_p: 0.9
+max_length: 1024

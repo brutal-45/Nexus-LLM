@@ -1,0 +1,93 @@
+# Nexus-LLM Training Configuration
+# Learning rate, epochs, batch size, LoRA parameters, and optimizer settings
+
+training:
+  output_dir: "./outputs"
+  overwrite_output_dir: false
+  seed: 42
+  deterministic: false
+
+  # Training loop
+  num_train_epochs: 3
+  max_steps: -1                      # -1 = use num_train_epochs
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 1
+  warmup_steps: 0
+  warmup_ratio: 0.0
+
+  # Learning rate
+  learning_rate: 5.0e-5
+  lr_scheduler_type: "cosine"         # linear, cosine, cosine_with_restarts, polynomial, constant, constant_with_warmup
+  lr_scheduler_kwargs: {}
+  weight_decay: 0.01
+
+  # Optimizer
+  optimizer: "adamw_torch"            # adamw_hf, adamw_torch, adamw_apex_fused, adafactor
+
+  # Precision
+  fp16: false
+  bf16: false
+  fp16_full_eval: false
+  bf16_full_eval: false
+
+  # Gradient management
+  max_grad_norm: 1.0
+  gradient_checkpointing: false
+  gradient_checkpointing_kwargs: {}
+
+  # Evaluation
+  evaluation_strategy: "no"           # no, steps, epoch
+  eval_steps: 500
+  eval_delay: 0
+  eval_accumulation_steps: 1
+
+  # Logging
+  logging_dir: "./logs"
+  logging_strategy: "steps"
+  logging_steps: 10
+  logging_nan_inf_filter: true
+  log_level: "info"
+  report_to: "tensorboard"            # tensorboard, wandb, none
+
+  # Checkpointing
+  save_strategy: "steps"              # no, steps, epoch
+  save_steps: 500
+  save_total_limit: 2
+  save_safetensors: true
+  load_best_model_at_end: false
+  metric_for_best_model: "loss"
+
+  # Data
+  dataloader_drop_last: false
+  dataloader_num_workers: 0
+  dataloader_pin_memory: true
+  dataloader_persistent_workers: false
+  group_by_length: false
+
+  # Distributed training
+  ddp_find_unused_parameters: false
+  fsdp: ""
+  deepspeed: null
+
+lora:
+  enabled: false
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - "q_proj"
+    - "v_proj"
+  bias: "none"                        # none, all, lora_only
+  task_type: "CAUSAL_LM"
+  fan_in_fan_out: false
+  modules_to_save: []
+  layers_to_transform: null
+  layers_pattern: null
+  rank_pattern: {}
+  alpha_pattern: {}
+
+peft:
+  enabled: false
+  method: "lora"                      # lora, prefix_tuning, prompt_tuning, p_tuning
+  config_path: null

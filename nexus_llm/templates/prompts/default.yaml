@@ -1,0 +1,15 @@
+# Default Prompt Template
+# Used when no specific template is specified
+
+system: "You are a helpful assistant."
+
+user: |
+  {input}
+
+assistant: ""
+
+parameters:
+  input:
+    description: "The user's input text"
+    required: true
+    type: string

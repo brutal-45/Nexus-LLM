@@ -1,0 +1,54 @@
+# Nexus-LLM Experiments Configuration
+# Controls experiment tracking, comparison, and ablation study settings
+
+experiments:
+  # Default experiment settings
+  default:
+    track_metrics: true
+    track_parameters: true
+    track_artifacts: true
+    auto_log: true
+    log_interval_seconds: 60
+
+  # Storage settings
+  storage:
+    backend: "local"  # local, s3, gcs
+    base_dir: "./experiments"
+    max_experiments: 1000
+    compression: true
+
+  # Comparison settings
+  comparison:
+    metrics:
+      - "accuracy"
+      - "f1_score"
+      - "latency_ms"
+      - "throughput"
+    significance_level: 0.05
+    correction_method: "bonferroni"
+
+  # Ablation settings
+  ablation:
+    baseline_model: "default"
+    min_improvement: 0.01
+    max_components: 20
+
+  # Hyperparameter search
+  hyperparameter_search:
+    strategy: "grid"  # grid, random, bayesian
+    max_trials: 100
+    num_workers: 4
+    objective: "maximize"
+    metric: "accuracy"
+    early_stopping:
+      enabled: true
+      patience: 10
+      min_delta: 0.001
+
+  # Tracking
+  tracker:
+    enabled: true
+    backend: "sqlite"  # sqlite, mlflow, wandb
+    db_path: "./experiments/tracking.db"
+    experiment_name_prefix: "nexus"
+    tags: []

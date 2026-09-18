@@ -1,0 +1,158 @@
+# Authentication Configuration for Nexus-LLM
+# Settings for API key management, rate limiting, and access control
+
+auth:
+  enabled: true
+  provider: "local"  # local, oauth2, ldap, saml
+
+  api_keys:
+    enabled: true
+    storage: "database"  # database, file, env
+    key_prefix: "nxllm-"
+    key_length: 32
+    hash_algorithm: "sha256"
+    auto_generate_on_registration: true
+    rotation_policy:
+      enabled: false
+      interval_days: 90
+      notify_days_before: 7
+    rate_limits:
+      default:
+        requests_per_minute: 60
+        requests_per_hour: 1000
+        requests_per_day: 10000
+        tokens_per_day: 500000
+      tiers:
+        free:
+          requests_per_minute: 10
+          requests_per_hour: 200
+          requests_per_day: 1000
+          tokens_per_day: 50000
+        basic:
+          requests_per_minute: 30
+          requests_per_hour: 500
+          requests_per_day: 5000
+          tokens_per_day: 200000
+        pro:
+          requests_per_minute: 60
+          requests_per_hour: 1000
+          requests_per_day: 10000
+          tokens_per_day: 500000
+        enterprise:
+          requests_per_minute: 120
+          requests_per_hour: 5000
+          requests_per_day: 100000
+          tokens_per_day: 5000000
+
+  oauth2:
+    enabled: false
+    providers:
+      google:
+        client_id: ""
+        client_secret: ""
+        redirect_uri: "/auth/callback/google"
+        scopes: ["openid", "email", "profile"]
+      github:
+        client_id: ""
+        client_secret: ""
+        redirect_uri: "/auth/callback/github"
+        scopes: ["read:user", "user:email"]
+      microsoft:
+        client_id: ""
+        client_secret: ""
+        redirect_uri: "/auth/callback/microsoft"
+        scopes: ["openid", "email", "profile"]
+    token_expiry_hours: 24
+    refresh_token_expiry_days: 30
+
+  permissions:
+    enabled: true
+    model: "rbac"  # rbac, abac, acl
+    roles:
+      admin:
+        description: "Full system access"
+        permissions:
+          - "system:admin"
+          - "models:*"
+          - "users:*"
+          - "config:*"
+          - "data:*"
+          - "logs:*"
+      operator:
+        description: "Operational access for managing models and monitoring"
+        permissions:
+          - "models:read"
+          - "models:deploy"
+          - "models:configure"
+          - "logs:read"
+          - "monitoring:read"
+          - "users:read"
+      developer:
+        description: "Development access for API usage"
+        permissions:
+          - "models:read"
+          - "models:inference"
+          - "data:read"
+          - "data:write"
+          - "experiments:*"
+      user:
+        description: "Basic user access"
+        permissions:
+          - "models:inference"
+          - "data:read"
+          - "chat:*"
+      viewer:
+        description: "Read-only access"
+        permissions:
+          - "models:read"
+          - "monitoring:read"
+
+  session:
+    type: "jwt"  # jwt, session_cookie
+    secret_key: "${AUTH_SECRET_KEY}"
+    algorithm: "HS256"
+    expiry_minutes: 60
+    refresh_enabled: true
+    refresh_expiry_days: 7
+    cookie_settings:
+      secure: true
+      httponly: true
+      samesite: "lax"
+      domain: null
+      path: "/"
+
+  cors:
+    enabled: true
+    allowed_origins:
+      - "http://localhost:3000"
+      - "http://localhost:8501"
+    allowed_methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+    allowed_headers:
+      - "Authorization"
+      - "Content-Type"
+      - "X-API-Key"
+    max_age_seconds: 3600
+    allow_credentials: true
+
+  security:
+    password_policy:
+      min_length: 12
+      require_uppercase: true
+      require_lowercase: true
+      require_digit: true
+      require_special: true
+    brute_force_protection:
+      enabled: true
+      max_attempts: 5
+      lockout_duration_minutes: 30
+    ip_whitelist:
+      enabled: false
+      allowed_ips: []
+    two_factor:
+      enabled: false
+      method: "totp"  # totp, sms, email

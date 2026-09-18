@@ -1,0 +1,225 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexus-llm"
+description = "Nexus-LLM - A Claude-like terminal LLM chat application with its own backend"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+dynamic = ["version"]
+authors = [{ name = "Nexus-LLM Team" }]
+keywords = ["llm", "chat", "terminal", "ai", "gpt", "local-inference", "training", "nlp"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
+]
+
+# Runtime dependencies. Keep this list in sync with requirements.txt; the
+# version floors below are what the code is actually written against.
+dependencies = [
+    "torch>=2.0.0",
+    "transformers>=4.35.0",
+    "tokenizers>=0.14.0",
+    "accelerate>=0.24.0",
+    "datasets>=2.14.0",
+    "peft>=0.6.0",
+    "safetensors>=0.4.0",
+    "huggingface_hub>=0.19.0",
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "websockets>=12.0",
+    "aiohttp>=3.9.0",
+    "aiofiles>=23.0.0",
+    "requests>=2.31.0",
+    "rich>=13.7.0",
+    "prompt_toolkit>=3.0.43",
+    "markdown-it-py>=3.0.0",
+    "pygments>=2.17.0",
+    "pyyaml>=6.0.1",
+    "python-dotenv>=1.0.0",
+    "click>=8.1.7",
+    "pydantic>=2.0.0",
+    "psutil>=5.9.0",
+    "numpy>=1.24.0",
+    "tqdm>=4.66.0",
+]
+
+[project.optional-dependencies]
+# Training extras: data wrangling and plotting used by nexus_llm.training / benchmark.
+train = [
+    "pandas>=2.0.0",
+    "scipy>=1.11.0",
+    "scikit-learn>=1.3.0",
+    "matplotlib>=3.7.0",
+]
+# Local, quantised inference.
+quantization = [
+    "bitsandbytes>=0.41.0; platform_system == 'Linux'",
+    "auto-gptq>=0.6.0; platform_system == 'Linux'",
+    "optimum>=1.14.0",
+]
+# CUDA / attention optimisations. flash-attn must be built against the
+# installed torch+CUDA pair, so it is intentionally not pinned here.
+gpu = [
+    "bitsandbytes>=0.41.0; platform_system == 'Linux'",
+    "xformers>=0.0.22",
+    "deepspeed>=0.12.0; platform_system == 'Linux'",
+]
+# Long-context / RAG embeddings.
+rag = [
+    "sentence-transformers>=2.2.0",
+]
+# Development tooling (what CI installs).
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.11.0",
+    "pytest-timeout>=2.2.0",
+    "httpx>=0.25.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "isort>=5.12.0",
+    "mypy>=1.5.0",
+    "pre-commit>=3.5.0",
+    "build>=1.0.0",
+    "twine>=4.0.0",
+]
+docs = [
+    "sphinx>=7.2.0",
+    "sphinx-rtd-theme>=2.0.0",
+    "sphinx-autodoc-typehints>=1.25.0",
+    "myst-parser>=2.0.0",
+]
+all = ["nexus-llm[train,quantization,gpu,rag,dev,docs]"]
+
+[project.scripts]
+nexus-llm = "nexus_llm.cli:cli"
+nexus = "nexus_llm.cli:cli"
+
+[project.urls]
+Homepage = "https://github.com/brutal-45/Nexus-LLM"
+Repository = "https://github.com/brutal-45/Nexus-LLM"
+Issues = "https://github.com/brutal-45/Nexus-LLM/issues"
+Changelog = "https://github.com/brutal-45/Nexus-LLM/blob/master/CHANGELOG.md"
+
+# The single source of truth for the version is nexus_llm/__version__.py, which
+# also writes VERSION so that packaging, `--version` and git tags agree.
+[tool.setuptools.dynamic]
+version = { attr = "nexus_llm.__version__.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["nexus_llm*"]
+
+[tool.setuptools.package-data]
+nexus_llm = [
+    "py.typed",
+    "*.yaml",
+    "*.yml",
+    "*.json",
+    "*.txt",
+    "*.md",
+    "**/*.yaml",
+    "**/*.yml",
+    "**/*.json",
+    "**/*.txt",
+    "**/*.jinja",
+    "**/*.j2",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+extend-exclude = ["docs/_build", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "FA", "SIM", "PIE", "RUF", "PLC", "PLE", "PLR", "PLW"]
+ignore = [
+    "BLE001",  # Blind exception handling (common in CLI apps)
+    "E501",    # Line too long
+    "F401",    # Unused imports (conditional imports are common)
+    "F811",    # Redefined but unused
+    "F841",    # Local variable assigned but never used
+    "PIE810",  # Call endswith once with a tuple
+    "PLC0415", # Import at top-level
+    "PLR2004", # Magic value comparison
+    "PLR0913", # Too many arguments
+    "PLR0917", # Too many positional arguments
+    "RUF012",  # Mutable class attribute default
+    "RUF015",  # Prefer next(iter()) over single element slice
+    "RUF059",  # Unpacked variable never used
+    "PLW2901", # Loop variable overwritten
+    "PLR0911", # Too many return statements
+    "PLR0912", # Too many branches
+    "SIM102",  # Combine if statements
+    "SIM103",  # Return condition directly
+    "SIM105",  # Use contextlib.suppress
+    "SIM108",  # Use ternary operator
+    "SIM113",  # Use enumerate
+    "SIM115",  # Context manager for file open
+    "SIM118",  # Use `key in dict` instead of `key in dict.keys()`
+    "PLW0603", # Global statement
+    "PLW0108", # Lambda assignment
+    "PLW1508", # Invalid envvar default
+    "PLW1510", # subprocess without check
+    "RUF001",  # Ambiguous unicode characters
+    "RUF002",  # Ambiguous en dash in docstring
+    "RUF003",  # Ambiguous unicode characters
+    "RUF005",  # Collection literal concatenation
+    "RUF006",  # asyncio task not awaited
+    "RUF034",  # Unnecessary dict comprehension
+    "E741",    # Ambiguous variable name
+    "PLR0915", # Too many statements
+    "PLR1714", # Repeated equality check
+    "PLC0206", # Dict items extraction
+    "UP006",   # Use list/dict instead of List/Dict
+    "UP007",   # Use X | Y for type annotations
+    "UP035",   # Deprecated typing import
+    "UP045",   # Use X | None for type annotations
+    "FA100",   # Add from __future__ import annotations
+]
+
+[tool.ruff.lint.per-file-ignores]
+# __init__.py files legitimately re-export names.
+"__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["nexus_llm"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra --strict-markers"
+asyncio_mode = "auto"
+markers = [
+    "slow: long-running tests",
+    "gpu: tests that require a CUDA device",
+    "integration: tests spanning multiple subsystems",
+    "network: tests that would reach the network",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:pkg_resources.*",
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

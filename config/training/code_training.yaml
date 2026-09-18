@@ -1,0 +1,6 @@
+# Training config: code_training
+method: lora
+r: 16
+alpha: 32
+data_format: instruction
+epochs: 5

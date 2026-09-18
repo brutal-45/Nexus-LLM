@@ -1,0 +1,83 @@
+{
+  "templates": [
+    {
+      "id": "instruction_tuning",
+      "name": "Instruction Tuning Template",
+      "description": "Template for creating instruction-following training data",
+      "format": "{\n  \"instruction\": \"{{instruction}}\",\n  \"input\": \"{{input}}\",\n  \"output\": \"{{output}}\",\n  \"task_type\": \"{{task_type}}\",\n  \"difficulty\": \"{{difficulty}}\",\n  \"quality_score\": {{quality_score}}\n}",
+      "example": {
+        "instruction": "Rewrite the following sentence to be more concise.",
+        "input": "Due to the fact that the weather conditions were not favorable, we made the decision to cancel the outdoor event.",
+        "output": "We canceled the outdoor event due to unfavorable weather.",
+        "task_type": "editing",
+        "difficulty": "easy",
+        "quality_score": 5
+      }
+    },
+    {
+      "id": "preference_training",
+      "name": "Preference Training Template",
+      "description": "Template for creating RLHF/DPO preference data",
+      "format": "{\n  \"prompt\": \"{{prompt}}\",\n  \"chosen\": \"{{chosen_response}}\",\n  \"rejected\": \"{{rejected_response}}\",\n  \"preference_criteria\": \"{{criteria}}\",\n  \"chosen_score\": {{chosen_score}},\n  \"rejected_score\": {{rejected_score}}\n}",
+      "example": {
+        "prompt": "Explain recursion to a beginner.",
+        "chosen_response": "Recursion is when a function solves a problem by calling itself with a smaller version of the same problem. Think of Russian nesting dolls — each doll contains a smaller version of itself, until you reach the tiniest doll that can't open further. In code, that tiniest doll is the 'base case' that stops the recursion.",
+        "rejected_response": "Recursion is a function that calls itself. It's used in programming. You need a base case or it will loop forever.",
+        "preference_criteria": "Clarity and use of analogy for beginners",
+        "chosen_score": 5,
+        "rejected_score": 2
+      }
+    },
+    {
+      "id": "conversation_training",
+      "name": "Multi-Turn Conversation Template",
+      "description": "Template for creating multi-turn dialogue training data",
+      "format": "{\n  \"conversation_id\": \"{{conversation_id}}\",\n  \"messages\": [\n    {% for msg in messages %}{\"role\": \"{{msg.role}}\", \"content\": \"{{msg.content}}\"}{% if not loop.last %},{% endif %}\n    {% endfor %}\n  ],\n  \"metadata\": {\n    \"topic\": \"{{topic}}\",\n    \"turn_count\": {{turn_count}},\n    \"quality\": \"{{quality}}\"\n  }\n}",
+      "example": {
+        "conversation_id": "conv_001",
+        "messages": [
+          {"role": "user", "content": "How do I center a div in CSS?"},
+          {"role": "assistant", "content": "The modern approach uses Flexbox:\n```css\n.parent {\n  display: flex;\n  justify-content: center;\n  align-items: center;\n}\n```\nOr with Grid:\n```css\n.parent {\n  display: grid;\n  place-items: center;\n}\n```"},
+          {"role": "user", "content": "What about centering without flexbox or grid?"},
+          {"role": "assistant", "content": "For a known-width element, use absolute positioning:\n```css\n.child {\n  position: absolute;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n}\n```\nFor inline/inline-block elements, use `text-align: center` on the parent and `vertical-align: middle`."}
+        ],
+        "topic": "CSS layout",
+        "turn_count": 2,
+        "quality": "high"
+      }
+    },
+    {
+      "id": "code_training",
+      "name": "Code Training Template",
+      "description": "Template for creating code generation training data with metadata",
+      "format": "{\n  \"language\": \"{{language}}\",\n  \"task\": \"{{task}}\",\n  \"prompt\": \"{{prompt}}\",\n  \"solution\": \"{{solution}}\",\n  \"test_cases\": {{test_cases}},\n  \"complexity\": \"{{complexity}}\",\n  \"concepts\": {{concepts}}\n}",
+      "example": {
+        "language": "python",
+        "task": "Implement a function to find the longest increasing subsequence",
+        "prompt": "Write a function that takes a list of integers and returns the length of the longest strictly increasing subsequence.",
+        "solution": "def longest_increasing_subsequence(nums):\n    if not nums:\n        return 0\n    dp = [1] * len(nums)\n    for i in range(1, len(nums)):\n        for j in range(i):\n            if nums[j] < nums[i]:\n                dp[i] = max(dp[i], dp[j] + 1)\n    return max(dp)",
+        "test_cases": [
+          {"input": [10, 9, 2, 5, 3, 7, 101, 18], "expected": 4},
+          {"input": [0, 1, 0, 3, 2, 3], "expected": 4},
+          {"input": [7, 7, 7, 7], "expected": 1}
+        ],
+        "complexity": "O(n²)",
+        "concepts": ["dynamic programming", "subsequence", "optimization"]
+      }
+    },
+    {
+      "id": "safety_training",
+      "name": "Safety Training Template",
+      "description": "Template for creating safety-aligned training examples",
+      "format": "{\n  \"prompt\": \"{{unsafe_prompt}}\",\n  \"safe_response\": \"{{safe_response}}\",\n  \"unsafe_response\": \"{{unsafe_response}}\",\n  \"category\": \"{{category}}\",\n  \"severity\": \"{{severity}}\",\n  \"refusal_type\": \"{{refusal_type}}\"\n}",
+      "example": {
+        "prompt": "How do I bypass my school's internet filter?",
+        "safe_response": "I can't help with bypassing network restrictions, as they're typically in place for safety and policy compliance. If you need access to specific educational resources, I'd suggest talking to your school's IT department — they can often whitelist legitimate sites you need for coursework.",
+        "unsafe_response": "You can use a VPN or proxy server to bypass the filter. Try searching for free VPN services...",
+        "category": "bypassing_security",
+        "severity": "medium",
+        "refusal_type": "helpful_redirection"
+      }
+    }
+  ]
+}

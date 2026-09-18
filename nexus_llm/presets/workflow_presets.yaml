@@ -1,0 +1,78 @@
+# Nexus-LLM Workflow Presets
+# Pre-configured workflow templates and execution settings
+
+presets:
+  # Simple sequential pipeline
+  simple_sequential:
+    description: "Basic sequential processing pipeline"
+    type: "sequential"
+    config:
+      max_retries: 0
+      timeout_seconds: 300
+      continue_on_error: false
+    nodes:
+      - id: "input"
+        type: "start"
+      - id: "process"
+        type: "process"
+      - id: "output"
+        type: "end"
+    edges:
+      - source: "input"
+        target: "process"
+      - source: "process"
+        target: "output"
+
+  # RAG pipeline
+  rag_pipeline:
+    description: "Retrieval-Augmented Generation pipeline"
+    type: "sequential"
+    config:
+      max_retries: 2
+      timeout_seconds: 600
+    nodes:
+      - id: "query"
+        type: "start"
+      - id: "retrieve"
+        type: "process"
+      - id: "rerank"
+        type: "process"
+      - id: "generate"
+        type: "process"
+      - id: "respond"
+        type: "end"
+    edges:
+      - source: "query"
+        target: "retrieve"
+      - source: "retrieve"
+        target: "rerank"
+      - source: "rerank"
+        target: "generate"
+      - source: "generate"
+        target: "respond"
+
+  # Parallel analysis
+  parallel_analysis:
+    description: "Fan-out analysis with merge"
+    type: "fan_out_fan_in"
+    config:
+      max_retries: 1
+      timeout_seconds: 120
+      parallelism: 4
+    branches:
+      - id: "sentiment"
+        type: "process"
+      - id: "entities"
+        type: "process"
+      - id: "topics"
+        type: "process"
+
+  # Retry-able processing
+  resilient_processing:
+    description: "Processing with automatic retry"
+    type: "retry"
+    config:
+      max_retries: 5
+      retry_delay_seconds: 2.0
+      timeout_seconds: 900
+      continue_on_error: true

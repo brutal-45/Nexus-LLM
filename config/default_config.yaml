@@ -1,0 +1,51 @@
+# Nexus-LLM Default Configuration
+# Edit this file or use: nexus-llm config --set <key> <value>
+
+model:
+  name: gpt2-medium
+  device: auto
+  precision: fp32
+  max_length: 512
+  temperature: 0.7
+  top_p: 0.9
+  top_k: 50
+  repetition_penalty: 1.1
+  num_beams: 1
+  do_sample: true
+  cache_dir: ./models
+
+server:
+  host: 127.0.0.1
+  port: 8000
+  workers: 1
+  cors_origins:
+    - "*"
+  api_key: null
+
+terminal:
+  theme: dark
+  show_tokens: true
+  show_timing: true
+  streaming: true
+  markdown: true
+  syntax_highlight: true
+  history_file: .nexus_history
+  max_history: 1000
+
+training:
+  output_dir: ./models/fine-tuned
+  lora_r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  learning_rate: 0.0002
+  num_epochs: 3
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  warmup_steps: 100
+  save_steps: 500
+  eval_steps: 500
+  max_seq_length: 512
+
+debug: false
+log_level: INFO
+log_file: ./logs/nexus_llm.log

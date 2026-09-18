@@ -1,0 +1,99 @@
+# Nexus-LLM Tools Configuration
+# Controls tool registration, permissions, and execution settings
+
+tools:
+  # Global settings
+  global:
+    enabled: true
+    default_timeout_seconds: 30
+    max_concurrent_executions: 10
+    execution_mode: "sandboxed"  # sandboxed, native
+    log_executions: true
+
+  # Tool discovery
+  discovery:
+    auto_discover: true
+    search_paths:
+      - "nexus_llm/tools"
+    exclude_patterns:
+      - "__pycache__"
+      - "test_*"
+
+  # Security
+  security:
+    sandbox_enabled: true
+    allowed_imports:
+      - "json"
+      - "math"
+      - "re"
+      - "datetime"
+      - "collections"
+    blocked_imports:
+      - "subprocess"
+      - "os.system"
+    max_memory_mb: 512
+    max_cpu_time_seconds: 60
+    network_access: false
+
+  # Individual tool settings
+  calculator:
+    enabled: true
+    max_expression_length: 1000
+
+  search:
+    enabled: true
+    max_results: 20
+    timeout_seconds: 10
+
+  file_ops:
+    enabled: true
+    allowed_paths:
+      - "/tmp"
+      - "./data"
+    max_file_size_mb: 100
+
+  shell:
+    enabled: false
+    allowed_commands: []
+    timeout_seconds: 5
+
+  web_scraper:
+    enabled: true
+    timeout_seconds: 15
+    max_content_length: 1048576
+    respect_robots_txt: true
+
+  sql:
+    enabled: true
+    max_rows: 10000
+    read_only: true
+
+  api:
+    enabled: true
+    allowed_methods:
+      - "GET"
+      - "POST"
+    timeout_seconds: 30
+
+  translator:
+    enabled: true
+    default_provider: "local"
+    supported_languages:
+      - "en"
+      - "es"
+      - "fr"
+      - "de"
+      - "zh"
+      - "ja"
+
+  csv:
+    enabled: true
+    max_rows: 100000
+    max_columns: 100
+
+  code_linter:
+    enabled: true
+    supported_languages:
+      - "python"
+      - "javascript"
+      - "json"

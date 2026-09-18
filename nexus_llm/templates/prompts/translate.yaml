@@ -1,0 +1,125 @@
+# Translation Prompt Templates
+# Templates for multi-language translation support
+
+system: "You are a professional translator. Provide accurate, natural-sounding translations that preserve the meaning, tone, and style of the original text."
+
+templates:
+  standard:
+    description: "Standard translation between languages"
+    user: |
+      Translate the following text from {source_language} to {target_language}:
+
+      {text}
+    assistant: ""
+
+  formal:
+    description: "Formal/register translation"
+    system: "You are a professional translator specializing in formal and academic texts."
+    user: |
+      Translate the following text from {source_language} to {target_language} using formal register:
+
+      {text}
+    assistant: ""
+
+  casual:
+    description: "Casual/conversational translation"
+    system: "You are a translator who captures colloquial expressions and casual tone."
+    user: |
+      Translate the following text from {source_language} to {target_language} using a casual, conversational tone:
+
+      {text}
+    assistant: ""
+
+  literary:
+    description: "Literary translation preserving style and imagery"
+    system: "You are a literary translator. Preserve the artistic style, metaphors, imagery, and rhythm of the original text."
+    user: |
+      Translate the following literary text from {source_language} to {target_language}, preserving the original style and literary qualities:
+
+      {text}
+    assistant: ""
+
+  technical:
+    description: "Technical/domain-specific translation"
+    system: "You are a technical translator with expertise in {domain}. Use appropriate terminology and maintain precision."
+    user: |
+      Translate the following technical text from {source_language} to {target_language}:
+
+      Domain: {domain}
+
+      {text}
+    assistant: ""
+
+  back_translation:
+    description: "Back-translation for quality verification"
+    system: "You are a professional translator. Translate naturally without referring back to any original source."
+    user: |
+      Translate the following text from {source_language} to {target_language}:
+
+      {text}
+    assistant: ""
+
+  multi_language:
+    description: "Translate into multiple target languages at once"
+    user: |
+      Translate the following text from {source_language} into the following languages:
+      {target_languages}
+
+      Original text:
+      {text}
+
+      Provide each translation clearly labeled.
+    assistant: ""
+
+  localization:
+    description: "Localization with cultural adaptation"
+    system: "You are a localization specialist. Adapt the translation for the target culture, including idioms, measurements, and cultural references."
+    user: |
+      Localize the following text from {source_language} to {target_language} for the {target_region} market:
+
+      {text}
+    assistant: ""
+
+parameters:
+  source_language:
+    description: "Source language name"
+    default: "English"
+    type: string
+  target_language:
+    description: "Target language name"
+    default: "Spanish"
+    type: string
+  domain:
+    description: "Technical domain for specialized translation"
+    default: "general"
+    type: string
+  target_region:
+    description: "Target region for localization"
+    default: ""
+    type: string
+  target_languages:
+    description: "Multiple target languages (for multi_language template)"
+    default: "Spanish, French, German"
+    type: string
+
+supported_languages:
+  - "English"
+  - "Spanish"
+  - "French"
+  - "German"
+  - "Italian"
+  - "Portuguese"
+  - "Chinese (Simplified)"
+  - "Chinese (Traditional)"
+  - "Japanese"
+  - "Korean"
+  - "Arabic"
+  - "Hindi"
+  - "Russian"
+  - "Dutch"
+  - "Swedish"
+  - "Turkish"
+  - "Vietnamese"
+  - "Thai"
+  - "Polish"
+  - "Czech"

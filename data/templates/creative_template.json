@@ -1,0 +1,92 @@
+{
+  "templates": [
+    {
+      "id": "story_starter",
+      "name": "Story Starter Template",
+      "description": "Template for generating creative fiction with structured prompts",
+      "format": "## Genre: {{genre}}\n## Setting: {{setting}}\n## Protagonist: {{protagonist}}\n## Conflict: {{conflict}}\n## Tone: {{tone}}\n## Opening Line: {{opening_line}}\n## Story:",
+      "stop_tokens": ["## ", "THE END", "---"],
+      "example": {
+        "genre": "Science Fiction",
+        "setting": "A generation ship 300 years into a 500-year journey to a distant star",
+        "protagonist": "A historian who discovers that the ship's original navigation data has been secretly altered",
+        "conflict": "Revealing the truth could cause civil unrest, but the ship is heading toward the wrong star system",
+        "tone": "Tense, thought-provoking",
+        "opening_line": "The archives were supposed to be quiet, but today they hummed with a frequency that made Elara's teeth ache."
+      }
+    },
+    {
+      "id": "poetry_composition",
+      "name": "Poetry Composition Template",
+      "description": "Template for generating poetry with specific structural constraints",
+      "format": "## Form: {{form}}\n## Theme: {{theme}}\n## Imagery Focus: {{imagery}}\n## Constraints:\n{% for constraint in constraints %}- {{constraint}}\n{% endfor %}\n## Poem:",
+      "stop_tokens": ["## ", "---"],
+      "example": {
+        "form": "Villanelle (19 lines, specific rhyme scheme ABA with refrains)",
+        "theme": "The passage of time and impermanence",
+        "imagery": "Seasons, rivers, fading light",
+        "constraints": [
+          "Rhyme scheme: ABA for tercets, ABAA for quatrain",
+          "Line 1 repeats as lines 6, 12, 18",
+          "Line 3 repeats as lines 9, 15, 19",
+          "Iambic pentameter"
+        ]
+      }
+    },
+    {
+      "id": "marketing_copy",
+      "name": "Marketing Copy Template",
+      "description": "Template for persuasive marketing and advertising content",
+      "format": "## Product: {{product}}\n## Target Audience: {{audience}}\n## Unique Value Proposition: {{uvp}}\n## Key Benefits:\n{% for benefit in benefits %}- {{benefit}}\n{% endfor %}\n## Tone: {{tone}}\n## Call to Action: {{cta}}\n## Copy:",
+      "stop_tokens": ["## ", "---"],
+      "example": {
+        "product": "FocusFlow — AI-powered productivity app",
+        "audience": "Remote workers and freelancers aged 25-40 who struggle with distractions",
+        "uvp": "The only productivity app that learns your work patterns and proactively shields your focus time",
+        "benefits": [
+          "AI identifies your peak productivity hours automatically",
+          "Smart notification blocking during deep work sessions",
+          "Weekly focus reports with actionable insights",
+          "Integrates with Slack, Calendar, and todo apps"
+        ],
+        "tone": "Empathetic, empowering, modern",
+        "cta": "Start your free 14-day trial — no credit card required"
+      }
+    },
+    {
+      "id": "worldbuilding",
+      "name": "Worldbuilding Template",
+      "description": "Template for constructing detailed fictional worlds",
+      "format": "## World Name: {{world_name}}\n## Genre: {{genre}}\n## Core Concept: {{core_concept}}\n## Elements to Develop:\n{% for element in elements %}### {{element.name}}\n{{element.prompt}}\n{% endfor %}\n## World Description:",
+      "stop_tokens": ["## ", "---"],
+      "example": {
+        "world_name": "Verdantis",
+        "genre": "Fantasy",
+        "core_concept": "A world where magic is drawn from a finite resource — crystalized memories — forcing societies to choose between preserving history and wielding power",
+        "elements": [
+          {"name": "Geography", "prompt": "Describe the major landmasses, climate zones, and how memory crystals form in different environments"},
+          {"name": "Societies", "prompt": "Describe the three major civilizations and their relationship with memory crystals"},
+          {"name": "Magic System", "prompt": "Explain how memories are extracted, crystalized, and consumed for magical effects"},
+          {"name": "Conflict", "prompt": "What is the central tension driving the world's major conflicts?"}
+        ]
+      }
+    },
+    {
+      "id": "dialogue_scene",
+      "name": "Dialogue Scene Template",
+      "description": "Template for crafting character-driven dialogue scenes",
+      "format": "## Characters:\n{% for character in characters %}- {{character.name}}: {{character.description}}\n{% endfor %}\n## Setting: {{setting}}\n## Situation: {{situation}}\n## Emotional Arc: {{emotional_arc}}\n## Subtext: {{subtext}}\n## Scene:",
+      "stop_tokens": ["## ", "---", "END SCENE"],
+      "example": {
+        "characters": [
+          {"name": "Dr. Sarah Chen", "description": "Brilliant but cautious research lead, worried about ethical implications"},
+          {"name": "Marcus Webb", "description": "Ambitious junior researcher who made the breakthrough discovery"}
+        ],
+        "setting": "A dimly lit laboratory at 11 PM, monitors casting blue light",
+        "situation": "Marcus has discovered their AI model has achieved something unexpected and wants to publish immediately; Sarah insists on more testing",
+        "emotional_arc": "Excitement → Tension → Reluctant agreement → Unease",
+        "subtext": "Both know this discovery could redefine their field, but neither is ready to admit what it might cost"
+      }
+    }
+  ]
+}

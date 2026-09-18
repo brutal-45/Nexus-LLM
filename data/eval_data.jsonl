@@ -1,0 +1,10 @@
+{"input": "What is the capital of France?", "output": "The capital of France is Paris.", "category": "geography", "difficulty": "easy"}
+{"input": "Explain quantum entanglement in simple terms.", "output": "Quantum entanglement is a phenomenon where two particles become connected so that measuring one instantly affects the other, regardless of distance.", "category": "science", "difficulty": "medium"}
+{"input": "Write a Python function to calculate factorial.", "output": "def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)", "category": "coding", "difficulty": "easy"}
+{"input": "What are the main differences between TCP and UDP?", "output": "TCP is connection-oriented, reliable, and ordered. UDP is connectionless, unreliable, and unordered but faster.", "category": "technology", "difficulty": "medium"}
+{"input": "Translate 'Hello World' to Spanish.", "output": "Hola Mundo", "category": "language", "difficulty": "easy"}
+{"input": "Summarize the theory of relativity.", "output": "Einstein's theory states that space and time are interconnected, and massive objects warp spacetime, affecting the passage of time and motion of objects.", "category": "science", "difficulty": "hard"}
+{"input": "Write a haiku about programming.", "output": "Code flows like water\nLogic bends to human will\nBugs hide in the deep", "category": "creative", "difficulty": "medium"}
+{"input": "What is the time complexity of binary search?", "output": "O(log n) where n is the number of elements in the sorted array.", "category": "coding", "difficulty": "easy"}
+{"input": "Explain the difference between supervised and unsupervised learning.", "output": "Supervised learning uses labeled data to train models, while unsupervised learning finds patterns in unlabeled data without predefined outputs.", "category": "ml", "difficulty": "medium"}
+{"input": "What is the meaning of life?", "output": "This is a philosophical question with many perspectives. Some find meaning through relationships, purpose, knowledge, or personal fulfillment.", "category": "philosophy", "difficulty": "hard"}

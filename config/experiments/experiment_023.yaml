@@ -1,0 +1,7 @@
+# Experiment 23
+name: experiment_23
+temperature: 0.5
+top_p: 0.9
+max_length: 1024
+epochs: 4
+learning_rate: 0.00030000000000000003

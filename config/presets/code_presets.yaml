@@ -1,0 +1,127 @@
+# Code Presets for Nexus-LLM
+# Predefined configurations optimized for code generation and programming tasks
+
+presets:
+  code_completion:
+    name: "Code Completion"
+    description: "Optimized for fast, accurate code completion"
+    model_preferences:
+      - "phi_3_mini"
+      - "qwen_7b_chat"
+      - "llama_3_8b_instruct"
+    parameters:
+      temperature: 0.2
+      top_p: 0.95
+      top_k: 40
+      max_new_tokens: 512
+      repetition_penalty: 1.0
+      do_sample: true
+    system_prompt: "You are a code completion assistant. Complete code accurately following the existing style and conventions. Provide only the code without explanations unless asked. Match the indentation, naming conventions, and patterns of the surrounding code."
+    features:
+      streaming: true
+      code_highlighting: true
+      auto_format: true
+      lint_integration: true
+    tags:
+      - code
+      - completion
+      - fast
+
+  code_review:
+    name: "Code Review"
+    description: "Thorough code review with best practices analysis"
+    model_preferences:
+      - "llama_3_70b_instruct"
+      - "qwen_72b_chat"
+      - "phi_3_medium"
+    parameters:
+      temperature: 0.3
+      top_p: 0.9
+      top_k: 40
+      max_new_tokens: 4096
+      repetition_penalty: 1.05
+      do_sample: true
+    system_prompt: "You are a senior code reviewer. Analyze code for bugs, security vulnerabilities, performance issues, and violations of best practices. Provide specific, actionable feedback with line references. Suggest improvements with code examples. Prioritize issues by severity: critical bugs, security issues, performance, then style."
+    features:
+      streaming: true
+      code_highlighting: true
+      diff_view: true
+      severity_levels: true
+    tags:
+      - code
+      - review
+      - quality
+
+  debugging_assistant:
+    name: "Debugging Assistant"
+    description: "Systematic debugging and error resolution"
+    model_preferences:
+      - "phi_3_mini"
+      - "qwen_7b_chat"
+      - "llama_3_8b_instruct"
+    parameters:
+      temperature: 0.2
+      top_p: 0.9
+      top_k: 40
+      max_new_tokens: 2048
+      repetition_penalty: 1.05
+      do_sample: true
+    system_prompt: "You are a debugging assistant. Approach bugs systematically: 1) Understand the expected behavior. 2) Identify the actual behavior. 3) Analyze the error message or stack trace. 4) Form hypotheses about the root cause. 5) Provide specific fixes with explanations. Include the corrected code with changes highlighted."
+    features:
+      streaming: true
+      code_highlighting: true
+      stacktrace_parsing: true
+      error_categorization: true
+    tags:
+      - code
+      - debugging
+      - error_fixing
+
+  architecture_design:
+    name: "Architecture Design"
+    description: "Software architecture and system design guidance"
+    model_preferences:
+      - "llama_3_70b_instruct"
+      - "qwen_72b_chat"
+      - "llama_3_8b_instruct"
+    parameters:
+      temperature: 0.5
+      top_p: 0.9
+      top_k: 40
+      max_new_tokens: 4096
+      repetition_penalty: 1.05
+      do_sample: true
+    system_prompt: "You are a software architect. Help design robust, scalable systems. Consider trade-offs between different approaches, recommend appropriate design patterns, and explain architectural decisions. Address non-functional requirements: scalability, reliability, security, and maintainability. Provide diagrams or structural descriptions when helpful."
+    features:
+      streaming: true
+      code_highlighting: true
+      diagram_generation: true
+    tags:
+      - code
+      - architecture
+      - system_design
+
+  test_generation:
+    name: "Test Generation"
+    description: "Comprehensive unit and integration test generation"
+    model_preferences:
+      - "phi_3_mini"
+      - "qwen_7b_chat"
+      - "llama_3_8b_instruct"
+    parameters:
+      temperature: 0.3
+      top_p: 0.9
+      top_k: 40
+      max_new_tokens: 2048
+      repetition_penalty: 1.05
+      do_sample: true
+    system_prompt: "You are a test engineering specialist. Generate comprehensive tests covering happy paths, edge cases, error conditions, and boundary values. Use descriptive test names following naming conventions. Include setup and teardown logic. Ensure tests are isolated, deterministic, and maintainable. Follow the Arrange-Act-Assert pattern."
+    features:
+      streaming: true
+      code_highlighting: true
+      coverage_tracking: true
+      framework_detection: true
+    tags:
+      - code
+      - testing
+      - quality_assurance

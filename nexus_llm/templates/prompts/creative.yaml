@@ -1,0 +1,155 @@
+# Creative Prompt Templates
+# Templates for creative writing: stories, poems, brainstorm, roleplay
+
+system: "You are a creative writer with a vivid imagination. Produce original, engaging content that captivates the reader."
+
+templates:
+  story:
+    description: "Generate a creative story"
+    system: "You are a skilled storyteller. Write engaging narratives with well-developed characters, vivid descriptions, and compelling plots."
+    user: |
+      Write a {genre} story based on the following prompt:
+
+      {prompt}
+
+      Story length: {length}
+      Tone: {tone}
+    assistant: ""
+
+  poem:
+    description: "Generate poetry"
+    system: "You are a poet. Craft beautiful verse with attention to rhythm, imagery, and emotional resonance."
+    user: |
+      Write a {poem_type} poem about: {topic}
+
+      Style: {style}
+    assistant: ""
+
+  brainstorm:
+    description: "Brainstorm creative ideas"
+    system: "You are a creative strategist. Generate diverse, innovative ideas without self-censoring."
+    user: |
+      Brainstorm {num_ideas} creative ideas for:
+
+      {topic}
+
+      Be diverse and think outside the box. For each idea, provide:
+      - A catchy title
+      - A brief description
+      - Why it could work
+    assistant: ""
+
+  roleplay:
+    description: "Roleplay as a character"
+    system: "You are roleplaying as {character}. Stay in character at all times and respond as {character} would."
+    user: |
+      {scenario}
+
+      {input}
+    assistant: ""
+
+  dialogue:
+    description: "Write dialogue between characters"
+    system: "You are a dialogue writer. Create natural, engaging conversations that reveal character and advance the plot."
+    user: |
+      Write a dialogue between {characters} about {topic}.
+
+      Setting: {setting}
+      Tone: {tone}
+    assistant: ""
+
+  worldbuilding:
+    description: "Create a fictional world"
+    system: "You are a worldbuilding expert. Create rich, detailed, and internally consistent fictional worlds."
+    user: |
+      Create a fictional world with the following characteristics:
+
+      Theme: {theme}
+      Era: {era}
+      Key feature: {feature}
+
+      Describe:
+      1. Geography and climate
+      2. Societies and cultures
+      3. Magic or technology system
+      4. Key conflicts or tensions
+    assistant: ""
+
+  continuation:
+    description: "Continue an existing story"
+    system: "You are a creative writer. Continue the story naturally, maintaining the established tone and style."
+    user: |
+      Continue the following story:
+
+      {text}
+
+      Continue for approximately {length} words.
+    assistant: ""
+
+  rewrite:
+    description: "Rewrite text in a different style"
+    system: "You are a versatile writer who can adapt to any style or tone."
+    user: |
+      Rewrite the following text in the style of {style}:
+
+      {text}
+    assistant: ""
+
+parameters:
+  genre:
+    description: "Story genre"
+    default: "fantasy"
+    type: string
+  length:
+    description: "Story length descriptor"
+    default: "medium (500-1000 words)"
+    type: string
+  tone:
+    description: "Tone of the writing"
+    default: "engaging and accessible"
+    type: string
+  poem_type:
+    description: "Type of poem (haiku, sonnet, free verse, etc.)"
+    default: "free verse"
+    type: string
+  style:
+    description: "Writing style"
+    default: "modern"
+    type: string
+  num_ideas:
+    description: "Number of brainstorm ideas"
+    default: 5
+    type: int
+  character:
+    description: "Roleplay character name and description"
+    default: "a wise old wizard"
+    type: string
+  scenario:
+    description: "Roleplay scenario"
+    default: ""
+    type: string
+  characters:
+    description: "Characters in dialogue"
+    default: "two friends"
+    type: string
+  setting:
+    description: "Setting for dialogue"
+    default: "a coffee shop"
+    type: string
+  theme:
+    description: "World theme"
+    default: "high fantasy"
+    type: string
+  era:
+    description: "Time period"
+    default: "medieval"
+    type: string
+  feature:
+    description: "Key world feature"
+    default: "floating islands"
+    type: string
+
+examples:
+  - prompt: "A mysterious door appears in the middle of a forest"
+    genre: "fantasy"
+    output: "The door stood impossibly among the ancient oaks, its brass handle gleaming as if polished daily..."

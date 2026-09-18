@@ -1,0 +1,44 @@
+{"question": "Natalia sold clips to 48 of her friends in April, and then she sold half as many clips in May. How many clips did Natalia sell altogether in April and May?", "answer": "Natalia sold 48 clips in April.\nIn May, she sold half as many: 48 / 2 = 24 clips.
+Altogether, she sold 48 + 24 = 72 clips.\nThe answer is 72."}
+{"question": "Weng earns $12 an hour for babysitting. Yesterday, she just did 50 minutes of babysitting. How much did she earn?", "answer": "Weng earns $12 per hour, which is $12/60 = $0.20 per minute.
+She worked 50 minutes, so she earned 50 × $0.20 = $10.
+The answer is 10."}
+{"question": "Betty is saving money for a new wallet which costs $100. Betty has only half of the money she needs. Her parents decided to give her $15 for that purpose, and her grandparents twice as much as her parents. How much more money does Betty need to buy the wallet?", "answer": "The wallet costs $100.
+Betty has half: $100 / 2 = $50.
+Her parents give $15.
+Her grandparents give 2 × $15 = $30.
+Total Betty has now: $50 + $15 + $30 = $95.
+She still needs: $100 - $95 = $5.
+The answer is 5."}
+{"question": "Julie is reading a 120-page book. Yesterday, she read 12 pages. Today, she read twice as many pages as yesterday. If she wants to read half of the remaining pages tomorrow, how many pages will she read tomorrow?", "answer": "Total pages: 120.
+Yesterday she read 12 pages.
+Today she read 2 × 12 = 24 pages.
+Pages read so far: 12 + 24 = 36.
+Remaining pages: 120 - 36 = 84.
+Half of remaining: 84 / 2 = 42.
+The answer is 42."}
+{"question": "Mark has a garden with flowers. He has 7 rows of daisies with 8 daisies in each row. He also has 5 rows of roses with 6 roses in each row. How many more daisies than roses does Mark have?", "answer": "Number of daisies: 7 × 8 = 56.
+Number of roses: 5 × 6 = 30.
+Difference: 56 - 30 = 26.
+The answer is 26."}
+{"question": "A baker made 125 pounds of sugar cookies and 175 pounds of chocolate chip cookies. He sold 85 pounds of sugar cookies and 115 pounds of chocolate chip cookies. How many pounds of cookies does the baker have left?", "answer": "Total cookies made: 125 + 175 = 300 pounds.
+Total cookies sold: 85 + 115 = 200 pounds.
+Cookies left: 300 - 200 = 100 pounds.
+The answer is 100."}
+{"question": "A rectangular swimming pool is 25 meters long and 10 meters wide. If the pool is filled to a depth of 2 meters, how many cubic meters of water are in the pool?", "answer": "Volume = length × width × depth
+Volume = 25 × 10 × 2 = 500 cubic meters.
+The answer is 500."}
+{"question": "Emma bought 3 notebooks for $4.50 each and 2 pens for $1.75 each. She paid with a $20 bill. How much change should she receive?", "answer": "Cost of notebooks: 3 × $4.50 = $13.50.
+Cost of pens: 2 × $1.75 = $3.50.
+Total cost: $13.50 + $3.50 = $17.00.
+Change: $20.00 - $17.00 = $3.00.
+The answer is 3."}
+{"question": "A car travels at an average speed of 60 miles per hour for the first 2 hours of a trip and then at an average speed of 40 miles per hour for the next 3 hours. What is the total distance the car travels?", "answer": "Distance in first part: 60 × 2 = 120 miles.
+Distance in second part: 40 × 3 = 120 miles.
+Total distance: 120 + 120 = 240 miles.
+The answer is 240."}
+{"question": "A teacher has 36 students in her class. She wants to divide them into groups of equal size for a project. If each group must have at least 4 students and at most 9 students, how many different group sizes can she choose?", "answer": "The group size must divide 36 evenly and be between 4 and 9 inclusive.
+Divisors of 36: 1, 2, 3, 4, 6, 9, 12, 18, 36.
+Between 4 and 9: 4, 6, 9.
+That's 3 different group sizes.
+The answer is 3."}

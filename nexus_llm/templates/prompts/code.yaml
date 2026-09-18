@@ -1,0 +1,126 @@
+# Code Prompt Templates
+# Templates for code generation, completion, review, and debugging
+
+system: "You are an expert software engineer. Write clean, efficient, and well-documented code. Follow best practices and include appropriate error handling."
+
+templates:
+  generation:
+    description: "Generate code from a natural language description"
+    user: |
+      Write {language} code for the following:
+
+      {description}
+
+      Requirements:
+      - Use clean, idiomatic {language} code
+      - Include appropriate error handling
+      - Add docstrings and comments
+      - Follow {language} naming conventions
+    assistant: ""
+
+  completion:
+    description: "Complete partial code"
+    system: "You are an expert programmer. Complete the code following the existing style and conventions."
+    user: |
+      Complete the following {language} code:
+
+      ```{language}
+      {code}
+      ```
+
+      Context: {context}
+    assistant: |
+
+  review:
+    description: "Review code for issues and improvements"
+    system: "You are a senior code reviewer. Analyze code for bugs, performance issues, security vulnerabilities, and style problems."
+    user: |
+      Review the following {language} code:
+
+      ```{language}
+      {code}
+      ```
+
+      Please provide:
+      1. Bug identification
+      2. Performance issues
+      3. Security concerns
+      4. Style and readability improvements
+      5. Suggested fixes
+    assistant: ""
+
+  debugging:
+    description: "Debug code with an error or unexpected behavior"
+    system: "You are an expert debugger. Systematically analyze code to find and fix bugs."
+    user: |
+      Debug the following {language} code:
+
+      ```{language}
+      {code}
+      ```
+
+      Error message: {error}
+
+      Expected behavior: {expected}
+      Actual behavior: {actual}
+    assistant: ""
+
+  refactoring:
+    description: "Refactor code to improve quality"
+    system: "You are a software architect specializing in code refactoring. Improve code quality while preserving functionality."
+    user: |
+      Refactor the following {language} code to improve readability, performance, and maintainability:
+
+      ```{language}
+      {code}
+      ```
+
+      Focus on:
+      - Reducing complexity
+      - Improving naming
+      - Eliminating duplication
+      - Applying design patterns where appropriate
+    assistant: ""
+
+  explanation:
+    description: "Explain what code does"
+    system: "You are a programming instructor. Explain code clearly and thoroughly."
+    user: |
+      Explain the following {language} code step by step:
+
+      ```{language}
+      {code}
+      ```
+    assistant: ""
+
+  testing:
+    description: "Generate unit tests for code"
+    system: "You are a testing expert. Write comprehensive unit tests."
+    user: |
+      Write comprehensive unit tests for the following {language} code:
+
+      ```{language}
+      {code}
+      ```
+
+      Include:
+      - Happy path tests
+      - Edge case tests
+      - Error handling tests
+      - Use appropriate testing framework for {language}
+    assistant: ""
+
+examples:
+  - description: "Write a Python function to reverse a string"
+    language: "python"
+    output: |
+      def reverse_string(s: str) -> str:
+          """Reverse a string.
+
+          Args:
+              s: The input string to reverse.
+
+          Returns:
+              The reversed string.
+          """
+          return s[::-1]
