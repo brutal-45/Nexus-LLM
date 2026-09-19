@@ -277,37 +277,37 @@ Raw Data Source
       │
       ▼
 ┌───────────┐
-│  Loader    │  Load from JSONL, CSV, HuggingFace, etc.
+│  Loader   │  Load from JSONL, CSV, HuggingFace, etc.
 └─────┬─────┘
       │
       ▼
 ┌───────────┐
-│  Validator │  Check schema, filter bad examples
+│ Validator │  Check schema, filter bad examples
 └─────┬─────┘
       │
       ▼
 ┌───────────┐
-│  Splitter  │  Train/eval split
+│  Splitter │  Train/eval split
 └─────┬─────┘
       │
       ▼
 ┌───────────┐
-│ Preprocessor│  Clean text, normalize, deduplicate
+│Preprocessor│  Clean text, normalize, deduplicate
 └─────┬─────┘
       │
       ▼
 ┌───────────┐
-│  Tokenizer │  Convert text → token IDs
+│ Tokenizer │  Convert text → token IDs
 └─────┬─────┘
       │
       ▼
 ┌───────────┐
-│  Collator  │  Batch and pad sequences
+│ Collator  │  Batch and pad sequences
 └─────┬─────┘
       │
       ▼
 ┌───────────┐
-│  DataLoader│  Feed batches to training loop
+│ DataLoader│  Feed batches to training loop
 └───────────┘
 ```
 
